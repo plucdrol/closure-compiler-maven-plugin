@@ -63,7 +63,7 @@ public class ProcessCSSFilesTask extends ProcessFilesTask {
                                String outputFilename, Engine engine, YuiConfig yuiConfig) throws FileNotFoundException {
         super(log, verbose, bufferSize, charset, suffix, nosuffix, skipMerge, skipMinify, webappSourceDir,
                 webappTargetDir, inputDir, sourceFiles, sourceIncludes, sourceExcludes, outputDir, outputFilename,
-                engine, yuiConfig);
+                engine, yuiConfig, null);
     }
 
     /**
@@ -104,5 +104,10 @@ public class ProcessCSSFilesTask extends ProcessFilesTask {
         }
 
         logCompressionGains(mergedFile, minifiedFile);
+    }
+
+    @Override
+    void minify(List<File> srcFiles, File minifiedFile) throws IOException {
+        throw new RuntimeException("Compressing a list of css files is not supported by this version.");
     }
 }
