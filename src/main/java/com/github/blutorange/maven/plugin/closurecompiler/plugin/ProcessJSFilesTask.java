@@ -1,4 +1,9 @@
 /*
+ * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
+ * below. Changes were made to this file.
+ */
+
+/*
  * Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com Licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may
  * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or
@@ -6,7 +11,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.samaxes.maven.minify.plugin;
+package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,7 +20,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
@@ -27,6 +31,7 @@ import java.util.Map;
 
 import org.apache.maven.plugin.logging.Log;
 
+import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
@@ -37,11 +42,6 @@ import com.google.javascript.jscomp.LightweightMessageFormatter;
 import com.google.javascript.jscomp.MessageFormatter;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
-import com.samaxes.maven.minify.common.ClosureConfig;
-import com.samaxes.maven.minify.common.JavaScriptErrorReporter;
-import com.samaxes.maven.minify.common.YuiConfig;
-import com.samaxes.maven.minify.plugin.MinifyMojo.Engine;
-import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
 /**
  * Task for merging and compressing JavaScript files.
@@ -67,8 +67,6 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
    * @param sourceExcludes list of source files to exclude
    * @param outputDir directory to write the final file
    * @param outputFilename the output file name
-   * @param engine minify processor engine selected
-   * @param yuiConfig YUI Compressor configuration
    * @param closureConfig Google Closure Compiler configuration
    * @throws FileNotFoundException when the given source file does not exist
    */
@@ -76,11 +74,11 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
       String webappTargetDir, String inputDir, List<String> sourceFiles,
       List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-      String outputFilename, Engine engine, YuiConfig yuiConfig, ClosureConfig closureConfig)
+      String outputFilename, ClosureConfig closureConfig)
       throws FileNotFoundException {
     super(log, verbose, bufferSize, charset, suffix, nosuffix, skipMerge, skipMinify, webappSourceDir,
         webappTargetDir, inputDir, sourceFiles, sourceIncludes, sourceExcludes, outputDir, outputFilename,
-        engine, yuiConfig, closureConfig);
+        closureConfig);
   }
 
   /**
@@ -105,97 +103,70 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       log.info("Creating the minified file [" + ((verbose) ? minifiedFile.getPath() : minifiedFile.getName())
           + "].");
 
-      switch (engine) {
-        case CLOSURE:
-          log.debug("Using Google Closure Compiler engine.");
+      log.debug("Using Google Closure Compiler engine.");
 
-          List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
-          for (File srcFile : srcFiles) {
-            InputStream in = new FileInputStream(srcFile);
-            SourceFile input = SourceFile.fromInputStream(srcFile.getName(), in);
-            sourceFileList.add(input);
-          }
+      List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
+      for (File srcFile : srcFiles) {
+        InputStream in = new FileInputStream(srcFile);
+        SourceFile input = SourceFile.fromInputStream(srcFile.getName(), in, charset);
+        sourceFileList.add(input);
+      }
 
-          CompilerOptions options = new CompilerOptions();
-          closureConfig.getCompilationLevel().setOptionsForCompilationLevel(options);
-          options.setOutputCharset(charset);
-          options.setLanguageIn(closureConfig.getLanguageIn());
-          options.setLanguageOut(closureConfig.getLanguageOut());
-          options.setAngularPass(closureConfig.getAngularPass());
-          options.setColorizeErrorOutput(closureConfig.getColorizeErrorOutput());
-          options.setDependencyOptions(closureConfig.getDependencyOptions());
-          options.setExtraAnnotationNames(closureConfig.getExtraAnnotations());
-          options.setDefineReplacements(closureConfig.getDefineReplacements());
+      CompilerOptions options = new CompilerOptions();
+      closureConfig.getCompilationLevel().setOptionsForCompilationLevel(options);
+      options.setOutputCharset(charset);
+      options.setLanguageIn(closureConfig.getLanguageIn());
+      options.setLanguageOut(closureConfig.getLanguageOut());
+      options.setAngularPass(closureConfig.getAngularPass());
+      options.setColorizeErrorOutput(closureConfig.getColorizeErrorOutput());
+      options.setDependencyOptions(closureConfig.getDependencyOptions());
+      options.setExtraAnnotationNames(closureConfig.getExtraAnnotations());
+      options.setDefineReplacements(closureConfig.getDefineReplacements());
+      options.setSourceMapIncludeSourcesContent(closureConfig.getIncludeSourcesContent());
 
-          File sourceMapResult = new File(minifiedFile.getPath() + ".map");
-          if (closureConfig.getSourceMapFormat() != null) {
-            options.setSourceMapFormat(closureConfig.getSourceMapFormat());
-            options.setSourceMapOutputPath(sourceMapResult.getPath());
-            // options.setSourceMapLocationMappings(Lists.newArrayList(new
-            // SourceMap.LocationMapping(sourceDir.getPath() + File.separator, "")));
-          }
+      File sourceMapResult = new File(minifiedFile.getPath() + ".map");
+      if (closureConfig.getSourceMapFormat() != null) {
+        options.setSourceMapFormat(closureConfig.getSourceMapFormat());
+        options.setSourceMapOutputPath(sourceMapResult.getPath());
+        // options.setSourceMapLocationMappings(Lists.newArrayList(new
+        // SourceMap.LocationMapping(sourceDir.getPath() + File.separator, "")));
+      }
 
-          if (closureConfig.getWarningLevels() != null) {
-            for (Map.Entry<DiagnosticGroup, CheckLevel> warningLevel : closureConfig.getWarningLevels().entrySet()) {
-              options.setWarningLevel(warningLevel.getKey(), warningLevel.getValue());
-            }
-          }
+      if (closureConfig.getWarningLevels() != null) {
+        for (Map.Entry<DiagnosticGroup, CheckLevel> warningLevel : closureConfig.getWarningLevels().entrySet()) {
+          options.setWarningLevel(warningLevel.getKey(), warningLevel.getValue());
+        }
+      }
 
-          List<SourceFile> externs = closureConfig.getExterns();
-          externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
-          externs.addAll(closureConfig.getExterns());
+      List<SourceFile> externs = closureConfig.getExterns();
+      externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
+      externs.addAll(closureConfig.getExterns());
 
-          Compiler compiler = new Compiler();
-          compiler.compile(externs, sourceFileList, options);
+      Compiler compiler = new Compiler();
+      compiler.compile(externs, sourceFileList, options);
 
-          // Check for errors.
-          JSError[] errors = compiler.getErrors();
-          if (errors.length > 0) {
-            StringBuilder msg = new StringBuilder("JSCompiler errors\n");
-            MessageFormatter formatter = new LightweightMessageFormatter(compiler);
-            for (JSError e : errors) {
-              msg.append(formatter.formatError(e));
-            }
-            throw new RuntimeException(msg.toString());
-          }
+      // Check for errors.
+      JSError[] errors = compiler.getErrors();
+      if (errors.length > 0) {
+        StringBuilder msg = new StringBuilder("JSCompiler errors\n");
+        MessageFormatter formatter = new LightweightMessageFormatter(compiler);
+        for (JSError e : errors) {
+          msg.append(formatter.formatError(e));
+        }
+        throw new RuntimeException(msg.toString());
+      }
 
-          writer.append(compiler.toSource());
+      writer.append(compiler.toSource());
 
-          if (closureConfig.getSourceMapFormat() != null) {
-            log.info("Creating the minified files map ["
-                + ((verbose) ? sourceMapResult.getPath() : sourceMapResult.getName()) + "].");
+      if (closureConfig.getSourceMapFormat() != null) {
+        log.info("Creating the minified files map ["
+            + ((verbose) ? sourceMapResult.getPath() : sourceMapResult.getName()) + "].");
 
-            sourceMapResult.createNewFile();
-            flushSourceMap(sourceMapResult, minifiedFile.getName(), compiler.getSourceMap());
+        sourceMapResult.createNewFile();
+        flushSourceMap(sourceMapResult, minifiedFile.getName(), compiler.getSourceMap());
 
-            writer.append(System.getProperty("line.separator"));
-            writer.append("//# sourceMappingURL=" + sourceMapResult.getName());
-          }
-
-          break;
-
-        case YUI:
-
-          if (srcFiles.size() == 1) {
-            log.debug("Using YUI Compressor engine.");
-
-            InputStream in = new FileInputStream(srcFiles.get(0));
-            InputStreamReader reader = new InputStreamReader(in, charset);
-
-            JavaScriptCompressor compressor = new JavaScriptCompressor(reader, new JavaScriptErrorReporter(log,
-                srcFiles.get(0).getName()));
-            compressor.compress(writer, yuiConfig.getLineBreak(), yuiConfig.isMunge(), verbose,
-                yuiConfig.isPreserveSemicolons(), yuiConfig.isDisableOptimizations());
-
-          }
-          else {
-            log.warn("JavaScript engine not supported. "
-                + "Only the CLOSURE engine is supported with the closureMapToOriginalSourceFiles option.");
-          }
-          break;
-        default:
-          log.warn("JavaScript engine not supported.");
-          break;
+        writer.append(System.getProperty("line.separator"));
+        writer.append("//# sourceMappingURL=" + sourceMapResult.getName());
       }
     }
     catch (IOException e) {
@@ -220,5 +191,4 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       return false;
     }
   }
-
 }

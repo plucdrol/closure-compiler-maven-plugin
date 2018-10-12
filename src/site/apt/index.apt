@@ -2,19 +2,20 @@
  Introduction
  ------
  Samuel Santos
+ Andre Wachsmuth
  ------
- 2013-09-08
+ 2018-10-08
  ------
 
-Minify Maven Plugin
+Closure Compiler Maven Plugin
 
-  This plugin combines and minimizes your CSS and JavaScript files for faster page loading. It produces a merged and a minified version of your CSS and JavaScript resources which can be re-used across your project.
+  This plugin combines and minimizes JavaScript files.
 
-  Under the hood, it uses the {{{http://yui.github.com/yuicompressor/}YUI Compressor}} and {{{https://developers.google.com/closure/compiler/}Google Closure Compiler}} but has a layer of abstraction around these tools which allows for other tools to be added in the future.
+  As the name implies, it is a wrapper around {{{https://developers.google.com/closure/compiler/}Google Closure Compiler}}.
 
 * Goals Overview
 
-  * {{{./minify-mojo.html}minify:minify}} combine and minimize JavaScript and CSS files.
+  * {{{./minify-mojo.html}minify:minify}} combine and minimize JavaScript files.
 
 * Usage
 

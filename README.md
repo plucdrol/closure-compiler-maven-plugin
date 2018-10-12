@@ -1,25 +1,17 @@
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.samaxes.maven/minify-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.samaxes.maven/minify-maven-plugin)
-[![Build Status](https://travis-ci.org/samaxes/minify-maven-plugin.png)](https://travis-ci.org/samaxes/minify-maven-plugin)
+**WORK-IN-PROGRESS**
 
 # Minify Maven Plugin
 
-Minify Maven Plugin combines and minimizes your CSS and JavaScript files for faster page loading. It produces a merged and a minified version of your CSS and JavaScript resources which can be re-used across your project.
+Forked from [Minify Maven Plugin](http://samaxes.github.io/minify-maven-plugin/). That project seems to be inactive. In line with the principle of single
+responsibility, this fork is meant only for processing JavaScript files. The [YUI Compressor](http://yui.github.com/yuicompressor/) is dead, so what remains
+is a maven plugin for [Google Closure Compiler](https://developers.google.com/closure/compiler/). I found some plugins for the closure compiler, but found
+them all to be lacking. So I decided to fork the excellent Minify Maven Plugin.
 
-Under the hood, it uses the [YUI Compressor](http://yui.github.com/yuicompressor/) and [Google Closure Compiler](https://developers.google.com/closure/compiler/) but has a layer of abstraction around these tools which allows for other tools to be added in the future.
+This plugin combines and minimizes JavaScript files. It produces a merged and a minified version.
 
-## Benefits
+Requires at least Java 1.8.
 
-### Reduce HTTP Requests
-
-> 80% of the end-user response time is spent on the front-end. Most of this time is tied up in downloading all the components in the page: images, stylesheets, scripts, etc. Reducing the number of components in turn reduces the number of HTTP requests required to render the page. This is the key to faster pages.
->
-> Combined files are a way to reduce the number of HTTP requests by combining all scripts into a single script, and similarly combining all CSS into a single stylesheet. Combining files is more challenging when the scripts and stylesheets vary from page to page, but making this part of your release process improves response times.
-
-### Compress JavaScript and CSS
-
-> Minification/compression is the practice of removing unnecessary characters from code to reduce its size thereby improving load times. A JavaScript compressor, in addition to removing comments and white-spaces, obfuscates local variables using the smallest possible variable name. This improves response time performance because the size of the downloaded file is reduced.
-
-## Usage
+# Usage
 
 Configure your project's `pom.xml` to run the plugin during the project's build cycle.
 
@@ -57,8 +49,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 </build>
 ```
 
-Notice that the [v1.6.X branch](https://github.com/samaxes/minify-maven-plugin/tree/v1.6.X) contains the last Java 6 compatible releases. Java 7 is required for new versions.  
-For more information, check the [documentation](http://samaxes.github.com/minify-maven-plugin/) or the [demo applications](https://github.com/samaxes/minify-maven-plugin/releases/).
+For more information, check the [documentation](http://samaxes.github.com/minify-maven-plugin/) or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/releases/).
 
 ## License
 

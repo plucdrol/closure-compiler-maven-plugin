@@ -1,4 +1,9 @@
 /*
+ * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
+ * below. Changes were made to this file.
+ */
+
+/*
  * Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com Licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may
  * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or
@@ -6,7 +11,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.samaxes.maven.minify.plugin;
+package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
 import static com.google.common.collect.Lists.newArrayList;
 
@@ -34,6 +39,9 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
+import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
+import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
+import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CheckLevel;
@@ -44,30 +52,12 @@ import com.google.javascript.jscomp.DependencyOptions;
 import com.google.javascript.jscomp.DiagnosticGroup;
 import com.google.javascript.jscomp.DiagnosticGroups;
 import com.google.javascript.jscomp.SourceFile;
-import com.samaxes.maven.minify.common.Aggregation;
-import com.samaxes.maven.minify.common.AggregationConfiguration;
-import com.samaxes.maven.minify.common.ClosureConfig;
-import com.samaxes.maven.minify.common.YuiConfig;
 
 /**
- * Goal for combining and minifying CSS and JavaScript files.
+ * Goal for combining and/or minifying JavaScript files with closure compiler.
  */
 @Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
 public class MinifyMojo extends AbstractMojo {
-
-  /**
-   * Engine used for minification.
-   */
-  public enum Engine {
-  /**
-   * YUI Compressor
-   */
-  YUI,
-  /**
-   * Google Closure Compiler
-   */
-  CLOSURE
-  }
 
   /* ************** */
   /* Global Options */
@@ -146,60 +136,6 @@ public class MinifyMojo extends AbstractMojo {
   @Parameter(property = "bundleConfiguration")
   private String bundleConfiguration;
 
-  /* *********** */
-  /* CSS Options */
-  /* *********** */
-
-  /**
-   * CSS source directory.
-   */
-  @Parameter(property = "cssSourceDir", defaultValue = "css")
-  private String cssSourceDir;
-
-  /**
-   * CSS source file names list.
-   */
-  @Parameter(property = "cssSourceFiles", alias = "cssFiles")
-  private ArrayList<String> cssSourceFiles;
-
-  /**
-   * CSS files to include. Specified as fileset patterns which are relative to the CSS source directory.
-   * @since 1.2
-   */
-  @Parameter(property = "cssSourceIncludes", alias = "cssIncludes")
-  private ArrayList<String> cssSourceIncludes;
-
-  /**
-   * CSS files to exclude. Specified as fileset patterns which are relative to the CSS source directory.
-   * @since 1.2
-   */
-  @Parameter(property = "cssSourceExcludes", alias = "cssExcludes")
-  private ArrayList<String> cssSourceExcludes;
-
-  /**
-   * CSS target directory. Takes the same value as {@code cssSourceDir} when empty.
-   * @since 1.3.2
-   */
-  @Parameter(property = "cssTargetDir")
-  private String cssTargetDir;
-
-  /**
-   * CSS output file name.
-   */
-  @Parameter(property = "cssFinalFile", defaultValue = "style.css")
-  private String cssFinalFile;
-
-  /**
-   * Define the CSS compressor engine to use.<br/>
-   * Possible values are:
-   * <ul>
-   * <li>{@code YUI}: <a href="http://yui.github.io/yuicompressor/">YUI Compressor</a></li>
-   * </ul>
-   * @since 1.7.1
-   */
-  @Parameter(property = "cssEngine", defaultValue = "YUI")
-  private Engine cssEngine;
-
   /* ****************** */
   /* JavaScript Options */
   /* ****************** */
@@ -242,50 +178,6 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "jsFinalFile", defaultValue = "script.js")
   private String jsFinalFile;
-
-  /**
-   * Define the JavaScript compressor engine to use.<br/>
-   * Possible values are:
-   * <ul>
-   * <li>{@code YUI}: <a href="http://yui.github.io/yuicompressor/">YUI Compressor</a></li>
-   * <li>{@code CLOSURE}: <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a></li>
-   * </ul>
-   * @since 1.6
-   */
-  @Parameter(property = "jsEngine", defaultValue = "YUI")
-  private Engine jsEngine;
-
-  /* *************************** */
-  /* YUI Compressor Only Options */
-  /* *************************** */
-
-  /**
-   * Some source control tools don't like files containing lines longer than, say 8000 characters. The line-break option
-   * is used in that case to split long lines after a specific column. It can also be used to make the code more
-   * readable and easier to debug. Specify {@code 0} to get a line break after each semi-colon in JavaScript, and after
-   * each rule in CSS. Specify {@code -1} to disallow line breaks.
-   */
-  @Parameter(property = "yuiLineBreak", defaultValue = "-1")
-  private int yuiLineBreak;
-
-  /**
-   * Minify only. Do not obfuscate local symbols.
-   */
-  @Parameter(property = "yuiNoMunge", defaultValue = "false")
-  private boolean yuiNoMunge;
-
-  /**
-   * Preserve unnecessary semicolons (such as right before a '}'). This option is useful when compressed code has to be
-   * run through JSLint.
-   */
-  @Parameter(property = "yuiPreserveSemicolons", defaultValue = "false")
-  private boolean yuiPreserveSemicolons;
-
-  /**
-   * Disable all the built-in micro-optimizations.
-   */
-  @Parameter(property = "yuiDisableOptimizations", defaultValue = "false")
-  private boolean yuiDisableOptimizations;
 
   /* ************************************ */
   /* Google Closure Compiler Only Options */
@@ -368,17 +260,21 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureCreateSourceMap;
 
   /**
-   * <<<<<<< HEAD Enables or disables sorting mode for Closure Library dependencies.<br/>
-   * If {@code true}, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always
-   * come =======
-   * <p>
    * If true, the source map created by the Closure compiler will have one link to each of the original JavaScript
-   * source files
-   * </p>
-   * @since 1.7.5-SNAPSHOT
+   * source files.
+   * @since 1.7.5
    */
   @Parameter(property = "closureMapToOriginalSourceFiles", defaultValue = "false")
   private boolean closureMapToOriginalSourceFiles;
+
+  /**
+   * If {@code true}, include the content of the source file in the source map directly (via the {@code sourceContent}
+   * property). This makes the source file bigger, but does not require the original source file to be added to the
+   * browser dev tools.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureIncludeSourcesContent", defaultValue = "false")
+  private boolean closureIncludeSourcesContent;
 
   /**
    * <p>
@@ -386,7 +282,6 @@ public class MinifyMojo extends AbstractMojo {
    * </p>
    * <p>
    * If true, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always come
-   * >>>>>>> 6757ddc676add185bd7f77630760f28252c7ccae before a file that {@code goog.requires} symbol X.
    * @since 1.7.4
    */
   @Parameter(property = "closureSortDependencies", defaultValue = "false")
@@ -460,11 +355,10 @@ public class MinifyMojo extends AbstractMojo {
 
     fillOptionalValues();
 
-    YuiConfig yuiConfig = fillYuiConfig();
     ClosureConfig closureConfig = fillClosureConfig();
     Collection<ProcessFilesTask> processFilesTasks;
     try {
-      processFilesTasks = createTasks(yuiConfig, closureConfig);
+      processFilesTasks = createTasks(closureConfig);
     }
     catch (FileNotFoundException e) {
       throw new MojoFailureException(e.getMessage(), e);
@@ -490,19 +384,12 @@ public class MinifyMojo extends AbstractMojo {
   }
 
   private void fillOptionalValues() {
-    if (Strings.isNullOrEmpty(cssTargetDir)) {
-      cssTargetDir = cssSourceDir;
-    }
     if (Strings.isNullOrEmpty(jsTargetDir)) {
       jsTargetDir = jsSourceDir;
     }
     if (Strings.isNullOrEmpty(charset)) {
       charset = Charset.defaultCharset().name();
     }
-  }
-
-  private YuiConfig fillYuiConfig() {
-    return new YuiConfig(yuiLineBreak, !yuiNoMunge, yuiPreserveSemicolons, yuiDisableOptimizations);
   }
 
   private ClosureConfig fillClosureConfig() throws MojoFailureException {
@@ -531,10 +418,10 @@ public class MinifyMojo extends AbstractMojo {
 
     return new ClosureConfig(closureLanguageIn, closureLanguageOut, closureEnvironment, closureCompilationLevel,
         dependencyOptions, externs, closureCreateSourceMap, warningLevels, closureAngularPass,
-        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles);
+        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent);
   }
 
-  private Collection<ProcessFilesTask> createTasks(YuiConfig yuiConfig, ClosureConfig closureConfig)
+  private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
       throws MojoFailureException, FileNotFoundException {
     List<ProcessFilesTask> tasks = newArrayList();
 
@@ -550,39 +437,26 @@ public class MinifyMojo extends AbstractMojo {
       }
 
       for (Aggregation aggregation : aggregationConfiguration.getBundles()) {
-        if (Aggregation.AggregationType.css.equals(aggregation.getType())) {
-          tasks.add(createCSSTask(yuiConfig, closureConfig, aggregation.getFiles(),
-              Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
-        }
-        else if (Aggregation.AggregationType.js.equals(aggregation.getType())) {
-          tasks.add(createJSTask(yuiConfig, closureConfig, aggregation.getFiles(),
+        if (Aggregation.AggregationType.js.equals(aggregation.getType())) {
+          tasks.add(createJSTask(closureConfig, aggregation.getFiles(),
               Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
         }
       }
     }
-    else { // Otherwise, fallback to the default behavior
-      tasks.add(createCSSTask(yuiConfig, closureConfig, cssSourceFiles, cssSourceIncludes, cssSourceExcludes,
-          cssFinalFile));
-      tasks.add(createJSTask(yuiConfig, closureConfig, jsSourceFiles, jsSourceIncludes, jsSourceExcludes,
+    else {
+      // Otherwise, fallback to the default behavior
+      tasks.add(createJSTask(closureConfig, jsSourceFiles, jsSourceIncludes, jsSourceExcludes,
           jsFinalFile));
     }
 
     return tasks;
   }
 
-  private ProcessFilesTask createCSSTask(YuiConfig yuiConfig, ClosureConfig closureConfig,
-      List<String> cssSourceFiles, List<String> cssSourceIncludes, List<String> cssSourceExcludes,
-      String cssFinalFile) throws FileNotFoundException {
-    return new ProcessCSSFilesTask(getLog(), verbose, bufferSize, Charset.forName(charset), suffix, nosuffix,
-        skipMerge, skipMinify, webappSourceDir, webappTargetDir, cssSourceDir, cssSourceFiles,
-        cssSourceIncludes, cssSourceExcludes, cssTargetDir, cssFinalFile, cssEngine, yuiConfig);
-  }
-
-  private ProcessFilesTask createJSTask(YuiConfig yuiConfig, ClosureConfig closureConfig, List<String> jsSourceFiles,
+  private ProcessFilesTask createJSTask(ClosureConfig closureConfig, List<String> jsSourceFiles,
       List<String> jsSourceIncludes, List<String> jsSourceExcludes, String jsFinalFile)
       throws FileNotFoundException {
     return new ProcessJSFilesTask(getLog(), verbose, bufferSize, Charset.forName(charset), suffix, nosuffix,
         skipMerge, skipMinify, webappSourceDir, webappTargetDir, jsSourceDir, jsSourceFiles, jsSourceIncludes,
-        jsSourceExcludes, jsTargetDir, jsFinalFile, jsEngine, yuiConfig, closureConfig);
+        jsSourceExcludes, jsTargetDir, jsFinalFile, closureConfig);
   }
 }

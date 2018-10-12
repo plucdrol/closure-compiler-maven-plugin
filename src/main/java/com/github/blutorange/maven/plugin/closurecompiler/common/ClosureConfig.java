@@ -1,4 +1,9 @@
 /*
+ * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
+ * below. Changes were made to this file.
+ */
+
+/*
  * Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com Licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may
  * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or
@@ -6,7 +11,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.samaxes.maven.minify.common;
+package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.util.HashMap;
 import java.util.List;
@@ -44,15 +49,17 @@ public class ClosureConfig {
 
   private final Map<DiagnosticGroup, CheckLevel> warningLevels;
 
-  private final Boolean colorizeErrorOutput;
+  private final boolean colorizeErrorOutput;
 
-  private final Boolean angularPass;
+  private final boolean angularPass;
 
   private final List<String> extraAnnotations;
 
   private final Map<String, Object> defineReplacements = new HashMap<>();
 
-  private final Boolean mapToOriginalSourceFiles;
+  private final boolean mapToOriginalSourceFiles;
+
+  private final boolean includeSourcesContent;
 
   /**
    * Init Closure Compiler values.
@@ -68,13 +75,13 @@ public class ClosureConfig {
    * @param extraAnnotations make extra annotations known to the closure engine
    * @param defineReplacements replacements for {@code @defines}
    * @param mapToOriginalSourceFiles if true, do not merge the source js files and create a link to each of them in the
-   * source map
+   * @param includeSourceContent If true, include the content of the source file in the source map. source map
    */
   public ClosureConfig(LanguageMode languageIn, LanguageMode languageOut, CompilerOptions.Environment environment,
       CompilationLevel compilationLevel, DependencyOptions dependencyOptions,
       List<SourceFile> externs, boolean createSourceMap,
       Map<DiagnosticGroup, CheckLevel> warningLevels, boolean angularPass,
-      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles) {
+      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent) {
     this.languageIn = languageIn;
     this.languageOut = languageOut;
     this.environment = environment;
@@ -87,6 +94,7 @@ public class ClosureConfig {
     this.colorizeErrorOutput = Boolean.TRUE;
     this.angularPass = angularPass;
     this.extraAnnotations = extraAnnotations;
+    this.includeSourcesContent = includeSourcesContent;
 
     for (Map.Entry<String, String> defineReplacement : defineReplacements.entrySet()) {
       if (Strings.isNullOrEmpty(defineReplacement.getValue())) { throw new RuntimeException("Define replacement " + defineReplacement.getKey() + " does not have a value."); }
@@ -117,107 +125,59 @@ public class ClosureConfig {
     }
   }
 
-  /**
-   * Gets the languageIn.
-   * @return the languageIn
-   */
   public LanguageMode getLanguageIn() {
     return languageIn;
   }
 
-  /**
-   * Gets the languageOut.
-   * @return the languageOut
-   */
   public LanguageMode getLanguageOut() {
     return languageOut;
   }
 
-  /**
-   * Gets the environment.
-   * @return the environment
-   */
   public CompilerOptions.Environment getEnvironment() {
     return environment;
   }
 
-  /**
-   * Gets the compilationLevel.
-   * @return the compilationLevel
-   */
   public CompilationLevel getCompilationLevel() {
     return compilationLevel;
   }
 
-  /**
-   * Gets the dependencyOptions.
-   * @return the dependencyOptions
-   */
   public DependencyOptions getDependencyOptions() {
     return dependencyOptions;
   }
 
-  /**
-   * Gets the externs.
-   * @return the externs
-   */
   public List<SourceFile> getExterns() {
     return externs;
   }
 
-  /**
-   * Gets the sourceMapFormat.
-   * @return the sourceMapFormat
-   */
   public Format getSourceMapFormat() {
     return sourceMapFormat;
   }
 
-  /**
-   * Gets the warningLevels.
-   * @return the warningLevels
-   */
   public Map<DiagnosticGroup, CheckLevel> getWarningLevels() {
     return warningLevels;
   }
 
-  /**
-   * Gets the colorizeErrorOutput.
-   * @return the colorizeErrorOutput
-   */
   public Boolean getColorizeErrorOutput() {
     return colorizeErrorOutput;
   }
 
-  /**
-   * Gets the angularPass.
-   * @return the angularPass
-   */
   public Boolean getAngularPass() {
     return angularPass;
   }
 
-  /**
-   * Gets the extraAnnotations.
-   * @return the extraAnnotations
-   */
   public List<String> getExtraAnnotations() {
     return extraAnnotations;
   }
 
-  /**
-   * Gets the defineReplacements.
-   * @return the defineReplacements
-   */
   public Map<String, Object> getDefineReplacements() {
     return defineReplacements;
   }
 
-  /**
-   * Gets the mapToOriginalSourceFiles
-   * @return the mapToOriginalSourceFiles
-   */
   public Boolean getMapToOriginalSourceFiles() {
     return mapToOriginalSourceFiles;
+  }
+
+  public boolean getIncludeSourcesContent() {
+    return includeSourcesContent;
   }
 }

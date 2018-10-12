@@ -2,13 +2,14 @@
  Using include/exclude patterns
  ------
  Samuel Santos
+ Andre Wachsmuth
  ------
- 2013-09-08
+ 2018-10-08
  ------
 
 Using include/exclude patterns
 
-  Since version 1.2, Minify Maven Plugin supports include/exclude patterns for lexicographical ordering.
+  Supports include/exclude patterns for lexicographical ordering.
 
 +---+
 <project>
@@ -17,19 +18,13 @@ Using include/exclude patterns
     <plugins>
       <!-- ... -->
       <plugin>
-        <groupId>com.samaxes.maven</groupId>
-        <artifactId>minify-maven-plugin</artifactId>
-        <version>1.7.6</version>
+        <groupId>com.github.blutorange</groupId>
+        <artifactId>closure-compiler-maven-plugin</artifactId>
+        <version>2.0.0</version>
         <executions>
           <execution>
             <id>default-minify</id>
             <configuration>
-              <cssSourceIncludes>
-                <cssSourceInclude>**</cssSourceInclude>
-              </cssSourceIncludes>
-              <cssSourceExcludes>
-                <cssSourceExclude>**/*.min.css</cssSourceExclude>
-              </cssSourceExcludes>
               <jsSourceIncludes>
                 <jsSourceInclude>**</jsSourceInclude>
               </jsSourceIncludes>

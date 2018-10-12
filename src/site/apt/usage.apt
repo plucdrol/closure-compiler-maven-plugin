@@ -2,13 +2,14 @@
  Usage
  ------
  Samuel Santos
+ Andre Wachsmuth
  ------
- 2013-09-08
+ 2018-10-08
  ------
 
 Usage
 
-  This document is intended to provide instructions for using the Minify Maven Plugin.\
+  This document is intended to provide instructions for using the Closure Compiler Maven Plugin.\
   In order for this discussion to be useful, it's critical to cover two topics:
 
     [[1]] Configuring your project's <<<pom.xml>>> to run the plugin during the project's build cycle
@@ -25,15 +26,13 @@ Usage
 
 ** Merge order
 
-  The following rules for file order are applied when input CSS  files are merged and minified into a single output file:
+  The following rules for file order are applied when input JS files are merged and minified into a single output file:
 
-    [[1]] Input files defined in <<<cssSourceFiles>>> are merged before files defined in <<<cssSourceIncludes>>>.
+    [[1]] Input files defined in <<<jsSourceFiles>>> are merged before files defined in <<<jsSourceIncludes>>>.
 
-    [[2]] Input files defined in <<<cssSourceIncludes>>> are sorted by filename before merging (see {{{./examples/patterns.html}Using include/exclude patterns}}).
+    [[2]] Input files defined in <<<jsSourceIncludes>>> are sorted by filename before merging (see {{{./examples/patterns.html}Using include/exclude patterns}}).
 
-    [[3]] If a file is configured both in <<<cssSourceFiles>>> and <<<cssSourceIncludes>>> then only the one defined in <<<cssSourceFiles>>> will be processed.
-
-  The same rules for JavaScript files are applied for tags <<<jsSourceFile>>> and <<<jsSourceIncludes>>> respectively.
+    [[3]] If a file is configured both in <<<jsSourceFiles>>> and <<<jsSourceIncludes>>> then only the one defined in <<<jsSourceFiles>>> will be processed.
 
 +---+
 <project>
@@ -42,8 +41,8 @@ Usage
     <plugins>
       <!-- ... -->
       <plugin>
-        <groupId>com.samaxes.maven</groupId>
-        <artifactId>minify-maven-plugin</artifactId>
+        <groupId>com.github.blutorange</groupId>
+        <artifactId>closure-compiler-maven-plugin</artifactId>
         <version>1.7.6</version>
         <executions>
           <execution>
@@ -51,13 +50,6 @@ Usage
             <phase>package</phase><!-- When omitted defaults to 'process-resources' -->
             <configuration>
               <charset>UTF-8</charset>
-              <cssSourceDir>css</cssSourceDir>
-              <cssSourceFiles>
-                <cssSourceFile>file-1.css</cssSourceFile>
-                <!-- ... -->
-                <cssSourceFile>file-n.css</cssSourceFile>
-              </cssSourceFiles>
-              <cssFinalFile>style.css</cssFinalFile>
               <jsSourceDir>js</jsSourceDir>
               <jsSourceFiles>
                 <jsSourceFile>file-1.js</jsSourceFile>

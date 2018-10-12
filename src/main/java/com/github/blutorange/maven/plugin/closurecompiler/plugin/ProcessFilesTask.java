@@ -1,4 +1,9 @@
 /*
+ * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
+ * below. Changes were made to this file.
+ */
+
+/*
  * Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com Licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may
  * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or
@@ -6,7 +11,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package com.samaxes.maven.minify.plugin;
+package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,10 +36,8 @@ import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 
-import com.samaxes.maven.minify.common.ClosureConfig;
-import com.samaxes.maven.minify.common.SourceFilesEnumeration;
-import com.samaxes.maven.minify.common.YuiConfig;
-import com.samaxes.maven.minify.plugin.MinifyMojo.Engine;
+import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 
 /**
  * Abstract class for merging and compressing a files list.
@@ -58,10 +61,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   protected final boolean skipMerge;
 
   protected final boolean skipMinify;
-
-  protected final Engine engine;
-
-  protected final YuiConfig yuiConfig;
 
   private final File sourceDir;
 
@@ -96,8 +95,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param sourceExcludes list of source files to exclude
    * @param outputDir directory to write the final file
    * @param outputFilename the output file name
-   * @param engine minify processor engine selected
-   * @param yuiConfig YUI Compressor configuration
    * @param closureConfig Google closure configuration
    * @throws FileNotFoundException when the given source file does not exist
    */
@@ -105,7 +102,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
       String webappTargetDir, String inputDir, List<String> sourceFiles,
       List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-      String outputFilename, Engine engine, YuiConfig yuiConfig, ClosureConfig closureConfig) throws FileNotFoundException {
+      String outputFilename, ClosureConfig closureConfig) throws FileNotFoundException {
     this.log = log;
     this.verbose = verbose;
     this.bufferSize = bufferSize;
@@ -114,8 +111,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     this.nosuffix = nosuffix;
     this.skipMerge = skipMerge;
     this.skipMinify = skipMinify;
-    this.engine = engine;
-    this.yuiConfig = yuiConfig;
 
     this.sourceDir = new File(webappSourceDir + File.separator + inputDir);
     this.targetDir = new File(webappTargetDir + File.separator + outputDir);
@@ -140,8 +135,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   @Override
   public Object call() throws IOException {
     synchronized (log) {
-      String fileType = (this instanceof ProcessCSSFilesTask) ? "CSS" : "JavaScript";
-      log.info("Starting " + fileType + " task:");
+      log.info("Starting JavaScript task:");
 
       if (!targetDir.exists() && !targetDir.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetDir); }
 
@@ -182,7 +176,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       }
       else if (!sourceFilesEmpty || !sourceIncludesEmpty) {
         // 'files' list will be empty if source file paths or names added to the project's POM are invalid.
-        log.error("No valid " + fileType + " source files found to process.");
+        log.error("No valid JavaScript source files found to process.");
       }
     }
 

@@ -2,14 +2,15 @@
  Bundle Configuration
  ------
  Sean Scanlon
+ Andre Wachsmuth
  ------
- 2014-05-26
+ 2018-10-08
  ------
 
 Bundle Configuration
 
   You can optionally specify the source files to process via an external configuration file. 
-  When a <<<bundleConfiguration>>> is defined, it overrides <<<cssSourceFiles>>> and <<<jsSourceFile>>> of the {{{../examples/basic.html}Basic Configuration}}.
+  When a <<<bundleConfiguration>>> is defined, it overrides <<<jsSourceFile>>> of the {{{../examples/basic.html}Basic Configuration}}.
 
 +---+
 <project>
@@ -18,9 +19,9 @@ Bundle Configuration
     <plugins>
       <!-- ... -->
       <plugin>
-        <groupId>com.samaxes.maven</groupId>
-        <artifactId>minify-maven-plugin</artifactId>
-        <version>1.7.6</version>
+        <groupId>com.github.blutorange</groupId>
+        <artifactId>closure-compiler-maven-plugin</artifactId>
+        <version>2.0.0</version>
         <executions>
           <execution>
             <id>bundle-minify</id>
@@ -47,16 +48,6 @@ Configuration Format
 +---+
 {
     "bundles": [
-        {
-            "type": "css",
-            "name": "static-combined.css",
-            "files": [
-                "reset.css",
-                "fonts.css",
-                "base.css",
-                "toc.css"
-            ]
-        },
         {
             "type": "js",
             "name": "static-combined.js",
