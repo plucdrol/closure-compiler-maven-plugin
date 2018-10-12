@@ -2,6 +2,8 @@
 
 ## 2.0.0
 
+* Add new options supported by closure compiler.
+* Remove YUICompressor. It is dead. Also remove CSS minification and concentrate on one task: closure compiler.
 * Adopt [Semantic Versioning](http://semver.org/) scheme.
 * Remove @deprecated options.
 
