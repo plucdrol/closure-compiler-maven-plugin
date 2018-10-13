@@ -61,6 +61,8 @@ public class ClosureConfig {
 
   private final boolean includeSourcesContent;
 
+  private final SourceMapOutputType sourceMapOutputType;
+
   /**
    * Init Closure Compiler values.
    * @param languageIn the version of ECMAScript used to report errors in the code
@@ -75,13 +77,15 @@ public class ClosureConfig {
    * @param extraAnnotations make extra annotations known to the closure engine
    * @param defineReplacements replacements for {@code @defines}
    * @param mapToOriginalSourceFiles if true, do not merge the source js files and create a link to each of them in the
+   * @param closureSourceMapInclusionType
    * @param includeSourceContent If true, include the content of the source file in the source map. source map
+   * @param sourceMapOutputType How to include the source map (inline or separate file).
    */
   public ClosureConfig(LanguageMode languageIn, LanguageMode languageOut, CompilerOptions.Environment environment,
       CompilationLevel compilationLevel, DependencyOptions dependencyOptions,
       List<SourceFile> externs, boolean createSourceMap,
       Map<DiagnosticGroup, CheckLevel> warningLevels, boolean angularPass,
-      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent) {
+      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent, SourceMapOutputType sourceMapOutputType) {
     this.languageIn = languageIn;
     this.languageOut = languageOut;
     this.environment = environment;
@@ -95,6 +99,7 @@ public class ClosureConfig {
     this.angularPass = angularPass;
     this.extraAnnotations = extraAnnotations;
     this.includeSourcesContent = includeSourcesContent;
+    this.sourceMapOutputType = sourceMapOutputType;
 
     for (Map.Entry<String, String> defineReplacement : defineReplacements.entrySet()) {
       if (Strings.isNullOrEmpty(defineReplacement.getValue())) { throw new RuntimeException("Define replacement " + defineReplacement.getKey() + " does not have a value."); }
@@ -179,5 +184,9 @@ public class ClosureConfig {
 
   public boolean getIncludeSourcesContent() {
     return includeSourcesContent;
+  }
+
+  public SourceMapOutputType getSourceMapOutputType() {
+    return sourceMapOutputType;
   }
 }

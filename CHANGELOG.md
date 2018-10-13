@@ -1,7 +1,9 @@
-# Minify Maven Plugin
+# Closure Compiler Maven Plugin
 
 ## 2.0.0
 
+* Add an option `closureMapToOriginalSourceFiles` (see https://github.com/samaxes/minify-maven-plugin/pull/97).
+* Add an option `closureSourceMapOuptutType`. Set it to `inline` to include the source map in the minified file. Together with the newly supported `closureIncludeSourcesContent` option this allows for standalone source map that always just work!
 * Add new options supported by closure compiler.
 * Remove YUICompressor. It is dead. Also remove CSS minification and concentrate on one task: closure compiler.
 * Adopt [Semantic Versioning](http://semver.org/) scheme.

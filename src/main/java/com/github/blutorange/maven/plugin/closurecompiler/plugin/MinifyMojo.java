@@ -41,7 +41,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
+import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationType;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CheckLevel;
@@ -199,6 +201,7 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
+   * <li>{@code STABLE} Use stable features
    * </ul>
    * @since 1.7.2
    */
@@ -207,8 +210,14 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * Refers to which version of ECMAScript your code will be returned in.<br/>
-   * It accepts the same options as {@code closureLanguageIn} and is used to transpile between different levels of
-   * ECMAScript.
+   * It is used to transpile between different levels of ECMAScript. Possible values are
+   * <ul>
+   * <li>{@code ECMASCRIPT3}
+   * <li>{@code ECMASCRIPT5}
+   * <li>{@code ECMASCRIPT5_STRICT}
+   * <li>{@code ECMASCRIPT_2015}
+   * <li>{@code STABLE}
+   * </ul>
    * @since 1.7.5
    */
   @Parameter(property = "closureLanguageOut", defaultValue = "ECMASCRIPT_2015")
@@ -262,7 +271,7 @@ public class MinifyMojo extends AbstractMojo {
   /**
    * If true, the source map created by the Closure compiler will have one link to each of the original JavaScript
    * source files.
-   * @since 1.7.5
+   * @since 2.0.0
    */
   @Parameter(property = "closureMapToOriginalSourceFiles", defaultValue = "false")
   private boolean closureMapToOriginalSourceFiles;
@@ -286,6 +295,22 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureSortDependencies", defaultValue = "false")
   private boolean closureSortDependencies;
+
+  /**
+   * After creating the source map, the browser needs to find it. There are several options available:
+   * <ul>
+   * <li>{@code reference} (the default): Create a source map named [originalFile].map, and add a reference to it in the
+   * minified file.</li>
+   * <li>{@code file}: Just create a source map named [originalFile].map, do not add a reference in the minified file.
+   * This may be useful when you want to add the {@code Source-Map} HTTP header.</li>
+   * <li>{@code file}: Do not write a separate source map file, but instead include the source file content in the
+   * minified file (as base64). This makes it easier for the browser to find the source map. Especially useful when used
+   * with JSF/Primefaces.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureSourceMapOutputType", defaultValue = "reference")
+  private SourceMapOutputType closureSourceMapOutputType;
 
   /**
    * Treat certain warnings as the specified CheckLevel:
@@ -418,7 +443,7 @@ public class MinifyMojo extends AbstractMojo {
 
     return new ClosureConfig(closureLanguageIn, closureLanguageOut, closureEnvironment, closureCompilationLevel,
         dependencyOptions, externs, closureCreateSourceMap, warningLevels, closureAngularPass,
-        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent);
+        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent, closureSourceMapOutputType);
   }
 
   private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
@@ -437,7 +462,7 @@ public class MinifyMojo extends AbstractMojo {
       }
 
       for (Aggregation aggregation : aggregationConfiguration.getBundles()) {
-        if (Aggregation.AggregationType.js.equals(aggregation.getType())) {
+        if (AggregationType.js.equals(aggregation.getType())) {
           tasks.add(createJSTask(closureConfig, aggregation.getFiles(),
               Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
         }

@@ -21,13 +21,6 @@ import java.util.List;
  */
 public class Aggregation {
 
-  /**
-   * Defines the aggregation type.
-   */
-  public enum AggregationType {
-  css, js
-  }
-
   private AggregationType type;
 
   private String name;

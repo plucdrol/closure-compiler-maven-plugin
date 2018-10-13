@@ -140,6 +140,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       if (!targetDir.exists() && !targetDir.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetDir); }
 
       if (!files.isEmpty()) {
+
+        // Minify only
         if (skipMerge) {
           log.info("Skipping the merge step...");
           String sourceBasePath = sourceDir.getAbsolutePath();
@@ -156,19 +158,26 @@ public abstract class ProcessFilesTask implements Callable<Object> {
             minify(mergedFile, minifiedFile);
           }
         }
+        // Merge-only
         else if (skipMinify) {
           File mergedFile = new File(targetDir, mergedFilename);
           merge(mergedFile);
           log.info("Skipping the minify step...");
         }
+        // Minify + merge
         else {
-          File mergedFile = new File(targetDir, (nosuffix) ? mergedFilename + TEMP_SUFFIX : mergedFilename);
-          merge(mergedFile);
           File minifiedFile = new File(targetDir, (nosuffix) ? mergedFilename : FileUtils.removeExtension(mergedFilename) + suffix + "." + FileUtils.extension(mergedFilename));
-          minify(mergedFile, minifiedFile);
-          if (nosuffix) {
-            if (!mergedFile.delete()) {
-              mergedFile.deleteOnExit();
+          if (closureConfig.getMapToOriginalSourceFiles()) {
+            minify(files, minifiedFile);
+          }
+          else {
+            File mergedFile = new File(targetDir, (nosuffix) ? mergedFilename + TEMP_SUFFIX : mergedFilename);
+            merge(mergedFile);
+            minify(mergedFile, minifiedFile);
+            if (nosuffix) {
+              if (!mergedFile.delete()) {
+                mergedFile.deleteOnExit();
+              }
             }
           }
         }

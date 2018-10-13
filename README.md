@@ -5,7 +5,7 @@
 Forked from [Minify Maven Plugin](http://samaxes.github.io/minify-maven-plugin/). That project seems to be inactive. In line with the principle of single
 responsibility, this fork is meant only for processing JavaScript files. The [YUI Compressor](http://yui.github.com/yuicompressor/) is dead, so what remains
 is a maven plugin for [Google Closure Compiler](https://developers.google.com/closure/compiler/). I found some plugins for the closure compiler, but found
-them all to be lacking. So I decided to fork the excellent Minify Maven Plugin.
+them all to be lacking. So I decided to fork the excellent Minify Maven Plugin as a base for a closure compiler maven plugin.
 
 This plugin combines and minimizes JavaScript files. It produces a merged and a minified version.
 
@@ -20,7 +20,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
   <plugins>
     <plugin>
       <groupId>com.github.blutornage</groupId>
-      <artifactId>minify-maven-plugin</artifactId>
+      <artifactId>closure-compiler-maven-plugin</artifactId>
       <version>2.0.0</version>
       <executions>
         <execution>
@@ -32,7 +32,6 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
               <!-- ... -->
               <jsSourceFile>file-n.js</jsSourceFile>
             </jsSourceFiles>
-            <jsEngine>CLOSURE</jsEngine>
           </configuration>
           <goals>
             <goal>minify</goal>
@@ -46,6 +45,12 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 
 For more information, check the [documentation](http://blutorange.github.com/closure-compiler-maven-plugin/) or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/releases/).
 
-## License
+# Release
+
+* Update version in `pom.xml` and `demo/pom.xml`.
+* Update version in `site/src/*`.
+* `mvn clean install deploy`
+
+# License
 
 This distribution is licensed under the terms of the Apache License, Version 2.0 (see LICENSE.txt).
