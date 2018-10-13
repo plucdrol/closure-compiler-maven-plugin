@@ -49,10 +49,10 @@
 					<execution>
 						<id>default-minify</id>
 						<configuration>
-							<jsSourceFiles>
-								<jsSourceFile>subdir/pearce-kelly.js</jsSourceFile>
-								<jsSourceFile>blutorange.js</jsSourceFile>
-							</jsSourceFiles>
+							<jsSourceIncludes>
+								<jsSourceInclude>subdir/pearce-kelly.js</jsSourceInclude>
+								<jsSourceInclude>blutorange.js</jsSourceInclude>
+							</jsSourceIncludes>
 							<skipMinify>false</skipMinify>
 							<jsFinalFile>merged.js</jsFinalFile>
 							<closureCreateSourceMap>true</closureCreateSourceMap>

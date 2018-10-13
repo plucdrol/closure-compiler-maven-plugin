@@ -2,6 +2,7 @@
 
 ## 2.0.0
 
+* When multple `jsSourceIncludes` are specified, preserve their order. File matched by a single `jsSourceIncludes` (when using wildcards) are sorted by name.
 * When merging files, a line separator is added between each file. A source file may end with a comment `// ...`, and without a new line the resulting merged file is not syntactically valid.
 * Add an options `outputWrapper`. This is the same as `output_wrapper` from closure compiler, but implemented in the plugin as the closure compiler API does not expose this option.
 * Add an option `closureMapToOriginalSourceFiles` (see https://github.com/samaxes/minify-maven-plugin/pull/97).

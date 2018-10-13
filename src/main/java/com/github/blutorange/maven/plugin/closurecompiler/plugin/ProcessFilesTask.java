@@ -25,10 +25,14 @@ import java.io.OutputStreamWriter;
 import java.io.SequenceInputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.maven.plugin.logging.Log;
@@ -38,6 +42,8 @@ import org.codehaus.plexus.util.IOUtil;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
+import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
+import com.google.common.base.Predicate;
 
 /**
  * Abstract class for merging and compressing a files list.
@@ -314,29 +320,37 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @return the files to copy
    */
   private List<File> getFilesToInclude(List<String> includes, List<String> excludes) {
-    List<File> includedFiles = new ArrayList<>();
 
-    if (includes != null && !includes.isEmpty()) {
-      DirectoryScanner scanner = new DirectoryScanner();
+    if (includes == null || includes.isEmpty()) { return new ArrayList<>(); }
 
-      scanner.setIncludes(includes.toArray(new String[includes.size()]));
-      scanner.setExcludes(excludes.toArray(new String[excludes.size()]));
-      scanner.addDefaultExcludes();
-      scanner.setBasedir(sourceDir);
-      scanner.scan();
+    String[] excludesArray = excludes.toArray(new String[excludes.size()]);
 
-      for (String includedFilename : scanner.getIncludedFiles()) {
-        includedFiles.add(new File(sourceDir, includedFilename));
-      }
-
-      Collections.sort(includedFiles, new Comparator<File>() {
-        @Override
-        public int compare(File o1, File o2) {
-          return o1.getName().compareToIgnoreCase(o2.getName());
-        }
-      });
-    }
-
-    return includedFiles;
+    // For each specified include, get all matching files, then
+    // sort first by the specified order, then by file path. Finally,
+    // filter out duplicate files.
+    return IntStream.range(0, includes.size()) //
+        .mapToObj(i -> new TwoTuple<>(i, includes.get(i))) //
+        .flatMap(include -> {
+          DirectoryScanner scanner = new DirectoryScanner();
+          scanner.setIncludes(new String[] { include.getSecond() });
+          scanner.setExcludes(excludesArray);
+          scanner.addDefaultExcludes();
+          scanner.setBasedir(sourceDir);
+          scanner.scan();
+          return Arrays.stream(scanner.getIncludedFiles()).map(includedFilename -> {
+            File includedFile = new File(sourceDir, includedFilename);
+            return new TwoTuple<>(include.getFirst(), includedFile);
+          });
+        }) //
+        .sorted(TwoTuple.getComparator()) //
+        .map(TwoTuple::getSecond) //
+        .filter(distinctByKey(File::getAbsolutePath)) //
+        .collect(Collectors.toList());
   }
+
+  private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+    Set<Object> seen = new HashSet<>();
+    return t -> seen.add(keyExtractor.apply(t));
+  }
+
 }
