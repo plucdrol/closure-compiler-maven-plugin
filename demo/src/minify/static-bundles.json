@@ -1,7 +1,6 @@
 {
     "bundles": [
         {
-            "type": "js",
             "name": "static-combined.js",
             "files": [
                 "blutorange.js",

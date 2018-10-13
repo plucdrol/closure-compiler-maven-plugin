@@ -41,7 +41,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
-import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationType;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.common.base.Strings;
@@ -269,12 +268,49 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureCreateSourceMap;
 
   /**
-   * If true, the source map created by the Closure compiler will have one link to each of the original JavaScript
-   * source files.
+   * If {@code true}, the source map created by the Closure compiler will have one link to each of the original
+   * JavaScript source files. Default is {@code false}.
    * @since 2.0.0
    */
   @Parameter(property = "closureMapToOriginalSourceFiles", defaultValue = "false")
   private boolean closureMapToOriginalSourceFiles;
+
+  /**
+   * If {@code true}, the processed ("minified") file is pretty printed (formatted with new lines). Default is
+   * {@code false}.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closurePrettyPrint", defaultValue = "false")
+  private boolean closurePrettyPrint;
+
+  /**
+   * If {@code true}, ES6 polyfills are written to the output file (such as for Set, Map etc.) Default is {@link true}.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureRewritePolyfills", defaultValue = "true")
+  private boolean closureRewritePolyfills;
+
+  /**
+   * If {@code false}, converts some characters such as '&lt;' and '&gt;' to '\x3c' and '\x3d' so that they are safe to
+   * put inside a script tag in an HTML file. Default is {@code true}.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureTrustedStrings", defaultValue = "true")
+  private boolean closureTrustedStrings;
+
+  /**
+   * <p>
+   * If not an empty or blank string, interpolate output into this string at the place denoted by the marker token
+   * {@code %output%}. Use marker token {@code %output|jsstring%} to do js string escaping on the output. Default is the
+   * empty string.
+   * </p>
+   * <p>
+   * Please take care when using this options with source maps -- the mapping will not match anymore.
+   * </p>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureOutputWrapper", defaultValue = "")
+  private String closureOutputWrapper;
 
   /**
    * If {@code true}, include the content of the source file in the source map directly (via the {@code sourceContent}
@@ -443,7 +479,9 @@ public class MinifyMojo extends AbstractMojo {
 
     return new ClosureConfig(closureLanguageIn, closureLanguageOut, closureEnvironment, closureCompilationLevel,
         dependencyOptions, externs, closureCreateSourceMap, warningLevels, closureAngularPass,
-        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent, closureSourceMapOutputType);
+        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent,
+        closureSourceMapOutputType, closurePrettyPrint, closureRewritePolyfills, closureTrustedStrings,
+        closureOutputWrapper);
   }
 
   private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
@@ -462,10 +500,8 @@ public class MinifyMojo extends AbstractMojo {
       }
 
       for (Aggregation aggregation : aggregationConfiguration.getBundles()) {
-        if (AggregationType.js.equals(aggregation.getType())) {
-          tasks.add(createJSTask(closureConfig, aggregation.getFiles(),
-              Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
-        }
+        tasks.add(createJSTask(closureConfig, aggregation.getFiles(),
+            Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
       }
     }
     else {

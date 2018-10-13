@@ -1,4 +1,3 @@
-
 class Blutorange {
 	constructor()  {
 		this.version = "final";

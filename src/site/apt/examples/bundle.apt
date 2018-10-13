@@ -49,11 +49,10 @@ Configuration Format
 {
     "bundles": [
         {
-            "type": "js",
             "name": "static-combined.js",
             "files": [
-                "samaxesjs.core.js",
-                "subdir/samaxesjs.toc.js"
+                "blutorange.js",
+                "subdir/pearce-kelly.js"
             ]
         }
     ]

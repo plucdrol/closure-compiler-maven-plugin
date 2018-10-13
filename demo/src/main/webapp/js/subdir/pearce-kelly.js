@@ -162,4 +162,4 @@ var PearceKellyDetector = (function () {
     return PearceKellyDetector;
 }());
 
-window.PearceKellyDetector = PearceKellyDetector;
+window.PearceKellyDetector = PearceKellyDetector; // end-of-file

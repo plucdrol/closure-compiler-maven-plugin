@@ -63,6 +63,14 @@ public class ClosureConfig {
 
   private final SourceMapOutputType sourceMapOutputType;
 
+  private boolean prettyPrint;
+
+  private boolean rewritePolyfills;
+
+  private boolean trustedStrings;
+
+  private String outputWrapper;
+
   /**
    * Init Closure Compiler values.
    * @param languageIn the version of ECMAScript used to report errors in the code
@@ -80,12 +88,17 @@ public class ClosureConfig {
    * @param closureSourceMapInclusionType
    * @param includeSourceContent If true, include the content of the source file in the source map. source map
    * @param sourceMapOutputType How to include the source map (inline or separate file).
+   * @param prettyPrint
+   * @param rewritePolyfills
+   * @param outputWrapper
    */
   public ClosureConfig(LanguageMode languageIn, LanguageMode languageOut, CompilerOptions.Environment environment,
       CompilationLevel compilationLevel, DependencyOptions dependencyOptions,
       List<SourceFile> externs, boolean createSourceMap,
       Map<DiagnosticGroup, CheckLevel> warningLevels, boolean angularPass,
-      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent, SourceMapOutputType sourceMapOutputType) {
+      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent,
+      SourceMapOutputType sourceMapOutputType, boolean prettyPrint, boolean rewritePolyfills, boolean trustedStrings,
+      String outputWrapper) {
     this.languageIn = languageIn;
     this.languageOut = languageOut;
     this.environment = environment;
@@ -100,6 +113,10 @@ public class ClosureConfig {
     this.extraAnnotations = extraAnnotations;
     this.includeSourcesContent = includeSourcesContent;
     this.sourceMapOutputType = sourceMapOutputType;
+    this.prettyPrint = prettyPrint;
+    this.rewritePolyfills = rewritePolyfills;
+    this.trustedStrings = trustedStrings;
+    this.outputWrapper = outputWrapper;
 
     for (Map.Entry<String, String> defineReplacement : defineReplacements.entrySet()) {
       if (Strings.isNullOrEmpty(defineReplacement.getValue())) { throw new RuntimeException("Define replacement " + defineReplacement.getKey() + " does not have a value."); }
@@ -188,5 +205,21 @@ public class ClosureConfig {
 
   public SourceMapOutputType getSourceMapOutputType() {
     return sourceMapOutputType;
+  }
+
+  public boolean getPrettyPrint() {
+    return prettyPrint;
+  }
+
+  public boolean getRewritePolyfills() {
+    return rewritePolyfills;
+  }
+
+  public boolean getTrustedStrings() {
+    return trustedStrings;
+  }
+
+  public String getOutputWrapper() {
+    return outputWrapper;
   }
 }

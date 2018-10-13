@@ -50,15 +50,16 @@
 						<id>default-minify</id>
 						<configuration>
 							<jsSourceFiles>
-								<jsSourceFile>blutorange.js</jsSourceFile>
 								<jsSourceFile>subdir/pearce-kelly.js</jsSourceFile>
+								<jsSourceFile>blutorange.js</jsSourceFile>
 							</jsSourceFiles>
+							<skipMinify>false</skipMinify>
+							<jsFinalFile>merged.js</jsFinalFile>
 							<closureCreateSourceMap>true</closureCreateSourceMap>
 							<closureLanguageIn>ECMASCRIPT_2016</closureLanguageIn>
 							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
 							<closureIncludeSourcesContent>true</closureIncludeSourcesContent>
 							<closureSourceMapOutputType>inline</closureSourceMapOutputType>
-							<closureMapToOriginalSourceFiles>false</closureMapToOriginalSourceFiles>
 							<closureDefine>
 								<DEFINE_TEST>false</DEFINE_TEST>
 							</closureDefine>

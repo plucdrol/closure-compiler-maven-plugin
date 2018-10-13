@@ -2,6 +2,8 @@
 
 ## 2.0.0
 
+* When merging files, a line separator is added between each file. A source file may end with a comment `// ...`, and without a new line the resulting merged file is not syntactically valid.
+* Add an options `outputWrapper`. This is the same as `output_wrapper` from closure compiler, but implemented in the plugin as the closure compiler API does not expose this option.
 * Add an option `closureMapToOriginalSourceFiles` (see https://github.com/samaxes/minify-maven-plugin/pull/97).
 * Add an option `closureSourceMapOuptutType`. Set it to `inline` to include the source map in the minified file. Together with the newly supported `closureIncludeSourcesContent` option this allows for standalone source map that always just work!
 * Add new options supported by closure compiler.

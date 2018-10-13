@@ -29,10 +29,12 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 import org.apache.maven.plugin.logging.Log;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.OutputWrapper;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
@@ -54,6 +56,8 @@ import eu.maxschuster.dataurl.IDataUrlSerializer;
  * Task for merging and compressing JavaScript files.
  */
 public class ProcessJSFilesTask extends ProcessFilesTask {
+
+  private UnaryOperator<String> outputWrapperInstance;
 
   /**
    * Task constructor.
@@ -105,6 +109,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
     minifiedFile.getParentFile().mkdirs();
 
+    UnaryOperator<String> outputInterpolator = createOutputInterpolator();
+
     try (OutputStream out = new FileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, charset)) {
 
       log.info("Creating the minified file [" + ((verbose) ? minifiedFile.getPath() : minifiedFile.getName())
@@ -153,7 +159,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       checkForErrors(compiler);
 
       // Write compiled file to output file
-      writer.append(compiler.toSource());
+      writer.append(outputInterpolator.apply(compiler.toSource()));
 
       // Create source map if configured.
       if (closureConfig.getSourceMapFormat() != null) {
@@ -171,6 +177,16 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     logCompressionGains(srcFiles, minifiedFile);
   }
 
+  private UnaryOperator<String> createOutputInterpolator() throws IOException {
+    String outputWrapper = closureConfig.getOutputWrapper();
+    if (outputWrapper == null || outputWrapper.trim().length() == 0) {
+      return UnaryOperator.identity();
+    }
+    else {
+      return new OutputWrapper(outputWrapper);
+    }
+  }
+
   private void setCommonOptions(CompilerOptions options) {
     closureConfig.getCompilationLevel().setOptionsForCompilationLevel(options);
     options.setOutputCharset(charset);
@@ -181,6 +197,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     options.setDependencyOptions(closureConfig.getDependencyOptions());
     options.setExtraAnnotationNames(closureConfig.getExtraAnnotations());
     options.setDefineReplacements(closureConfig.getDefineReplacements());
+    options.setPrettyPrint(closureConfig.getPrettyPrint());
+    options.setRewritePolyfills(closureConfig.getRewritePolyfills());
+    options.setTrustedStrings(closureConfig.getTrustedStrings());
   }
 
   private void checkForErrors(Compiler compiler) {

@@ -21,56 +21,22 @@ import java.util.List;
  */
 public class Aggregation {
 
-  private AggregationType type;
-
   private String name;
 
   private List<String> files = Collections.emptyList();
 
-  /**
-   * Gets the type.
-   * @return the type
-   */
-  public AggregationType getType() {
-    return type;
-  }
-
-  /**
-   * Sets the type.
-   * @param type the type to set
-   */
-  public void setType(AggregationType type) {
-    this.type = type;
-  }
-
-  /**
-   * Gets the name.
-   * @return the name
-   */
   public String getName() {
     return name;
   }
 
-  /**
-   * Sets the name.
-   * @param name the name to set
-   */
   public void setName(String name) {
     this.name = name;
   }
 
-  /**
-   * Gets the files.
-   * @return the files
-   */
   public List<String> getFiles() {
     return files;
   }
 
-  /**
-   * Sets the files.
-   * @param files the files to set
-   */
   public void setFiles(List<String> files) {
     this.files = files;
   }

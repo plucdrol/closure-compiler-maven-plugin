@@ -13,13 +13,17 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Supplier;
 
 import org.apache.maven.plugin.logging.Log;
 
@@ -30,7 +34,7 @@ import org.apache.maven.plugin.logging.Log;
  */
 public class SourceFilesEnumeration implements Enumeration<InputStream> {
 
-  private List<File> files;
+  private List<InputStreamSupplier> suppliers;
 
   private int current = 0;
 
@@ -39,12 +43,18 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    * @param log Maven plugin log
    * @param files list of files
    * @param verbose show source file paths in log output
+   * @param charset
    */
-  public SourceFilesEnumeration(Log log, List<File> files, boolean verbose) {
-    this.files = files;
+  public SourceFilesEnumeration(Log log, List<File> files, boolean verbose, Charset charset) {
+    this.suppliers = new ArrayList<>();
 
-    for (File file : files) {
+    for (int i = 0, j = files.size(); i < j; ++i) {
+      File file = files.get(i);
       log.info("Processing source file [" + ((verbose) ? file.getPath() : file.getName()) + "].");
+      this.suppliers.add(new FileInputStreamSupplier(file));
+      if (i < j - 1) {
+        this.suppliers.add(new NewlineInputStreamSupplier(charset));
+      }
     }
   }
 
@@ -55,7 +65,7 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    */
   @Override
   public boolean hasMoreElements() {
-    return (current < files.size());
+    return (current < suppliers.size());
   }
 
   /**
@@ -65,23 +75,53 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    */
   @Override
   public InputStream nextElement() {
-    InputStream is;
+    if (!hasMoreElements()) { throw new NoSuchElementException("No more files!"); }
+    InputStreamSupplier nextElement = suppliers.get(current);
+    current += 1;
+    return nextElement.get();
+  }
 
-    if (!hasMoreElements()) {
-      throw new NoSuchElementException("No more files!");
+  private static interface InputStreamSupplier extends Supplier<InputStream> {
+  }
+
+  /**
+   * Supplies an input stream with the content of a newline separator.
+   * @author madgaksha
+   */
+  private static class NewlineInputStreamSupplier implements InputStreamSupplier {
+    private final Charset charset;
+
+    public NewlineInputStreamSupplier(Charset charset) {
+      this.charset = charset;
     }
-    else {
-      File nextElement = files.get(current);
-      current++;
 
+    @Override
+    public InputStream get() {
+      return new ByteArrayInputStream(System.lineSeparator().getBytes(charset));
+    }
+  }
+
+  /**
+   * Supplies an input stream with the content of the given file.
+   * @author madgaksha
+   */
+  private static class FileInputStreamSupplier implements InputStreamSupplier {
+    private final File file;
+
+    public FileInputStreamSupplier(File file) {
+      this.file = file;
+    }
+
+    @Override
+    public InputStream get() {
+      InputStream is;
       try {
-        is = new FileInputStream(nextElement);
+        is = new FileInputStream(file);
       }
       catch (FileNotFoundException e) {
-        throw new NoSuchElementException("The path [" + nextElement.getPath() + "] cannot be found.");
+        throw new NoSuchElementException("The path [" + file.getPath() + "] cannot be found.");
       }
+      return is;
     }
-
-    return is;
   }
 }

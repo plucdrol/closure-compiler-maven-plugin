@@ -200,7 +200,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   protected void merge(File mergedFile) throws IOException {
     if (!mergedFile.getParentFile().exists() && !mergedFile.getParentFile().mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + mergedFile.getParentFile()); }
 
-    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, verbose));
+    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, verbose, charset));
         OutputStream out = new FileOutputStream(mergedFile);
         InputStreamReader sequenceReader = new InputStreamReader(sequence, charset);
         OutputStreamWriter outWriter = new OutputStreamWriter(out, charset)) {
