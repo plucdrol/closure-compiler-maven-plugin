@@ -49,6 +49,8 @@ For more information, check the [documentation](http://blutorange.github.com/clo
 
 * Update version in `pom.xml` and `demo/pom.xml`.
 * Update version in `site/src/*`.
+* Generate site with `mvn clean plugin:report site`, check it, then upload by setting `dryRun` 
+  to `false` and running the command again.
 * `mvn clean install deploy`
 
 # License

@@ -5,7 +5,7 @@
 
     <body>
         <breadcrumbs>
-            <item name="Minify Maven Plugin" href="https://github.com/samaxes/minify-maven-plugin" />
+            <item name="Minify Maven Plugin" href="https://github.com/blutorange/closure-compiler-maven-plugin" />
         </breadcrumbs>
 
         <menu ref="modules" />
@@ -27,24 +27,18 @@
     <skin>
         <groupId>org.apache.maven.skins</groupId>
         <artifactId>maven-fluido-skin</artifactId>
-        <version>1.5</version>
+        <version>1.7</version>
     </skin>
 
     <custom>
         <fluidoSkin>
             <leftColumnClass>span3</leftColumnClass>
-            <bodyColumnClass>span9</bodyColumnClass>
+            <bodyColumnClass>span9</bodyColumnClass>            
             <gitHub>
-                <projectId>samaxes/minify-maven-plugin</projectId>
+                <projectId>bluorange/closure-compiler-maven-plugin</projectId>
                 <ribbonOrientation>right</ribbonOrientation>
                 <ribbonColor>red</ribbonColor>
             </gitHub>
-            <twitter>
-                <user>samaxes</user>
-                <showUser>true</showUser>
-            </twitter>
-            <facebookLike />
-            <googlePlusOne />
         </fluidoSkin>
     </custom>
 </project>

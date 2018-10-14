@@ -9,7 +9,8 @@
 
 Using include/exclude patterns
 
-  Supports include/exclude patterns for lexicographical ordering.
+  Supports include/exclude patterns for lexicographical ordering. All files matching an <<<include>>> are sorted alphabetically.
+  Files from different <<<include>>>'s are added in the order as specified when merging files.
 
 +---+
 <project>
@@ -25,12 +26,12 @@ Using include/exclude patterns
           <execution>
             <id>default-minify</id>
             <configuration>
-              <jsSourceIncludes>
-                <jsSourceInclude>**</jsSourceInclude>
-              </jsSourceIncludes>
-              <jsSourceExcludes>
-                <jsSourceExclude>**/*.min.js</jsSourceExclude>
-              </jsSourceExcludes>
+              <includes>
+                <include>**</include>
+              </includes>
+              <excludes>
+                <exclude>**/*.min.js</exclude>
+              </excludes>
             </configuration>
             <goals>
               <goal>minify</goal>

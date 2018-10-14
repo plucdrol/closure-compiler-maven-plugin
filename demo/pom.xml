@@ -38,7 +38,7 @@
 				<version>3.2.2</version>
 				<configuration>
 					<failOnMissingWebXml>false</failOnMissingWebXml>
-					<warSourceExcludes>**/reset.css,**/fonts.css,**/base.css,**/toc.css,**/samaxesjs.core.js,**/samaxesjs.toc.js</warSourceExcludes>
+					<warSourceExcludes>**/blutorange.js,**/pearce-kelly.js</warSourceExcludes>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -49,12 +49,11 @@
 					<execution>
 						<id>default-minify</id>
 						<configuration>
-							<jsSourceIncludes>
-								<jsSourceInclude>subdir/pearce-kelly.js</jsSourceInclude>
-								<jsSourceInclude>blutorange.js</jsSourceInclude>
-							</jsSourceIncludes>
-							<skipMinify>false</skipMinify>
-							<jsFinalFile>merged.js</jsFinalFile>
+							<includes>
+								<include>subdir/pearce-kelly.js</include>
+								<include>blutorange.js</include>
+							</includes>
+							<outputFilename>merged.js</outputFilename>
 							<closureCreateSourceMap>true</closureCreateSourceMap>
 							<closureLanguageIn>ECMASCRIPT_2016</closureLanguageIn>
 							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>

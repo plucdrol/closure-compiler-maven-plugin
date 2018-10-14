@@ -25,11 +25,11 @@ Basic Configuration
           <execution>
             <id>default-minify</id>
             <configuration>
-              <jsSourceFiles>
-                <jsSourceFile>file-1.js</jsSourceFile>
+              <includes>
+                <include>file-1.js</include>
                 <!-- ... -->
-                <jsSourceFile>file-n.js</jsSourceFile>
-              </jsSourceFiles>
+                <include>file-n.js</include>
+              </includes>
             </configuration>
             <goals>
               <goal>minify</goal>

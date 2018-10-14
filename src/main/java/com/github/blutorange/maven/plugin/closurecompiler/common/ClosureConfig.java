@@ -13,17 +13,30 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
+import java.io.File;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.maven.plugin.MojoFailureException;
+
+import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
 import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.DependencyOptions;
 import com.google.javascript.jscomp.DiagnosticGroup;
+import com.google.javascript.jscomp.DiagnosticGroups;
+import com.google.javascript.jscomp.ModuleIdentifier;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
 import com.google.javascript.jscomp.SourceMap.Format;
@@ -33,102 +46,78 @@ import com.google.javascript.jscomp.SourceMap.Format;
  */
 public class ClosureConfig {
 
-  private final LanguageMode languageIn;
+  private static final String BINARY_PREFIX = "0b";
 
-  private final LanguageMode languageOut;
+  private static final String FILE_PREFIX = "file:";
 
-  private final CompilerOptions.Environment environment;
+  private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
+    CompilerOptions options = new CompilerOptions();
 
-  private final CompilationLevel compilationLevel;
+    options.setOutputCharset(Charset.forName(mojo.getEncoding()));
+    options.setLanguageIn(mojo.getClosureLanguageIn());
+    options.setLanguageOut(mojo.getClosureLanguageOut());
 
-  private final DependencyOptions dependencyOptions;
+    options.setAngularPass(mojo.isClosureAngularPass());
+    options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
+    options.setDependencyOptions(createDependencyOptions(mojo));
+    options.setDefineReplacements(createDefineReplacements(mojo));
+    options.setExtraAnnotationNames(mojo.getClosureExtraAnnotations());
+    options.setPrettyPrint(mojo.isClosurePrettyPrint());
+    options.setRewritePolyfills(mojo.isClosureRewritePolyfills());
+    options.setTrustedStrings(mojo.isClosureTrustedStrings());
+    createWarningLevels(mojo).forEach(options::setWarningLevel);
 
-  private final List<SourceFile> externs;
+    return options;
+  }
 
-  private final Format sourceMapFormat;
+  private static Map<String, Object> createDefineReplacements(MinifyMojo mojo) {
+    Map<String, Object> defineReplacements = new HashMap<>();
+    for (Map.Entry<String, String> defineReplacement : mojo.getClosureDefineReplacements().entrySet()) {
+      String key = defineReplacement.getKey();
+      String value = Strings.nullToEmpty(defineReplacement.getValue()).trim();
 
-  private final Map<DiagnosticGroup, CheckLevel> warningLevels;
+      if (Strings.isNullOrEmpty(value)) { throw new RuntimeException("Define replacement " + key + " does not have a value."); }
 
-  private final boolean colorizeErrorOutput;
-
-  private final boolean angularPass;
-
-  private final List<String> extraAnnotations;
-
-  private final Map<String, Object> defineReplacements = new HashMap<>();
-
-  private final boolean mapToOriginalSourceFiles;
-
-  private final boolean includeSourcesContent;
-
-  private final SourceMapOutputType sourceMapOutputType;
-
-  private boolean prettyPrint;
-
-  private boolean rewritePolyfills;
-
-  private boolean trustedStrings;
-
-  private String outputWrapper;
-
-  /**
-   * Init Closure Compiler values.
-   * @param languageIn the version of ECMAScript used to report errors in the code
-   * @param languageOut the version of ECMAScript the code will be returned in
-   * @param environment the set of builtin externs to load
-   * @param compilationLevel the degree of compression and optimization to apply to JavaScript
-   * @param dependencyOptions options for how to manage dependencies between input files
-   * @param externs preserve symbols that are defined outside of the code you are compiling
-   * @param createSourceMap create a source map for the minifed/combined production files
-   * @param warningLevels a map of warnings to enable or disable in the compiler
-   * @param angularPass use {@code @ngInject} annotation to generate Angular injections
-   * @param extraAnnotations make extra annotations known to the closure engine
-   * @param defineReplacements replacements for {@code @defines}
-   * @param mapToOriginalSourceFiles if true, do not merge the source js files and create a link to each of them in the
-   * @param closureSourceMapInclusionType
-   * @param includeSourceContent If true, include the content of the source file in the source map. source map
-   * @param sourceMapOutputType How to include the source map (inline or separate file).
-   * @param prettyPrint
-   * @param rewritePolyfills
-   * @param outputWrapper
-   */
-  public ClosureConfig(LanguageMode languageIn, LanguageMode languageOut, CompilerOptions.Environment environment,
-      CompilationLevel compilationLevel, DependencyOptions dependencyOptions,
-      List<SourceFile> externs, boolean createSourceMap,
-      Map<DiagnosticGroup, CheckLevel> warningLevels, boolean angularPass,
-      List<String> extraAnnotations, Map<String, String> defineReplacements, boolean mapToOriginalSourceFiles, boolean includeSourcesContent,
-      SourceMapOutputType sourceMapOutputType, boolean prettyPrint, boolean rewritePolyfills, boolean trustedStrings,
-      String outputWrapper) {
-    this.languageIn = languageIn;
-    this.languageOut = languageOut;
-    this.environment = environment;
-    this.mapToOriginalSourceFiles = createSourceMap && mapToOriginalSourceFiles;
-    this.compilationLevel = compilationLevel;
-    this.dependencyOptions = dependencyOptions;
-    this.externs = externs;
-    this.sourceMapFormat = (createSourceMap) ? SourceMap.Format.V3 : null;
-    this.warningLevels = warningLevels;
-    this.colorizeErrorOutput = Boolean.TRUE;
-    this.angularPass = angularPass;
-    this.extraAnnotations = extraAnnotations;
-    this.includeSourcesContent = includeSourcesContent;
-    this.sourceMapOutputType = sourceMapOutputType;
-    this.prettyPrint = prettyPrint;
-    this.rewritePolyfills = rewritePolyfills;
-    this.trustedStrings = trustedStrings;
-    this.outputWrapper = outputWrapper;
-
-    for (Map.Entry<String, String> defineReplacement : defineReplacements.entrySet()) {
-      if (Strings.isNullOrEmpty(defineReplacement.getValue())) { throw new RuntimeException("Define replacement " + defineReplacement.getKey() + " does not have a value."); }
-
-      if (String.valueOf(true).equals(defineReplacement.getValue()) ||
-          String.valueOf(false).equals(defineReplacement.getValue())) {
-        this.defineReplacements.put(defineReplacement.getKey(), Boolean.valueOf(defineReplacement.getValue()));
+      if ("true".equals(value)) {
+        defineReplacements.put(key, Boolean.TRUE);
         continue;
       }
 
+      if ("false".equals(value)) {
+        defineReplacements.put(key, Boolean.FALSE);
+        continue;
+      }
+
+      // Check for quoted string
+      if (value.startsWith("\"") || value.startsWith("'")) {
+        defineReplacements.put(key, StringEscapeUtils.unescapeEcmaScript(value.substring(1, value.length() - 1)));
+        continue;
+      }
+
+      if (value.startsWith(BINARY_PREFIX)) {
+        try {
+          defineReplacements.put(key, Integer.valueOf(value.substring(BINARY_PREFIX.length()), 2));
+          continue;
+        }
+        catch (NumberFormatException e) {
+          mojo.getLog().warn("Cannot parse a (binary) number: " + value, e);
+          // Not a valid binary Integer, try next type
+        }
+      }
+
+      if (value.startsWith("0") && value.charAt(1) != '.') {
+        try {
+          defineReplacements.put(key, Integer.valueOf(value.substring(1), 8));
+          continue;
+        }
+        catch (NumberFormatException e) {
+          mojo.getLog().warn("Cannot parse an (octal) number: " + value, e);
+          // Not a valid binary Integer, try next type
+        }
+      }
+
       try {
-        this.defineReplacements.put(defineReplacement.getKey(), Integer.valueOf(defineReplacement.getValue()));
+        defineReplacements.put(key, Integer.valueOf(value, 10));
         continue;
       }
       catch (NumberFormatException e) {
@@ -136,90 +125,151 @@ public class ClosureConfig {
       }
 
       try {
-        this.defineReplacements.put(defineReplacement.getKey(), Double.valueOf(defineReplacement.getValue()));
+        defineReplacements.put(key, Double.valueOf(value));
         continue;
       }
       catch (NumberFormatException e) {
+        mojo.getLog().warn("Cannot parse as a number: " + value, e);
         // Not a valid Double, try next type
       }
 
-      this.defineReplacements.put(defineReplacement.getKey(), defineReplacement.getValue());
+      // Default to string
+      mojo.getLog().warn("Cannot parse define replacement value: '" + value + "'. Use quotation marks for a string.");
+      defineReplacements.put(key, value);
+    }
+    return defineReplacements;
+  }
+
+  private static DependencyOptions createDependencyOptions(MinifyMojo mojo) {
+    DependencyOptions dependencyOptions = new DependencyOptions();
+
+    dependencyOptions.setDependencySorting(mojo.isClosureDependencySorting());
+    dependencyOptions.setDependencyPruning(mojo.isClosureDependencyPruning());
+    dependencyOptions.setMoocherDropping(mojo.isClosureDependencyMoocherDropping());
+
+    dependencyOptions.setEntryPoints(CollectionUtils.emptyIfNull(mojo.getClosureDependencyEntryPoints()).stream().map(entryPoint -> {
+      if (entryPoint.startsWith(FILE_PREFIX)) {
+        File file = new File(mojo.getProject().getBasedir(), entryPoint.substring(FILE_PREFIX.length()));
+        return ModuleIdentifier.forFile(file.getAbsolutePath());
+      }
+      else {
+        return ModuleIdentifier.forClosure(entryPoint);
+      }
+    }).collect(Collectors.toList()));
+    return dependencyOptions;
+  }
+
+  private static List<SourceFile> createExterns(MinifyMojo mojo) {
+    List<SourceFile> externs = new ArrayList<>();
+    for (String extern : mojo.getClosureExterns()) {
+      externs.add(SourceFile.fromFile(new File(mojo.getBaseSourceDir(), extern).getAbsolutePath(), Charset.forName(mojo.getEncoding())));
+    }
+    return externs;
+  }
+
+  private static UnaryOperator<String> createOutputInterpolator(MinifyMojo mojo) {
+    String outputWrapper = mojo.getClosureOutputWrapper();
+    if (StringUtils.isBlank(outputWrapper)) {
+      return UnaryOperator.identity();
+    }
+    else {
+      return new OutputWrapper(outputWrapper);
     }
   }
 
-  public LanguageMode getLanguageIn() {
-    return languageIn;
+  private static Map<DiagnosticGroup, CheckLevel> createWarningLevels(MinifyMojo mojo) throws MojoFailureException {
+    Map<DiagnosticGroup, CheckLevel> warningLevels = new HashMap<>();
+    DiagnosticGroups diagnosticGroups = new DiagnosticGroups();
+    for (Map.Entry<String, String> warningLevel : mojo.getClosureWarningLevels().entrySet()) {
+      DiagnosticGroup diagnosticGroup = diagnosticGroups.forName(warningLevel.getKey());
+      if (diagnosticGroup == null) { throw new MojoFailureException("Failed to process closureWarningLevels: " + warningLevel.getKey() + " is an invalid DiagnosticGroup"); }
+
+      try {
+        CheckLevel checkLevel = CheckLevel.valueOf(warningLevel.getValue());
+        warningLevels.put(diagnosticGroup, checkLevel);
+      }
+      catch (IllegalArgumentException e) {
+        throw new MojoFailureException("Failed to process closureWarningLevels: " + warningLevel.getKey() + " is an invalid CheckLevel");
+      }
+    }
+    return warningLevels;
   }
 
-  public LanguageMode getLanguageOut() {
-    return languageOut;
-  }
+  private final CompilationLevel compilationLevel;
 
-  public CompilerOptions.Environment getEnvironment() {
-    return environment;
+  private final CompilerOptions compilerOptions;
+
+  private final CompilerOptions.Environment environment;
+
+  private final List<SourceFile> externs;
+
+  private final boolean includeSourcesContent;
+
+  private final UnaryOperator<String> outputInterpolator;
+
+  private final Format sourceMapFormat;
+
+  private final FilenameInterpolator sourceMapInterpolator;
+
+  private final SourceMapOutputType sourceMapOutputType;
+
+  /**
+   * Create a new closure compiler configuration from the mojo configuration.
+   * @param mojo Mojo with the options.
+   */
+  public ClosureConfig(MinifyMojo mojo) throws MojoFailureException {
+    this.compilationLevel = mojo.getClosureCompilationLevel();
+    this.environment = mojo.getClosureEnvironment();
+    this.includeSourcesContent = mojo.isClosureIncludeSourcesContent();
+    this.sourceMapFormat = mojo.isClosureCreateSourceMap() ? SourceMap.Format.V3 : null;
+    this.sourceMapOutputType = mojo.getClosureSourceMapOutputType();
+
+    this.sourceMapInterpolator = new FilenameInterpolator(mojo.getClosureSourceMapName());
+    this.compilerOptions = createCompilerOptions(mojo);
+    this.externs = createExterns(mojo);
+    this.outputInterpolator = createOutputInterpolator(mojo);
   }
 
   public CompilationLevel getCompilationLevel() {
     return compilationLevel;
   }
 
-  public DependencyOptions getDependencyOptions() {
-    return dependencyOptions;
+  public CompilerOptions getCompilerOptions(File sourceMapFile) {
+    CompilerOptions compilerOptions = SerializationUtils.clone(this.compilerOptions);
+
+    // Apply compilation level
+    compilationLevel.setOptionsForCompilationLevel(compilerOptions);
+
+    // Tell the compiler to create a source map, if configured.
+    if (sourceMapFormat != null) {
+      compilerOptions.setSourceMapFormat(sourceMapFormat);
+      compilerOptions.setSourceMapIncludeSourcesContent(includeSourcesContent);
+      compilerOptions.setSourceMapOutputPath(sourceMapFile.getPath());
+    }
+    return compilerOptions;
+  }
+
+  public CompilerOptions.Environment getEnvironment() {
+    return environment;
   }
 
   public List<SourceFile> getExterns() {
     return externs;
   }
 
-  public Format getSourceMapFormat() {
-    return sourceMapFormat;
+  public UnaryOperator<String> getOutputInterpolator() {
+    return outputInterpolator;
   }
 
-  public Map<DiagnosticGroup, CheckLevel> getWarningLevels() {
-    return warningLevels;
-  }
-
-  public Boolean getColorizeErrorOutput() {
-    return colorizeErrorOutput;
-  }
-
-  public Boolean getAngularPass() {
-    return angularPass;
-  }
-
-  public List<String> getExtraAnnotations() {
-    return extraAnnotations;
-  }
-
-  public Map<String, Object> getDefineReplacements() {
-    return defineReplacements;
-  }
-
-  public Boolean getMapToOriginalSourceFiles() {
-    return mapToOriginalSourceFiles;
-  }
-
-  public boolean getIncludeSourcesContent() {
-    return includeSourcesContent;
+  public FilenameInterpolator getSourceMapInterpolator() {
+    return sourceMapInterpolator;
   }
 
   public SourceMapOutputType getSourceMapOutputType() {
     return sourceMapOutputType;
   }
 
-  public boolean getPrettyPrint() {
-    return prettyPrint;
-  }
-
-  public boolean getRewritePolyfills() {
-    return rewritePolyfills;
-  }
-
-  public boolean getTrustedStrings() {
-    return trustedStrings;
-  }
-
-  public String getOutputWrapper() {
-    return outputWrapper;
+  public boolean isCreateSourceMap() {
+    return sourceMapFormat != null;
   }
 }

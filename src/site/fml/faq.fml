@@ -17,7 +17,7 @@
         <faq id="alternative-compilers">
             <question>Which JavaScript compressor engines does Closure Compiler Maven Plugin support?</question>
             <answer>
-                <p>As the name implies, it uses <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a>.
+                <p>As the name implies, it uses <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a></p>.
             </answer>
         </faq>
     </part>

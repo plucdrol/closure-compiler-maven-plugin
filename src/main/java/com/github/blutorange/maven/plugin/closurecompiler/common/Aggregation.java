@@ -23,7 +23,9 @@ public class Aggregation {
 
   private String name;
 
-  private List<String> files = Collections.emptyList();
+  private List<String> includes = Collections.emptyList();
+
+  private List<String> excludes = Collections.emptyList();
 
   public String getName() {
     return name;
@@ -33,11 +35,19 @@ public class Aggregation {
     this.name = name;
   }
 
-  public List<String> getFiles() {
-    return files;
+  public List<String> getIncludes() {
+    return includes;
   }
 
-  public void setFiles(List<String> files) {
-    this.files = files;
+  public void setIncludes(List<String> files) {
+    this.includes = files;
+  }
+
+  public List<String> getExcludes() {
+    return excludes;
+  }
+
+  public void setExcludes(List<String> excludes) {
+    this.excludes = excludes;
   }
 }

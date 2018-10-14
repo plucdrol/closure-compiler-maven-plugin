@@ -26,13 +26,13 @@ Usage
 
 ** Merge order
 
-  The following rules for file order are applied when input JS files are merged and minified into a single output file:
+  Applies when input JS files are merged and minified into a single output file:
 
-    [[1]] Input files defined in <<<jsSourceFiles>>> are merged before files defined in <<<jsSourceIncludes>>>.
+    [[1]] For each include (input file) defined in <<<includes>>>, the list of matching files is created.
+    [[2]] The matching files for each <<<include>>> are sorted alphabetically.
+    [[3]] Matching files from different <<<include>>>'s are added in the order as specified.
 
-    [[2]] Input files defined in <<<jsSourceIncludes>>> are sorted by filename before merging (see {{{./examples/patterns.html}Using include/exclude patterns}}).
-
-    [[3]] If a file is configured both in <<<jsSourceFiles>>> and <<<jsSourceIncludes>>> then only the one defined in <<<jsSourceFiles>>> will be processed.
+See also {{{./examples/patterns.html}Using include/exclude patterns}}.
 
 +---+
 <project>
@@ -43,25 +43,34 @@ Usage
       <plugin>
         <groupId>com.github.blutorange</groupId>
         <artifactId>closure-compiler-maven-plugin</artifactId>
-        <version>1.7.6</version>
+        <version>2.0.0</version>
         <executions>
           <execution>
             <id>default-minify</id>
             <phase>package</phase><!-- When omitted defaults to 'process-resources' -->
             <configuration>
+
+              <!-- These are the defaults -->
               <charset>UTF-8</charset>
-              <jsSourceDir>js</jsSourceDir>
-              <jsSourceFiles>
-                <jsSourceFile>file-1.js</jsSourceFile>
+              <baseSourceDir>${basedir}/src/main/webapp</baseSourceDir>
+              <baseTargetDir>${project.build.directory}/${project.build.finalName}</baseTargetDir>
+              <sourceDir>js</sourceDir>
+              <targetDir>js</targetDir>
+
+              <!-- List of files to process. May use wildcards. -->
+              <includes>
+                <include>file-1.js</include>
                 <!-- ... -->
-                <jsSourceFile>file-n.js</jsSourceFile>
-              </jsSourceFiles>
-              <jsFinalFile>script.js</jsFinalFile>
-              <jsEngine>CLOSURE</jsEngine>
+                <include>file-n.js</include>
+              </includes>
+              <outputFilename>script.js</outputFilename>
+
             </configuration>
+
             <goals>
               <goal>minify</goal>
             </goals>
+
           </execution>
         </executions>
       </plugin>

@@ -2,10 +2,11 @@
     "bundles": [
         {
             "name": "static-combined.js",
-            "files": [
+            "includes": [
                 "blutorange.js",
                 "subdir/pearce-kelly.js"
-            ]
+            ],
+            "excludes": []
         }
     ]
 }

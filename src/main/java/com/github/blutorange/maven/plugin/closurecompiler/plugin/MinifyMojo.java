@@ -16,7 +16,6 @@ package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 import static com.google.common.collect.Lists.newArrayList;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -26,39 +25,44 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
-import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
-import com.google.javascript.jscomp.DependencyOptions;
-import com.google.javascript.jscomp.DiagnosticGroup;
-import com.google.javascript.jscomp.DiagnosticGroups;
-import com.google.javascript.jscomp.SourceFile;
 
 /**
  * Goal for combining and/or minifying JavaScript files with closure compiler.
  */
 @Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
-public class MinifyMojo extends AbstractMojo {
+public class MinifyMojo extends AbstractMojo implements MojoMetadata {
+
+  /* ************* */
+  /* Maven options */
+  /* ************* */
+
+  @Parameter(defaultValue = "${project}", readonly = true, required = true)
+  private MavenProject project;
 
   /* ************** */
   /* Global Options */
@@ -83,26 +87,27 @@ public class MinifyMojo extends AbstractMojo {
    * encoding types.
    * @since 1.3.2
    */
-  @Parameter(property = "charset", defaultValue = "${project.build.sourceEncoding}")
-  private String charset;
+  @Parameter(property = "encoding", defaultValue = "${project.build.sourceEncoding}", alias = "charset")
+  private String encoding;
 
   /**
-   * The output file name suffix.
-   * @since 1.3.2
+   * <p>
+   * The output file name of the processed files.
+   * </p>
+   * <p>
+   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
+   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
+   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
+   * file.
+   * </p>
+   * <p>
+   * If merging files, by default the basename is set to {@code script} and the extension to {@code js}, so that the
+   * resulting merged file is called {@code script.min.js}.
+   * </p>
+   * @since 2.0.0
    */
-  @Parameter(property = "suffix", defaultValue = ".min")
-  private String suffix;
-
-  /**
-   * Do not append a suffix to the minified output file name, independently of the value in the {@code suffix}
-   * parameter.<br/>
-   * <strong>Warning:</strong> when both the options {@code nosuffix} and {@code skipMerge} are set to {@code true}, the
-   * plugin execution phase needs to be set to {@code package}, otherwise the output files will be overridden by the
-   * source files during the packaging.
-   * @since 1.7
-   */
-  @Parameter(property = "nosuffix", defaultValue = "false")
-  private boolean nosuffix;
+  @Parameter(property = "outputFileName", defaultValue = "#{basename}.min.#{extension}")
+  private String outputFilename;
 
   /**
    * Skip the merge step. Minification will be applied to each source file individually.
@@ -119,22 +124,25 @@ public class MinifyMojo extends AbstractMojo {
   private boolean skipMinify;
 
   /**
-   * Webapp source directory.
+   * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
+   * directory. Use variables such as {@code basedir} to make it relative to the current directory.
    */
-  @Parameter(property = "webappSourceDir", defaultValue = "${basedir}/src/main/webapp")
-  private String webappSourceDir;
+  @Parameter(property = "baseSourceDir", defaultValue = "${basedir}/src/main/webapp")
+  private File baseSourceDir;
 
   /**
-   * Webapp target directory.
+   * Base directory for output files. This should be an absolute path; if not, it must be relative to the project base
+   * directory. Use variables such as {@code project.build.directory} to make it relative to the current directory.
    */
-  @Parameter(property = "webappTargetDir", defaultValue = "${project.build.directory}/${project.build.finalName}")
-  private String webappTargetDir;
+  @Parameter(property = "baseTargetDir", defaultValue = "${project.build.directory}/${project.build.finalName}")
+  private File baseTargetDir;
 
   /**
-   * Specify aggregations in an external JSON formatted config file.
+   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
+   * project base directory.
    * @since 1.7.5
    */
-  @Parameter(property = "bundleConfiguration")
+  @Parameter(property = "bundleConfiguration", defaultValue = "")
   private String bundleConfiguration;
 
   /* ****************** */
@@ -142,43 +150,32 @@ public class MinifyMojo extends AbstractMojo {
   /* ****************** */
 
   /**
-   * JavaScript source directory.
+   * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
    */
-  @Parameter(property = "jsSourceDir", defaultValue = "js")
-  private String jsSourceDir;
-
-  /**
-   * JavaScript source file names list.
-   */
-  @Parameter(property = "jsSourceFiles", alias = "jsFiles")
-  private ArrayList<String> jsSourceFiles;
+  @Parameter(property = "sourceDir", defaultValue = "js")
+  private String sourceDir;
 
   /**
    * JavaScript files to include. Specified as fileset patterns which are relative to the JavaScript source directory.
    * @since 1.2
    */
-  @Parameter(property = "jsSourceIncludes", alias = "jsIncludes")
-  private ArrayList<String> jsSourceIncludes;
+  @Parameter(property = "includes")
+  private ArrayList<String> includes;
 
   /**
    * JavaScript files to exclude. Specified as fileset patterns which are relative to the JavaScript source directory.
    * @since 1.2
    */
-  @Parameter(property = "jsSourceExcludes", alias = "jsExcludes")
-  private ArrayList<String> jsSourceExcludes;
+  @Parameter(property = "excludes")
+  private ArrayList<String> excludes;
 
   /**
-   * JavaScript target directory. Takes the same value as {@code jsSourceDir} when empty.
+   * JavaScript target directory. Takes the same value as {@code jsSourceDir} when empty. This is relative to the
+   * {@link #baseTargetDir}.
    * @since 1.3.2
    */
-  @Parameter(property = "jsTargetDir")
-  private String jsTargetDir;
-
-  /**
-   * JavaScript output file name.
-   */
-  @Parameter(property = "jsFinalFile", defaultValue = "script.js")
-  private String jsFinalFile;
+  @Parameter(property = "targetDir", defaultValue = "js")
+  private String targetDir;
 
   /* ************************************ */
   /* Google Closure Compiler Only Options */
@@ -223,6 +220,17 @@ public class MinifyMojo extends AbstractMojo {
   private LanguageMode closureLanguageOut;
 
   /**
+   * Extension of the source map, if one is created. By default, the extension {@code .map} is added to the minified
+   * file. Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
+   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
+   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
+   * file.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureSourceMapName", defaultValue = "#{filename}.map")
+  private String closureSourceMapName;
+
+  /**
    * Determines the set of builtin externs to load.<br/>
    * Options: BROWSER, CUSTOM.
    * @since 1.7.5
@@ -241,6 +249,8 @@ public class MinifyMojo extends AbstractMojo {
    * JavaScript. When using {@code ADVANCED_OPTIMIZATIONS} compilation you must perform extra steps to preserve
    * references to external symbols. See <a href="/closure/compiler/docs/api-tutorial3">Advanced Compilation and
    * Externs</a> for more information about {@code ADVANCED_OPTIMIZATIONS}.</li>
+   * <li>{@code BUNDLE}: Leaves all compiler options unchanged. For advanced usage if you want to seet the releavant
+   * options yourself.</li>
    * </ul>
    * @since 1.7.2
    */
@@ -251,40 +261,37 @@ public class MinifyMojo extends AbstractMojo {
    * List of JavaScript files containing code that declares function names or other symbols. Use {@code closureExterns}
    * to preserve symbols that are defined outside of the code you are compiling. The {@code closureExterns} parameter
    * only has an effect if you are using a {@code CompilationLevel} of {@code ADVANCED_OPTIMIZATIONS}.<br/>
-   * These file names are relative to {@link #webappSourceDir} directory.
+   * These file names are relative to {@link #baseSourceDir} directory.
    * @since 1.7.2
    */
   @Parameter(property = "closureExterns")
   private ArrayList<String> closureExterns;
 
   /**
-   * Collects information mapping the generated (compiled) source back to its original source for debugging
-   * purposes.<br/>
-   * Please visit <a href="https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit">Source
-   * Map Revision 3 Proposal</a> for more information.
+   * <p>
+   * Collects information mapping the generated (compiled) source back to its original source for debugging purposes.
+   * </p>
    * @since 1.7.3
    */
   @Parameter(property = "closureCreateSourceMap", defaultValue = "false")
   private boolean closureCreateSourceMap;
 
   /**
-   * If {@code true}, the source map created by the Closure compiler will have one link to each of the original
-   * JavaScript source files. Default is {@code false}.
+   * Whether the error output from the closure compiler is colorized. Color codes may not be supported by all terminals.
    * @since 2.0.0
    */
-  @Parameter(property = "closureMapToOriginalSourceFiles", defaultValue = "false")
-  private boolean closureMapToOriginalSourceFiles;
+  @Parameter(property = "closureColorizeErrorOutput", defaultValue = "true")
+  private boolean closureColorizeErrorOutput;
 
   /**
-   * If {@code true}, the processed ("minified") file is pretty printed (formatted with new lines). Default is
-   * {@code false}.
+   * If {@code true}, the processed ("minified") file is pretty printed (formatted with new lines).
    * @since 2.0.0
    */
   @Parameter(property = "closurePrettyPrint", defaultValue = "false")
   private boolean closurePrettyPrint;
 
   /**
-   * If {@code true}, ES6 polyfills are written to the output file (such as for Set, Map etc.) Default is {@link true}.
+   * If {@code true}, ES6 polyfills are written to the output file (such as for Set, Map etc.)
    * @since 2.0.0
    */
   @Parameter(property = "closureRewritePolyfills", defaultValue = "true")
@@ -292,7 +299,7 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * If {@code false}, converts some characters such as '&lt;' and '&gt;' to '\x3c' and '\x3d' so that they are safe to
-   * put inside a script tag in an HTML file. Default is {@code true}.
+   * put inside a script tag in an HTML file.
    * @since 2.0.0
    */
   @Parameter(property = "closureTrustedStrings", defaultValue = "true")
@@ -301,8 +308,7 @@ public class MinifyMojo extends AbstractMojo {
   /**
    * <p>
    * If not an empty or blank string, interpolate output into this string at the place denoted by the marker token
-   * {@code %output%}. Use marker token {@code %output|jsstring%} to do js string escaping on the output. Default is the
-   * empty string.
+   * {@code %output%}. Use marker token {@code %output|jsstring%} to do js string escaping on the output.
    * </p>
    * <p>
    * Please take care when using this options with source maps -- the mapping will not match anymore.
@@ -323,14 +329,59 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * <p>
-   * Enables or disables sorting mode for Closure Library dependencies.
+   * Enables or disables dependency sorting mode. If true, we will sort the input files based on dependency information
+   * in them.
    * </p>
    * <p>
-   * If true, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always come
+   * If {@code true}, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always
+   * come before a file that {@code goog.requires} symbol X.
    * @since 1.7.4
    */
   @Parameter(property = "closureSortDependencies", defaultValue = "false")
-  private boolean closureSortDependencies;
+  private boolean closureDependencySorting;
+
+  /**
+   * Enables or disables dependency pruning mode. In dependency pruning mode, we will look for all files that provide a
+   * symbol. Unless that file is a transitive dependency of a file that we're using, we will remove it from the
+   * compilation job. This does not affect how we handle files that do not provide symbols. See setMoocherDropping for
+   * information on how these are handled.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyPruning", defaultValue = "false")
+  private boolean closureDependencyPruning;
+
+  /**
+   * Enables or disables moocher dropping mode. A 'moocher' is a file that does not provide any symbols (though they may
+   * require symbols). This is usually because they don't want to tie themselves to a particular dependency system
+   * (e.g., Closure's goog.provide, CommonJS modules). So they rely on other people to manage dependencies on them. If
+   * true, we drop these files when we prune dependencies. If false, we always keep these files and anything they depend
+   * on. The default is false. Notice that this option only makes sense if dependency pruning is on, and a set of entry
+   * points is specified.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyMoocherDropping", defaultValue = "false")
+  private boolean closureDependencyMoocherDropping;
+
+  /**
+   * <p>
+   * Adds a collection of symbols to always keep. In dependency pruning mode, we will automatically keep all the
+   * transitive dependencies of these symbols. The syntactic form of a symbol depends on the type of dependency
+   * primitives we're using. For example, {@code goog.provide('foo.bar')} provides the symbol {@code foo.bar}. Entry
+   * points can be scoped to a module by specifying {@code mod2:foo.bar}.
+   * </p>
+   * <p>
+   * There are two different types of entry points, closurer and modules:
+   * <ul>
+   * <li>{@code closure}: A closure namespaces used as an entry point. May start with {@code goog:} when provided as a
+   * flag from the command line. Closure entry points may also be formatted as: {@code goog:moduleName:name.space} which
+   * specifies that the module name and provided namespace are different</li>
+   * <li>{@code file}: Must start with the prefix {@code file:}. AES6 or CommonJS modules used as an entry point. The
+   * file path is relative to the project base dir.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyEntryPoints")
+  private List<String> closureDependencyEntryPoints;
 
   /**
    * After creating the source map, the browser needs to find it. There are several options available:
@@ -398,11 +449,42 @@ public class MinifyMojo extends AbstractMojo {
    * </code>
    * </pre>
    * 
-   * where {@code <name>} is the name of a {@code @define} variable and {@code value} is a boolean, number or string.
+   * where {@code <name>} is the name of a {@code @define} variable and {@code value} is a JavaScript boolean, number or
+   * string literal. That is, use quotation marks to specify a string: {@code "First line\nseconds line"}
    * @since 1.7.5
    */
-  @Parameter(property = "closureDefine")
-  private HashMap<String, String> closureDefine;
+  @Parameter(property = "closureDefineReplacements")
+  private HashMap<String, String> closureDefineReplacements;
+
+  private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
+      List<String> includes, List<String> excludes, String outputFilename)
+      throws IOException {
+    return new ProcessJSFilesTask(this, bufferSize,
+        skipMerge, skipMinify,
+        baseSourceDir, baseTargetDir,
+        sourceDir, targetDir,
+        includes, excludes,
+        outputFilename, closureConfig);
+  }
+
+  private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
+      throws MojoFailureException, IOException {
+    List<ProcessFilesTask> tasks = newArrayList();
+
+    // If a bundleConfiguration is defined, attempt to use that
+    if (StringUtils.isNotBlank(bundleConfiguration)) {
+      for (Aggregation aggregation : getAggregations()) {
+        tasks.add(createJSTask(closureConfig, aggregation.getIncludes(),
+            aggregation.getExcludes(), aggregation.getName()));
+      }
+    }
+    // Otherwise, fallback to the default behavior
+    else {
+      tasks.add(createJSTask(closureConfig, includes, excludes, outputFilename));
+    }
+
+    return tasks;
+  }
 
   /**
    * Executed when the goal is invoked, it will first invoke a parallel lifecycle, ending at the given phase.
@@ -410,18 +492,17 @@ public class MinifyMojo extends AbstractMojo {
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     if (skipMerge && skipMinify) {
-      getLog().warn("Both merge and minify steps are configured to be skipped.");
-      return;
+      getLog().warn("Both merge and minify steps are configured to be skipped. Files will only be copied to their destination without any processing");
     }
 
     fillOptionalValues();
 
-    ClosureConfig closureConfig = fillClosureConfig();
+    ClosureConfig closureConfig = new ClosureConfig(this);
     Collection<ProcessFilesTask> processFilesTasks;
     try {
       processFilesTasks = createTasks(closureConfig);
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       throw new MojoFailureException(e.getMessage(), e);
     }
 
@@ -445,79 +526,337 @@ public class MinifyMojo extends AbstractMojo {
   }
 
   private void fillOptionalValues() {
-    if (Strings.isNullOrEmpty(jsTargetDir)) {
-      jsTargetDir = jsSourceDir;
+    if (Strings.isNullOrEmpty(targetDir)) {
+      targetDir = sourceDir;
     }
-    if (Strings.isNullOrEmpty(charset)) {
-      charset = Charset.defaultCharset().name();
+    if (Strings.isNullOrEmpty(encoding)) {
+      encoding = Charset.defaultCharset().name();
+    }
+    if (excludes == null) {
+      excludes = new ArrayList<>();
+    }
+    if (includes == null) {
+      includes = new ArrayList<>();
+    }
+    if (closureWarningLevels == null) {
+      closureWarningLevels = new HashMap<>();
+    }
+    if (closureExtraAnnotations == null) {
+      closureExtraAnnotations = new ArrayList<>();
+    }
+    if (closureDefineReplacements == null) {
+      closureDefineReplacements = new HashMap<>();
+    }
+    if (closureExterns == null) {
+      closureExterns = new ArrayList<>();
+    }
+    if (closureDependencyEntryPoints == null) {
+      closureDependencyEntryPoints = new ArrayList<>();
     }
   }
 
-  private ClosureConfig fillClosureConfig() throws MojoFailureException {
-    DependencyOptions dependencyOptions = new DependencyOptions();
-    dependencyOptions.setDependencySorting(closureSortDependencies);
-
-    List<SourceFile> externs = new ArrayList<>();
-    for (String extern : closureExterns) {
-      externs.add(SourceFile.fromFile(webappSourceDir + File.separator + extern, Charset.forName(charset)));
+  private Collection<Aggregation> getAggregations() throws MojoFailureException {
+    if (StringUtils.isBlank(bundleConfiguration)) { return Collections.emptySet(); }
+    AggregationConfiguration aggregationConfiguration;
+    try (Reader bundleConfigurationReader = new FileReader(FileHelper.getAbsoluteFile(project.getBasedir(), bundleConfiguration))) {
+      aggregationConfiguration = new Gson().fromJson(bundleConfigurationReader,
+          AggregationConfiguration.class);
     }
-
-    Map<DiagnosticGroup, CheckLevel> warningLevels = new HashMap<>();
-    DiagnosticGroups diagnosticGroups = new DiagnosticGroups();
-    for (Map.Entry<String, String> warningLevel : closureWarningLevels.entrySet()) {
-      DiagnosticGroup diagnosticGroup = diagnosticGroups.forName(warningLevel.getKey());
-      if (diagnosticGroup == null) { throw new MojoFailureException("Failed to process closureWarningLevels: " + warningLevel.getKey() + " is an invalid DiagnosticGroup"); }
-
-      try {
-        CheckLevel checkLevel = CheckLevel.valueOf(warningLevel.getValue());
-        warningLevels.put(diagnosticGroup, checkLevel);
-      }
-      catch (IllegalArgumentException e) {
-        throw new MojoFailureException("Failed to process closureWarningLevels: " + warningLevel.getKey() + " is an invalid CheckLevel");
-      }
+    catch (IOException e) {
+      throw new MojoFailureException("Failed to open the bundle configuration file [" + bundleConfiguration
+          + "].", e);
     }
-
-    return new ClosureConfig(closureLanguageIn, closureLanguageOut, closureEnvironment, closureCompilationLevel,
-        dependencyOptions, externs, closureCreateSourceMap, warningLevels, closureAngularPass,
-        closureExtraAnnotations, closureDefine, closureMapToOriginalSourceFiles, closureIncludeSourcesContent,
-        closureSourceMapOutputType, closurePrettyPrint, closureRewritePolyfills, closureTrustedStrings,
-        closureOutputWrapper);
+    return CollectionUtils.emptyIfNull(aggregationConfiguration.getBundles());
   }
 
-  private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
-      throws MojoFailureException, FileNotFoundException {
-    List<ProcessFilesTask> tasks = newArrayList();
-
-    if (!Strings.isNullOrEmpty(bundleConfiguration)) { // If a bundleConfiguration is defined, attempt to use that
-      AggregationConfiguration aggregationConfiguration;
-      try (Reader bundleConfigurationReader = new FileReader(bundleConfiguration)) {
-        aggregationConfiguration = new Gson().fromJson(bundleConfigurationReader,
-            AggregationConfiguration.class);
-      }
-      catch (IOException e) {
-        throw new MojoFailureException("Failed to open the bundle configuration file [" + bundleConfiguration
-            + "].", e);
-      }
-
-      for (Aggregation aggregation : aggregationConfiguration.getBundles()) {
-        tasks.add(createJSTask(closureConfig, aggregation.getFiles(),
-            Collections.<String> emptyList(), Collections.<String> emptyList(), aggregation.getName()));
-      }
-    }
-    else {
-      // Otherwise, fallback to the default behavior
-      tasks.add(createJSTask(closureConfig, jsSourceFiles, jsSourceIncludes, jsSourceExcludes,
-          jsFinalFile));
-    }
-
-    return tasks;
+  public File getBaseSourceDir() {
+    return baseSourceDir;
   }
 
-  private ProcessFilesTask createJSTask(ClosureConfig closureConfig, List<String> jsSourceFiles,
-      List<String> jsSourceIncludes, List<String> jsSourceExcludes, String jsFinalFile)
-      throws FileNotFoundException {
-    return new ProcessJSFilesTask(getLog(), verbose, bufferSize, Charset.forName(charset), suffix, nosuffix,
-        skipMerge, skipMinify, webappSourceDir, webappTargetDir, jsSourceDir, jsSourceFiles, jsSourceIncludes,
-        jsSourceExcludes, jsTargetDir, jsFinalFile, closureConfig);
+  public File getBaseTargetDir() {
+    return baseTargetDir;
+  }
+
+  public int getBufferSize() {
+    return bufferSize;
+  }
+
+  public String getBundleConfiguration() {
+    return bundleConfiguration;
+  }
+
+  public CompilationLevel getClosureCompilationLevel() {
+    return closureCompilationLevel;
+  }
+
+  public HashMap<String, String> getClosureDefineReplacements() {
+    return closureDefineReplacements;
+  }
+
+  public List<String> getClosureDependencyEntryPoints() {
+    return closureDependencyEntryPoints;
+  }
+
+  public CompilerOptions.Environment getClosureEnvironment() {
+    return closureEnvironment;
+  }
+
+  public ArrayList<String> getClosureExterns() {
+    return closureExterns;
+  }
+
+  public ArrayList<String> getClosureExtraAnnotations() {
+    return closureExtraAnnotations;
+  }
+
+  public LanguageMode getClosureLanguageIn() {
+    return closureLanguageIn;
+  }
+
+  public LanguageMode getClosureLanguageOut() {
+    return closureLanguageOut;
+  }
+
+  public String getClosureOutputWrapper() {
+    return closureOutputWrapper;
+  }
+
+  public String getClosureSourceMapName() {
+    return closureSourceMapName;
+  }
+
+  public SourceMapOutputType getClosureSourceMapOutputType() {
+    return closureSourceMapOutputType;
+  }
+
+  public HashMap<String, String> getClosureWarningLevels() {
+    return closureWarningLevels;
+  }
+
+  @Override
+  public String getEncoding() {
+    return encoding;
+  }
+
+  public ArrayList<String> getExcludes() {
+    return excludes;
+  }
+
+  public ArrayList<String> getIncludes() {
+    return includes;
+  }
+
+  public String getOutputFilename() {
+    return outputFilename;
+  }
+
+  @Override
+  public MavenProject getProject() {
+    return project;
+  }
+
+  public String getSourceDir() {
+    return sourceDir;
+  }
+
+  public String getTargetDir() {
+    return targetDir;
+  }
+
+  public boolean isClosureAngularPass() {
+    return closureAngularPass;
+  }
+
+  public boolean isClosureColorizeErrorOutput() {
+    return closureColorizeErrorOutput;
+  }
+
+  public boolean isClosureCreateSourceMap() {
+    return closureCreateSourceMap;
+  }
+
+  public boolean isClosureDependencyMoocherDropping() {
+    return closureDependencyMoocherDropping;
+  }
+
+  public boolean isClosureDependencyPruning() {
+    return closureDependencyPruning;
+  }
+
+  public boolean isClosureDependencySorting() {
+    return closureDependencySorting;
+  }
+
+  public boolean isClosureIncludeSourcesContent() {
+    return closureIncludeSourcesContent;
+  }
+
+  public boolean isClosurePrettyPrint() {
+    return closurePrettyPrint;
+  }
+
+  public boolean isClosureRewritePolyfills() {
+    return closureRewritePolyfills;
+  }
+
+  public boolean isClosureTrustedStrings() {
+    return closureTrustedStrings;
+  }
+
+  public boolean isSkipMerge() {
+    return skipMerge;
+  }
+
+  public boolean isSkipMinify() {
+    return skipMinify;
+  }
+
+  @Override
+  public boolean isVerbose() {
+    return verbose;
+  }
+
+  public void setBaseSourceDir(File baseSourceDir) {
+    this.baseSourceDir = baseSourceDir;
+  }
+
+  public void setBaseTargetDir(File baseTargetDir) {
+    this.baseTargetDir = baseTargetDir;
+  }
+
+  public void setBufferSize(int bufferSize) {
+    this.bufferSize = bufferSize;
+  }
+
+  public void setBundleConfiguration(String bundleConfiguration) {
+    this.bundleConfiguration = bundleConfiguration;
+  }
+
+  public void setClosureAngularPass(boolean closureAngularPass) {
+    this.closureAngularPass = closureAngularPass;
+  }
+
+  public void setClosureColorizeErrorOutput(boolean closureColorizeErrorOutput) {
+    this.closureColorizeErrorOutput = closureColorizeErrorOutput;
+  }
+
+  public void setClosureCompilationLevel(CompilationLevel closureCompilationLevel) {
+    this.closureCompilationLevel = closureCompilationLevel;
+  }
+
+  public void setClosureCreateSourceMap(boolean closureCreateSourceMap) {
+    this.closureCreateSourceMap = closureCreateSourceMap;
+  }
+
+  public void setClosureDefineReplacements(HashMap<String, String> closureDefineReplacements) {
+    this.closureDefineReplacements = closureDefineReplacements;
+  }
+
+  public void setClosureDependencyEntryPoints(List<String> closureDependencyEntryPoints) {
+    this.closureDependencyEntryPoints = closureDependencyEntryPoints;
+  }
+
+  public void setClosureDependencyMoocherDropping(boolean closureDependencyMoocherDropping) {
+    this.closureDependencyMoocherDropping = closureDependencyMoocherDropping;
+  }
+
+  public void setClosureDependencyPruning(boolean closureDependencyPruning) {
+    this.closureDependencyPruning = closureDependencyPruning;
+  }
+
+  public void setClosureDependencySorting(boolean closureDependencySorting) {
+    this.closureDependencySorting = closureDependencySorting;
+  }
+
+  public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
+    this.closureEnvironment = closureEnvironment;
+  }
+
+  public void setClosureExterns(ArrayList<String> closureExterns) {
+    this.closureExterns = closureExterns;
+  }
+
+  public void setClosureExtraAnnotations(ArrayList<String> closureExtraAnnotations) {
+    this.closureExtraAnnotations = closureExtraAnnotations;
+  }
+
+  public void setClosureIncludeSourcesContent(boolean closureIncludeSourcesContent) {
+    this.closureIncludeSourcesContent = closureIncludeSourcesContent;
+  }
+
+  public void setClosureLanguageIn(LanguageMode closureLanguageIn) {
+    this.closureLanguageIn = closureLanguageIn;
+  }
+
+  public void setClosureLanguageOut(LanguageMode closureLanguageOut) {
+    this.closureLanguageOut = closureLanguageOut;
+  }
+
+  public void setClosureOutputWrapper(String closureOutputWrapper) {
+    this.closureOutputWrapper = closureOutputWrapper;
+  }
+
+  public void setClosurePrettyPrint(boolean closurePrettyPrint) {
+    this.closurePrettyPrint = closurePrettyPrint;
+  }
+
+  public void setClosureRewritePolyfills(boolean closureRewritePolyfills) {
+    this.closureRewritePolyfills = closureRewritePolyfills;
+  }
+
+  public void setClosureSourceMapName(String closureSourceMapName) {
+    this.closureSourceMapName = closureSourceMapName;
+  }
+
+  public void setClosureSourceMapOutputType(SourceMapOutputType closureSourceMapOutputType) {
+    this.closureSourceMapOutputType = closureSourceMapOutputType;
+  }
+
+  public void setClosureTrustedStrings(boolean closureTrustedStrings) {
+    this.closureTrustedStrings = closureTrustedStrings;
+  }
+
+  public void setClosureWarningLevels(HashMap<String, String> closureWarningLevels) {
+    this.closureWarningLevels = closureWarningLevels;
+  }
+
+  public void setEncoding(String encoding) {
+    this.encoding = encoding;
+  }
+
+  public void setExcludes(ArrayList<String> excludes) {
+    this.excludes = excludes;
+  }
+
+  public void setIncludes(ArrayList<String> includes) {
+    this.includes = includes;
+  }
+
+  public void setOutputFilename(String outputFilename) {
+    this.outputFilename = outputFilename;
+  }
+
+  public void setProject(MavenProject project) {
+    this.project = project;
+  }
+
+  public void setSkipMerge(boolean skipMerge) {
+    this.skipMerge = skipMerge;
+  }
+
+  public void setSkipMinify(boolean skipMinify) {
+    this.skipMinify = skipMinify;
+  }
+
+  public void setSourceDir(String sourceDir) {
+    this.sourceDir = sourceDir;
+  }
+
+  public void setTargetDir(String targetDir) {
+    this.targetDir = targetDir;
+  }
+
+  public void setVerbose(boolean verbose) {
+    this.verbose = verbose;
   }
 }

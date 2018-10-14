@@ -2,13 +2,40 @@
 
 ## 2.0.0
 
-* When multple `jsSourceIncludes` are specified, preserve their order. File matched by a single `jsSourceIncludes` (when using wildcards) are sorted by name.
-* When merging files, a line separator is added between each file. A source file may end with a comment `// ...`, and without a new line the resulting merged file is not syntactically valid.
-* Add an options `outputWrapper`. This is the same as `output_wrapper` from closure compiler, but implemented in the plugin as the closure compiler API does not expose this option.
-* Add an option `closureMapToOriginalSourceFiles` (see https://github.com/samaxes/minify-maven-plugin/pull/97).
-* Add an option `closureSourceMapOuptutType`. Set it to `inline` to include the source map in the minified file. Together with the newly supported `closureIncludeSourcesContent` option this allows for standalone source map that always just work!
-* Add new options supported by closure compiler.
-* Remove YUICompressor. It is dead. Also remove CSS minification and concentrate on one task: closure compiler.
+* Renamed aggregation JSON option `files` to `includes`.
+* Added aggregation JSON option to `excludes`.
+* Removed obsolete option `nosuffix`. Set `outputFilename` pattern to the desired value.
+* Removed obsolete option `jsSourceFiles` (alias `jsFiles`). Files are now merged in 
+  the order as specified by `includes`.
+* Renamed option `jsSourceDir` to `sourceDir` and `jsTargetDir` to `targetDir`.
+* Renamed option `webappSourceDir` to `baseSourceDir` and `webappTargetDir` to `baseTargetDir`.
+* Renamed option `jsSourceExcludes` (alias `jsExcludes`) to `excludes` and `jsSourceIncludes` 
+  (alias `jsIncludes`) to `includes`.
+* Renamed option `closureSortDependencies` to `closureDependencySorting`.
+* Renamed option `closureDefine` to closureDefineReplacements`.
+* Replaced option `suffix` with `outputFileName`. This allows for more freedom in defining 
+  the output file name.
+* Added an option `sourceMapName` to customize how the source map is named.
+* Added an option `outputWrapper`. This is the same as `output_wrapper` from closure compiler,
+  but implemented in the plugin as the closure compiler API does not expose this option.
+* Added an option `closureSourceMapOuptutType`. Set it to `inline` to include the source map 
+  in the minified file. Together with the newly supported `closureIncludeSourcesContent` 
+  option this allows for standalone source map that always just work!
+* Added new options supported by closure compiler.
+* Values for the option `closureDefineReplacements` are now like JavaScript literals. This 
+  means that strings support escape sequences and should be quoted; and that binary/octal 
+  number literals are supported.
+* The `closureMapToOriginalSourceFiles` (see https://github.com/samaxes/minify-maven-plugin/pull/97) 
+  is now the default for merge+minify.
+* When both `skipMerge` and `skipMinify` are set to `true`, the entire plugin was skipped 
+  previously. Now files are copied to their destination without any processing.
+* When multple `jsSourceIncludes` are specified, preserve their order. File matched by a single
+  `jsSourceIncludes` (when using wildcards) are sorted by name.
+* When merging files, a line separator is added between each file. A source file may end 
+  with a comment `// ...`, and without a new line the resulting merged file is not 
+  syntactically valid.
+* Remove YUICompressor. It is dead. Also remove CSS minification and concentrate on 
+  one task: closure compiler.
 * Adopt [Semantic Versioning](http://semver.org/) scheme.
 * Remove @deprecated options.
 

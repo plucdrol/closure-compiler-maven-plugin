@@ -10,7 +10,7 @@
 Bundle Configuration
 
   You can optionally specify the source files to process via an external configuration file. 
-  When a <<<bundleConfiguration>>> is defined, it overrides <<<jsSourceFile>>> of the {{{../examples/basic.html}Basic Configuration}}.
+  When a <<<bundleConfiguration>>> is defined, it overrides <<<includes>>> of the {{{../examples/basic.html}Basic Configuration}}.
 
 +---+
 <project>
@@ -43,17 +43,18 @@ Bundle Configuration
 
 Configuration Format
 
-  Bundles are defined in {{{http://en.wikipedia.org/wiki/JSON}JSON}} format.
+  Bundles are defined in JSON format.
 
 +---+
 {
     "bundles": [
         {
             "name": "static-combined.js",
-            "files": [
+            "includes": [
                 "blutorange.js",
                 "subdir/pearce-kelly.js"
-            ]
+            ],
+            "excludes": []
         }
     ]
 }

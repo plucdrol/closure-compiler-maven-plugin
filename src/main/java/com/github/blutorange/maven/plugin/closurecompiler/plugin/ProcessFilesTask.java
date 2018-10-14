@@ -26,6 +26,7 @@ import java.io.SequenceInputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,12 +36,15 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.DirectoryScanner;
-import org.codehaus.plexus.util.FileUtils;
-import org.codehaus.plexus.util.IOUtil;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
 import com.google.common.base.Predicate;
@@ -50,267 +54,30 @@ import com.google.common.base.Predicate;
  */
 public abstract class ProcessFilesTask implements Callable<Object> {
 
+  private static final String DEFAULT_MERGED_FILENAME = "script.js";
+
   public static final String TEMP_SUFFIX = ".tmp";
-
-  protected final Log log;
-
-  protected final boolean verbose;
-
-  protected final Integer bufferSize;
-
-  protected final Charset charset;
-
-  protected final String suffix;
-
-  protected final boolean nosuffix;
-
-  protected final boolean skipMerge;
-
-  protected final boolean skipMinify;
-
-  private final File sourceDir;
-
-  private final File targetDir;
-
-  private final String mergedFilename;
-
-  private final List<File> files = new ArrayList<>();
-
-  private final boolean sourceFilesEmpty;
-
-  private final boolean sourceIncludesEmpty;
-
-  protected final ClosureConfig closureConfig;
-
-  /**
-   * Task constructor.
-   * @param log Maven plugin log
-   * @param verbose display additional info
-   * @param bufferSize size of the buffer used to read source files
-   * @param charset if a character set is specified, a byte-to-char variant allows the encoding to be selected.
-   * Otherwise, only byte-to-byte operations are used
-   * @param suffix final file name suffix
-   * @param nosuffix whether to use a suffix for the minified file name or not
-   * @param skipMerge whether to skip the merge step or not
-   * @param skipMinify whether to skip the minify step or not
-   * @param webappSourceDir web resources source directory
-   * @param webappTargetDir web resources target directory
-   * @param inputDir directory containing source files
-   * @param sourceFiles list of source files to include
-   * @param sourceIncludes list of source files to include
-   * @param sourceExcludes list of source files to exclude
-   * @param outputDir directory to write the final file
-   * @param outputFilename the output file name
-   * @param closureConfig Google closure configuration
-   * @throws FileNotFoundException when the given source file does not exist
-   */
-  public ProcessFilesTask(Log log, boolean verbose, Integer bufferSize, Charset charset, String suffix,
-      boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
-      String webappTargetDir, String inputDir, List<String> sourceFiles,
-      List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
-      String outputFilename, ClosureConfig closureConfig) throws FileNotFoundException {
-    this.log = log;
-    this.verbose = verbose;
-    this.bufferSize = bufferSize;
-    this.charset = charset;
-    this.suffix = suffix;
-    this.nosuffix = nosuffix;
-    this.skipMerge = skipMerge;
-    this.skipMinify = skipMinify;
-
-    this.sourceDir = new File(webappSourceDir + File.separator + inputDir);
-    this.targetDir = new File(webappTargetDir + File.separator + outputDir);
-    this.mergedFilename = outputFilename;
-    for (String sourceFilename : sourceFiles) {
-      addNewSourceFile(mergedFilename, sourceFilename);
-    }
-    for (File sourceInclude : getFilesToInclude(sourceIncludes, sourceExcludes)) {
-      if (!files.contains(sourceInclude)) {
-        addNewSourceFile(mergedFilename, sourceInclude);
-      }
-    }
-    this.sourceFilesEmpty = sourceFiles.isEmpty();
-    this.sourceIncludesEmpty = sourceIncludes.isEmpty();
-    this.closureConfig = closureConfig;
-  }
-
-  /**
-   * Method executed by the thread.
-   * @throws IOException when the merge or minify steps fail
-   */
-  @Override
-  public Object call() throws IOException {
-    synchronized (log) {
-      log.info("Starting JavaScript task:");
-
-      if (!targetDir.exists() && !targetDir.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetDir); }
-
-      if (!files.isEmpty()) {
-
-        // Minify only
-        if (skipMerge) {
-          log.info("Skipping the merge step...");
-          String sourceBasePath = sourceDir.getAbsolutePath();
-
-          for (File mergedFile : files) {
-            // Create folders to preserve sub-directory structure when only minifying
-            String originalPath = mergedFile.getAbsolutePath();
-            String subPath = originalPath.substring(sourceBasePath.length(),
-                originalPath.lastIndexOf(File.separator));
-            File targetPath = new File(targetDir.getAbsolutePath() + subPath);
-            if (!targetPath.exists() && !targetPath.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetPath); }
-
-            File minifiedFile = new File(targetPath, (nosuffix) ? mergedFile.getName() : FileUtils.removeExtension(mergedFile.getName()) + suffix + "." + FileUtils.extension(mergedFile.getName()));
-            minify(mergedFile, minifiedFile);
-          }
-        }
-        // Merge-only
-        else if (skipMinify) {
-          File mergedFile = new File(targetDir, mergedFilename);
-          merge(mergedFile);
-          log.info("Skipping the minify step...");
-        }
-        // Minify + merge
-        else {
-          File minifiedFile = new File(targetDir, (nosuffix) ? mergedFilename : FileUtils.removeExtension(mergedFilename) + suffix + "." + FileUtils.extension(mergedFilename));
-          if (closureConfig.getMapToOriginalSourceFiles()) {
-            minify(files, minifiedFile);
-          }
-          else {
-            File mergedFile = new File(targetDir, (nosuffix) ? mergedFilename + TEMP_SUFFIX : mergedFilename);
-            merge(mergedFile);
-            minify(mergedFile, minifiedFile);
-            if (nosuffix) {
-              if (!mergedFile.delete()) {
-                mergedFile.deleteOnExit();
-              }
-            }
-          }
-        }
-        log.info("");
-      }
-      else if (!sourceFilesEmpty || !sourceIncludesEmpty) {
-        // 'files' list will be empty if source file paths or names added to the project's POM are invalid.
-        log.error("No valid JavaScript source files found to process.");
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Merges a list of source files. Create missing parent directories if needed.
-   * @param mergedFile output file resulting from the merged step
-   * @throws IOException when the merge step fails
-   */
-  protected void merge(File mergedFile) throws IOException {
-    if (!mergedFile.getParentFile().exists() && !mergedFile.getParentFile().mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + mergedFile.getParentFile()); }
-
-    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, verbose, charset));
-        OutputStream out = new FileOutputStream(mergedFile);
-        InputStreamReader sequenceReader = new InputStreamReader(sequence, charset);
-        OutputStreamWriter outWriter = new OutputStreamWriter(out, charset)) {
-      log.info("Creating the merged file [" + (verbose ? mergedFile.getPath() : mergedFile.getName()) + "].");
-
-      IOUtil.copy(sequenceReader, outWriter, bufferSize);
-    }
-    catch (IOException e) {
-      log.error("Failed to concatenate files.", e);
-      throw e;
-    }
-  }
-
-  /**
-   * Minifies a source file. Create missing parent directories if needed.
-   * @param mergedFile input file resulting from the merged step
-   * @param minifiedFile output file resulting from the minify step
-   * @throws IOException when the minify step fails
-   */
-  abstract void minify(File mergedFile, File minifiedFile) throws IOException;
-
-  /**
-   * Minifies a list of source files into a single file. Create missing parent directories if needed.
-   * @param srcFiles list of input files
-   * @param minifiedFile output file resulting from the minify step
-   * @throws IOException when the minify step fails
-   */
-  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException;
-
-  /**
-   * Logs compression gains.
-   * @param mergedFile input file resulting from the merged step
-   * @param minifiedFile output file resulting from the minify step
-   */
-  void logCompressionGains(File mergedFile, File minifiedFile) {
-    List<File> srcFiles = new ArrayList<File>();
-    srcFiles.add(mergedFile);
-    logCompressionGains(srcFiles, minifiedFile);
-  }
-
-  /**
-   * Logs compression gains.
-   * @param srcFiles list of input files to compress
-   * @param minifiedFile output file resulting from the minify step
-   */
-  void logCompressionGains(List<File> srcFiles, File minifiedFile) {
-    try {
-      File temp = File.createTempFile(minifiedFile.getName(), ".gz");
-
-      try (InputStream in = new FileInputStream(minifiedFile);
-          OutputStream out = new FileOutputStream(temp);
-          GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
-        IOUtil.copy(in, outGZIP, bufferSize);
-      }
-
-      long uncompressedSize = 0;
-      if (srcFiles != null) {
-        for (File srcFile : srcFiles) {
-          uncompressedSize += srcFile.length();
-        }
-      }
-
-      log.info("Uncompressed size: " + uncompressedSize + " bytes.");
-      log.info("Compressed size: " + minifiedFile.length() + " bytes minified (" + temp.length()
-          + " bytes gzipped).");
-
-      temp.deleteOnExit();
-    }
-    catch (IOException e) {
-      log.debug("Failed to calculate the gzipped file size.", e);
-    }
-  }
-
-  /**
-   * Logs an addition of a new source file.
-   * @param finalFilename the final file name
-   * @param sourceFilename the source file name
-   * @throws FileNotFoundException when the given source file does not exist
-   */
-  private void addNewSourceFile(String finalFilename, String sourceFilename) throws FileNotFoundException {
-    File sourceFile = new File(sourceDir, sourceFilename);
-
-    addNewSourceFile(finalFilename, sourceFile);
-  }
 
   /**
    * Logs an addition of a new source file.
    * @param finalFilename the final file name
    * @param sourceFile the source file
-   * @throws FileNotFoundException when the given source file does not exist
+   * @throws IOException
    */
-  private void addNewSourceFile(String finalFilename, File sourceFile) throws FileNotFoundException {
+  private static void addNewSourceFile(Collection<File> files, File sourceFile, MojoMetadata mojoMeta) throws IOException {
     if (sourceFile.exists()) {
-      if (finalFilename.equalsIgnoreCase(sourceFile.getName())) {
-        log.warn("The source file [" + (verbose ? sourceFile.getPath() : sourceFile.getName())
-            + "] has the same name as the final file.");
-      }
-      log.debug("Adding source file [" + (verbose ? sourceFile.getPath() : sourceFile.getName()) + "].");
-      files.add(sourceFile);
+      mojoMeta.getLog().debug("Adding source file [" + (mojoMeta.isVerbose() ? sourceFile.getPath() : sourceFile.getName()) + "].");
+      files.add(sourceFile.getCanonicalFile());
     }
     else {
       throw new FileNotFoundException("The source file ["
-          + (verbose ? sourceFile.getPath() : sourceFile.getName()) + "] does not exist.");
+          + (mojoMeta.isVerbose() ? sourceFile.getPath() : sourceFile.getName()) + "] does not exist.");
     }
+  }
+
+  private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+    Set<Object> seen = new HashSet<>();
+    return t -> seen.add(keyExtractor.apply(t));
   }
 
   /**
@@ -319,8 +86,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param excludes list of source files to exclude
    * @return the files to copy
    */
-  private List<File> getFilesToInclude(List<String> includes, List<String> excludes) {
-
+  private static List<File> getFilesToInclude(File sourceDir, List<String> includes, List<String> excludes) {
     if (includes == null || includes.isEmpty()) { return new ArrayList<>(); }
 
     String[] excludesArray = excludes.toArray(new String[excludes.size()]);
@@ -348,9 +114,217 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         .collect(Collectors.toList());
   }
 
-  private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
-    Set<Object> seen = new HashSet<>();
-    return t -> seen.add(keyExtractor.apply(t));
+  protected final Integer bufferSize;
+
+  protected final ClosureConfig closureConfig;
+
+  protected final Charset encoding;
+
+  protected final List<File> files = new ArrayList<>();
+
+  protected final boolean includesEmpty;
+
+  protected final Log log;
+
+  private final FilenameInterpolator outputFilenameInterpolator;
+
+  protected final boolean skipMerge;
+
+  protected final boolean skipMinify;
+
+  protected final File sourceDir;
+
+  protected final File targetDir;
+
+  protected final boolean verbose;
+
+  /**
+   * Task constructor.
+   * @param mojoMeta Base mojo data.
+   * @param bufferSize size of the buffer used to read source files
+   * @param suffix final file name suffix
+   * @param nosuffix whether to use a suffix for the minified file name or not
+   * @param skipMerge whether to skip the merge step or not
+   * @param skipMinify whether to skip the minify step or not
+   * @param baseSourceDir web resources source directory
+   * @param baseTargetDir web resources target directory
+   * @param sourceDir directory containing source files
+   * @param includes list of source files to include
+   * @param excludes list of source files to exclude
+   * @param targetDir directory to write the final file
+   * @param outputFilename the output file name
+   * @param closureConfig Google closure configuration
+   * @throws IOException
+   */
+  public ProcessFilesTask(MojoMetadata mojoMeta, int bufferSize,
+      boolean skipMerge, boolean skipMinify,
+      File baseSourceDir, File baseTargetDir,
+      String sourceDir, String targetDir,
+      List<String> includes, List<String> excludes,
+      String outputFilename, ClosureConfig closureConfig) throws IOException {
+    this.log = mojoMeta.getLog();
+    this.verbose = mojoMeta.isVerbose();
+    this.bufferSize = bufferSize;
+    this.encoding = Charset.forName(mojoMeta.getEncoding());
+    this.skipMerge = skipMerge;
+    this.skipMinify = skipMinify;
+
+    File projectBasedir = mojoMeta.getProject().getBasedir();
+    this.sourceDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, baseSourceDir), sourceDir).getAbsoluteFile().getCanonicalFile();
+    this.targetDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, baseTargetDir), targetDir).getAbsoluteFile().getCanonicalFile();
+    this.outputFilenameInterpolator = new FilenameInterpolator(outputFilename);
+
+    for (File include : getFilesToInclude(this.sourceDir, includes, excludes)) {
+      if (!files.contains(include)) {
+        addNewSourceFile(files, include, mojoMeta);
+      }
+    }
+
+    this.includesEmpty = includes.isEmpty();
+    this.closureConfig = closureConfig;
   }
 
+  private void assertTarget(File source, File target) throws MojoFailureException {
+    if (target.getAbsolutePath().equals(source.getAbsolutePath())) {
+      String msg = "The source file [" + (verbose ? source.getPath() : source.getName())
+          + "] has the same name as the output file [" + (verbose ? target.getPath() : target.getName()) + "].";
+      log.warn(msg);
+      throw new MojoFailureException(msg);
+    }
+  }
+
+  /**
+   * Method executed by the thread.
+   * @throws IOException when the merge or minify steps fail
+   * @throws MojoFailureException
+   */
+  @Override
+  public Object call() throws IOException, MojoFailureException {
+    synchronized (log) {
+      log.info("Starting JavaScript task:");
+
+      if (!targetDir.exists() && !targetDir.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetDir); }
+
+      if (!files.isEmpty()) {
+
+        // Minify only
+        if (skipMerge) {
+          log.info("Skipping the merge step...");
+
+          for (File sourceFile : files) {
+            // Create folders to preserve sub-directory structure when only minifying
+            File targetPath = sourceFile.getParentFile();
+            if (!targetPath.exists() && !targetPath.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetPath); }
+            File minifiedFile = outputFilenameInterpolator.apply(sourceFile);
+            assertTarget(sourceFile, minifiedFile);
+            if (skipMinify) {
+              FileUtils.copyFile(sourceFile, minifiedFile);
+            }
+            else {
+              minify(sourceFile, minifiedFile);
+            }
+          }
+        }
+        // Merge-only
+        else if (skipMinify) {
+          File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME));
+          merge(mergedFile);
+          log.info("Skipping the minify step...");
+        }
+        // Minify + merge
+        else {
+          File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME));
+          minify(files, minifiedFile);
+        }
+      }
+      else if (!includesEmpty) {
+        // 'files' list will be empty if source file paths or names added to the project's POM are invalid.
+        log.error("No valid JavaScript source files found to process.");
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Logs compression gains.
+   * @param mergedFile input file resulting from the merged step
+   * @param minifiedFile output file resulting from the minify step
+   */
+  void logCompressionGains(File mergedFile, File minifiedFile) {
+    List<File> srcFiles = new ArrayList<File>();
+    srcFiles.add(mergedFile);
+    logCompressionGains(srcFiles, minifiedFile);
+  }
+
+  /**
+   * Logs compression gains.
+   * @param srcFiles list of input files to compress
+   * @param minifiedFile output file resulting from the minify step
+   */
+  void logCompressionGains(List<File> srcFiles, File minifiedFile) {
+    try {
+      File temp = File.createTempFile(minifiedFile.getName(), ".gz");
+
+      try (InputStream in = new FileInputStream(minifiedFile);
+          OutputStream out = new FileOutputStream(temp);
+          GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
+        IOUtils.copy(in, outGZIP, bufferSize);
+      }
+
+      long uncompressedSize = 0;
+      if (srcFiles != null) {
+        for (File srcFile : srcFiles) {
+          uncompressedSize += srcFile.length();
+        }
+      }
+
+      log.info("Uncompressed size: " + uncompressedSize + " bytes.");
+      log.info("Compressed size: " + minifiedFile.length() + " bytes minified (" + temp.length()
+          + " bytes gzipped).");
+
+      temp.deleteOnExit();
+    }
+    catch (IOException e) {
+      log.debug("Failed to calculate the gzipped file size.", e);
+    }
+  }
+
+  /**
+   * Merges a list of source files. Create missing parent directories if needed.
+   * @param mergedFile output file resulting from the merged step
+   * @throws IOException when the merge step fails
+   */
+  protected void merge(File mergedFile) throws IOException {
+    if (!mergedFile.getParentFile().exists() && !mergedFile.getParentFile().mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + mergedFile.getParentFile()); }
+
+    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, verbose, encoding));
+        OutputStream out = new FileOutputStream(mergedFile);
+        InputStreamReader sequenceReader = new InputStreamReader(sequence, encoding);
+        OutputStreamWriter outWriter = new OutputStreamWriter(out, encoding)) {
+      log.info("Creating the merged file [" + (verbose ? mergedFile.getPath() : mergedFile.getName()) + "].");
+
+      IOUtils.copyLarge(sequenceReader, outWriter, new char[bufferSize]);
+    }
+    catch (IOException e) {
+      log.error("Failed to concatenate files.", e);
+      throw e;
+    }
+  }
+
+  /**
+   * Minifies a source file. Create missing parent directories if needed.
+   * @param mergedFile input file resulting from the merged step
+   * @param minifiedFile output file resulting from the minify step
+   * @throws IOException when the minify step fails
+   */
+  abstract void minify(File mergedFile, File minifiedFile) throws IOException;
+
+  /**
+   * Minifies a list of source files into a single file. Create missing parent directories if needed.
+   * @param srcFiles list of input files
+   * @param minifiedFile output file resulting from the minify step
+   * @throws IOException when the minify step fails
+   */
+  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException;
 }

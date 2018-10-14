@@ -16,30 +16,22 @@ package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.UnaryOperator;
 
-import org.apache.maven.plugin.logging.Log;
-
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
-import com.github.blutorange.maven.plugin.closurecompiler.common.OutputWrapper;
-import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.DiagnosticGroup;
 import com.google.javascript.jscomp.JSError;
 import com.google.javascript.jscomp.LightweightMessageFormatter;
 import com.google.javascript.jscomp.MessageFormatter;
@@ -57,38 +49,34 @@ import eu.maxschuster.dataurl.IDataUrlSerializer;
  */
 public class ProcessJSFilesTask extends ProcessFilesTask {
 
-  private UnaryOperator<String> outputWrapperInstance;
-
   /**
    * Task constructor.
-   * @param log Maven plugin log
+   * @param mojoMeta Mojo meta (for log, project etc.)
    * @param verbose display additional info
    * @param bufferSize size of the buffer used to read source files
-   * @param charset if a character set is specified, a byte-to-char variant allows the encoding to be selected.
+   * @param encoding if a character set is specified, a byte-to-char variant allows the encoding to be selected.
    * Otherwise, only byte-to-byte operations are used
-   * @param suffix final file name suffix
-   * @param nosuffix whether to use a suffix for the minified file name or not
    * @param skipMerge whether to skip the merge step or not
    * @param skipMinify whether to skip the minify step or not
-   * @param webappSourceDir web resources source directory
-   * @param webappTargetDir web resources target directory
-   * @param inputDir directory containing source files
-   * @param sourceFiles list of source files to include
-   * @param sourceIncludes list of source files to include
-   * @param sourceExcludes list of source files to exclude
-   * @param outputDir directory to write the final file
+   * @param baseSourceDir web resources source directory
+   * @param baseTargetDir web resources target directory
+   * @param sourceDir directory containing source files
+   * @param includes list of source files to include
+   * @param excludes list of source files to exclude
+   * @param targetDir directory to write the final file
    * @param outputFilename the output file name
    * @param closureConfig Google Closure Compiler configuration
-   * @throws FileNotFoundException when the given source file does not exist
+   * @throws IOException
    */
-  public ProcessJSFilesTask(Log log, boolean verbose, Integer bufferSize, Charset charset, String suffix,
-      boolean nosuffix, boolean skipMerge, boolean skipMinify, String webappSourceDir,
-      String webappTargetDir, String inputDir, List<String> sourceFiles,
-      List<String> sourceIncludes, List<String> sourceExcludes, String outputDir,
+  public ProcessJSFilesTask(MojoMetadata mojoMeta, int bufferSize,
+      boolean skipMerge, boolean skipMinify,
+      File baseSourceDir, File baseTargetDir,
+      String sourceDir, String targetDir,
+      List<String> includes, List<String> excludes,
       String outputFilename, ClosureConfig closureConfig)
-      throws FileNotFoundException {
-    super(log, verbose, bufferSize, charset, suffix, nosuffix, skipMerge, skipMinify, webappSourceDir,
-        webappTargetDir, inputDir, sourceFiles, sourceIncludes, sourceExcludes, outputDir, outputFilename,
+      throws IOException {
+    super(mojoMeta, bufferSize, skipMerge, skipMinify, baseSourceDir,
+        baseTargetDir, sourceDir, targetDir, includes, excludes, outputFilename,
         closureConfig);
   }
 
@@ -109,9 +97,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
     minifiedFile.getParentFile().mkdirs();
 
-    UnaryOperator<String> outputInterpolator = createOutputInterpolator();
+    UnaryOperator<String> outputInterpolator = closureConfig.getOutputInterpolator();
 
-    try (OutputStream out = new FileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, charset)) {
+    try (OutputStream out = new FileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, encoding)) {
 
       log.info("Creating the minified file [" + ((verbose) ? minifiedFile.getPath() : minifiedFile.getName())
           + "].");
@@ -123,28 +111,13 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
       for (File srcFile : srcFiles) {
         InputStream in = new FileInputStream(srcFile);
-        SourceFile input = SourceFile.fromInputStream(srcFile.getName(), in, charset);
+        SourceFile input = SourceFile.fromInputStream(srcFile.getName(), in, encoding);
         sourceFileList.add(input);
       }
 
       // Set common options
-      CompilerOptions options = new CompilerOptions();
-      setCommonOptions(options);
-
-      // Tell the compiler to create a source map, if configured.
-      File sourceMapFile = new File(minifiedFile.getPath() + ".map");
-      if (closureConfig.getSourceMapFormat() != null) {
-        options.setSourceMapFormat(closureConfig.getSourceMapFormat());
-        options.setSourceMapIncludeSourcesContent(closureConfig.getIncludeSourcesContent());
-        options.setSourceMapOutputPath(sourceMapFile.getPath());
-      }
-
-      // Set warning levels
-      if (closureConfig.getWarningLevels() != null) {
-        for (Map.Entry<DiagnosticGroup, CheckLevel> warningLevel : closureConfig.getWarningLevels().entrySet()) {
-          options.setWarningLevel(warningLevel.getKey(), warningLevel.getValue());
-        }
-      }
+      File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile);
+      CompilerOptions options = closureConfig.getCompilerOptions(sourceMapFile);
 
       // Set (external) libraries to be available
       List<SourceFile> externs = new ArrayList<>();
@@ -162,7 +135,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       writer.append(outputInterpolator.apply(compiler.toSource()));
 
       // Create source map if configured.
-      if (closureConfig.getSourceMapFormat() != null) {
+      if (closureConfig.isCreateSourceMap()) {
         createSourceMap(writer, compiler, minifiedFile, sourceMapFile);
       }
     }
@@ -175,31 +148,6 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     }
 
     logCompressionGains(srcFiles, minifiedFile);
-  }
-
-  private UnaryOperator<String> createOutputInterpolator() throws IOException {
-    String outputWrapper = closureConfig.getOutputWrapper();
-    if (outputWrapper == null || outputWrapper.trim().length() == 0) {
-      return UnaryOperator.identity();
-    }
-    else {
-      return new OutputWrapper(outputWrapper);
-    }
-  }
-
-  private void setCommonOptions(CompilerOptions options) {
-    closureConfig.getCompilationLevel().setOptionsForCompilationLevel(options);
-    options.setOutputCharset(charset);
-    options.setLanguageIn(closureConfig.getLanguageIn());
-    options.setLanguageOut(closureConfig.getLanguageOut());
-    options.setAngularPass(closureConfig.getAngularPass());
-    options.setColorizeErrorOutput(closureConfig.getColorizeErrorOutput());
-    options.setDependencyOptions(closureConfig.getDependencyOptions());
-    options.setExtraAnnotationNames(closureConfig.getExtraAnnotations());
-    options.setDefineReplacements(closureConfig.getDefineReplacements());
-    options.setPrettyPrint(closureConfig.getPrettyPrint());
-    options.setRewritePolyfills(closureConfig.getRewritePolyfills());
-    options.setTrustedStrings(closureConfig.getTrustedStrings());
   }
 
   private void checkForErrors(Compiler compiler) {

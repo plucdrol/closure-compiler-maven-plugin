@@ -11,9 +11,11 @@ Exclude source files from WAR package
 
   Sometimes we need to exclude the original source files from the final WAR package.
 
-  A possible scenario is when you do not want to make them publicly available via your site for security reasons, or simply want to include only the minified (obfuscated) file resulting from the plugin execution.
+  A possible scenario is when you do not want to make them publicly available via your site for security reasons, or simply only want to include only the minified file in the resulting war.
 
   The example below illustrates how to configure Maven WAR Plugin to exclude the undesired source files from the final WAR package.
+  
+  You should also consider creating separate directories for source files and generated files, this makes the configration clearer.
 
 +---+
 <project>
@@ -37,11 +39,11 @@ Exclude source files from WAR package
           <execution>
             <id>default-minify</id>
             <configuration>
-              <jsSourceFiles>
-                <jsSourceFile>file-1.js</jsSourceFile>
+              <includes>
+                <include>file-1.js</include>
                 <!-- ... -->
-                <jsSourceFile>file-n.js</jsSourceFile>
-              </jsSourceFiles>
+                <include>file-n.js</include>
+              </includes>
             </configuration>
             <goals>
               <goal>minify</goal>
