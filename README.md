@@ -1,4 +1,4 @@
-**WORK-IN-PROGRESS, not yet uploaded to maven**
+**WORK-IN-PROGRESS**
 
 # Closure Compiler Maven Plugin
 
@@ -26,12 +26,12 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
         <execution>
           <id>default-minify</id>
           <configuration>
-            <charset>UTF-8</charset>
-            <jsSourceFiles>
-              <jsSourceFile>file-1.js</jsSourceFile>
+            <encoding>UTF-8</encoding>
+            <includes>
+              <include>file-1.js</include>
               <!-- ... -->
-              <jsSourceFile>file-n.js</jsSourceFile>
-            </jsSourceFiles>
+              <include>file-n.js</include>
+            </includes>
           </configuration>
           <goals>
             <goal>minify</goal>
@@ -43,7 +43,8 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 </build>
 ```
 
-For more information, check the [documentation](http://blutorange.github.com/closure-compiler-maven-plugin/) or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/releases/).
+For more information, check the [documentation](http://blutorange.github.com/closure-compiler-maven-plugin/)
+or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/tree/master/demo).
 
 # Release
 

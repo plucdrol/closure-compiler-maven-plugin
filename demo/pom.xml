@@ -53,7 +53,7 @@
 								<include>subdir/pearce-kelly.js</include>
 								<include>blutorange.js</include>
 							</includes>
-							<outputFilename>merged.js</outputFilename>
+							<outputFilename>merged.js</outputFilename>							
 							<closureCreateSourceMap>true</closureCreateSourceMap>
 							<closureLanguageIn>ECMASCRIPT_2016</closureLanguageIn>
 							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
