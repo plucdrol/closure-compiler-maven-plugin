@@ -213,6 +213,7 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    * <li>{@code ECMASCRIPT5_STRICT}
    * <li>{@code ECMASCRIPT_2015}
    * <li>{@code STABLE}
+   * <li>{@code NO_TRANSPILE}</li>
    * </ul>
    * @since 1.7.5
    */

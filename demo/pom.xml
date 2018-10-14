@@ -53,12 +53,16 @@
 								<include>subdir/pearce-kelly.js</include>
 								<include>blutorange.js</include>
 							</includes>
+							<verbose>true</verbose>
+							<closureWarningLevels>
+								<es5Strict>OFF</es5Strict>
+							</closureWarningLevels>
 							<outputFilename>merged.js</outputFilename>							
 							<closureCreateSourceMap>true</closureCreateSourceMap>
 							<closureLanguageIn>ECMASCRIPT_2016</closureLanguageIn>
 							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
 							<closureIncludeSourcesContent>true</closureIncludeSourcesContent>
-							<closureSourceMapOutputType>inline</closureSourceMapOutputType>
+							<closureSourceMapOutputType>reference</closureSourceMapOutputType>
 							<closureDefine>
 								<DEFINE_TEST>false</DEFINE_TEST>
 							</closureDefine>

@@ -119,6 +119,10 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile);
       CompilerOptions options = closureConfig.getCompilerOptions(sourceMapFile);
 
+      if (verbose) {
+        log.info("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
+      }
+
       // Set (external) libraries to be available
       List<SourceFile> externs = new ArrayList<>();
       externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));

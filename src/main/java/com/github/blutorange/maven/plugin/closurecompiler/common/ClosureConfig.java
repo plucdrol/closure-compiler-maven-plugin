@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.DependencyOptions;
 import com.google.javascript.jscomp.DiagnosticGroup;
 import com.google.javascript.jscomp.DiagnosticGroups;
@@ -213,6 +214,8 @@ public class ClosureConfig {
 
   private final SourceMapOutputType sourceMapOutputType;
 
+  private final LanguageMode languageOut;
+
   /**
    * Create a new closure compiler configuration from the mojo configuration.
    * @param mojo Mojo with the options.
@@ -221,6 +224,7 @@ public class ClosureConfig {
     this.compilationLevel = mojo.getClosureCompilationLevel();
     this.environment = mojo.getClosureEnvironment();
     this.includeSourcesContent = mojo.isClosureIncludeSourcesContent();
+    this.languageOut = mojo.getClosureLanguageOut();
     this.sourceMapFormat = mojo.isClosureCreateSourceMap() ? SourceMap.Format.V3 : null;
     this.sourceMapOutputType = mojo.getClosureSourceMapOutputType();
 
@@ -246,6 +250,7 @@ public class ClosureConfig {
       compilerOptions.setSourceMapIncludeSourcesContent(includeSourcesContent);
       compilerOptions.setSourceMapOutputPath(sourceMapFile.getPath());
     }
+
     return compilerOptions;
   }
 
@@ -271,5 +276,9 @@ public class ClosureConfig {
 
   public boolean isCreateSourceMap() {
     return sourceMapFormat != null;
+  }
+
+  public LanguageMode getLanguageOut() {
+    return languageOut;
   }
 }
