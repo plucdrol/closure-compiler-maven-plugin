@@ -13,22 +13,21 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.function.UnaryOperator;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
@@ -95,19 +94,22 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
   @Override
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
-    minifiedFile.getParentFile().mkdirs();
+    File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile);
 
-    UnaryOperator<String> outputInterpolator = closureConfig.getOutputInterpolator();
+    if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMap() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
 
-    try (OutputStream out = new FileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, encoding)) {
+    mkDir(minifiedFile.getParentFile());
+    if (closureConfig.isCreateSourceMap()) {
+      mkDir(sourceMapFile.getParentFile());
+    }
 
-      log.info("Creating the minified file [" + ((verbose) ? minifiedFile.getPath() : minifiedFile.getName())
-          + "].");
+    OutputInterpolator outputInterpolator = closureConfig.getOutputInterpolator();
 
-      log.debug("Using Google Closure Compiler engine.");
+    try (OutputStream out = buildContext.newFileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, encoding)) {
 
-      // List<SourceFile> sourceFileList = srcFiles.stream().map(f -> SourceFile.fromPath(f.toPath(),
-      // charset)).collect(Collectors.toList());
+      log.info("Creating the minified file [" + minifiedFile.getName() + "].");
+      log.debug("Full path is [" + minifiedFile.getPath() + "].");
+
       List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
       for (File srcFile : srcFiles) {
         InputStream in = new FileInputStream(srcFile);
@@ -115,21 +117,18 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         sourceFileList.add(input);
       }
 
-      // Set common options
-      File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile);
+      // Create compiler options
       CompilerOptions options = closureConfig.getCompilerOptions(sourceMapFile);
 
-      if (verbose) {
-        log.info("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
-      }
+      log.debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
 
       // Set (external) libraries to be available
       List<SourceFile> externs = new ArrayList<>();
       externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
       externs.addAll(closureConfig.getExterns());
 
-      // Now compile
       final Compiler compiler = new Compiler();
+      // Now compile
       compiler.compile(externs, sourceFileList, options);
 
       // Check for errors.
@@ -140,14 +139,17 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
       // Create source map if configured.
       if (closureConfig.isCreateSourceMap()) {
+        // Adjust source map for output wrapper.
+        compiler.getSourceMap().setWrapperPrefix(outputInterpolator.getWrapperPrefix());
         createSourceMap(writer, compiler, minifiedFile, sourceMapFile);
       }
+
+      // Make sure we end with a new line
+      writer.append(System.lineSeparator());
     }
     catch (IOException e) {
-      log.error(
-          "Failed to compress the JavaScript file ["
-              + (verbose ? minifiedFile.getPath() : minifiedFile.getName()) + "].",
-          e);
+      log.error("Failed to compress the JavaScript file [" + minifiedFile.getName() + "].", e);
+      log.debug("Full path is [" + minifiedFile.getPath() + "]");
       throw e;
     }
 
@@ -167,8 +169,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private void createSourceMap(Writer writer, Compiler compiler, File minifiedFile, File sourceMapFile) throws IOException {
-    log.info("Creating the minified files map ["
-        + ((verbose) ? sourceMapFile.getPath() : sourceMapFile.getName()) + "].");
+    log.info("Creating the minified files map [" + sourceMapFile.getName() + "].");
+    log.debug("Full path is [" + sourceMapFile.getPath() + "].");
 
     switch (closureConfig.getSourceMapOutputType()) {
       case inline:
@@ -182,34 +184,30 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
             .build();
         IDataUrlSerializer serializer = new DataUrlSerializer();
         String dataUrl = serializer.serialize(unserialized);
-        writer.append(System.getProperty("line.separator"));
+        writer.append(System.lineSeparator());
         writer.append("//# sourceMappingURL=" + dataUrl);
         break;
       case file:
-        sourceMapFile.createNewFile();
         flushSourceMap(sourceMapFile, minifiedFile.getName(), compiler.getSourceMap());
         break;
       case reference:
-        sourceMapFile.createNewFile();
         flushSourceMap(sourceMapFile, minifiedFile.getName(), compiler.getSourceMap());
-        writer.append(System.getProperty("line.separator"));
+        writer.append(System.lineSeparator());
         writer.append("//# sourceMappingURL=" + sourceMapFile.getName());
         break;
       default:
-        log.warn("unknown source map inclusion type: " + closureConfig.getSourceMapOutputType());
+        log.warn("Unknown source map inclusion type [" + closureConfig.getSourceMapOutputType() + "]");
         throw new RuntimeException("unknown source map inclusion type: " + closureConfig.getSourceMapOutputType());
     }
   }
 
-  private boolean flushSourceMap(File sourceMapFile, String minifyFileName, SourceMap sourceMap) {
-    try (BufferedWriter out = Files.newBufferedWriter(sourceMapFile.toPath(), StandardCharsets.UTF_8)) {
-      sourceMap.appendTo(out, minifyFileName);
-      return true;
+  private void flushSourceMap(File sourceMapFile, String minifyFileName, SourceMap sourceMap) throws IOException {
+    try (OutputStream out = buildContext.newFileOutputStream(sourceMapFile); Writer writer = new OutputStreamWriter(out, encoding)) {
+      sourceMap.appendTo(writer, minifyFileName);
     }
     catch (IOException e) {
-      log.error("Failed to write the JavaScript Source Map file ["
-          + (verbose ? sourceMapFile.getPath() : sourceMapFile.getName()) + "].", e);
-      return false;
+      log.error("Failed to write the JavaScript Source Map file [" + sourceMapFile.getName() + "].", e);
+      log.debug("Full path is [" + sourceMapFile.getPath() + "]");
     }
   }
 }

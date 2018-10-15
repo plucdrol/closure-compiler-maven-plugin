@@ -45,12 +45,12 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    * @param verbose show source file paths in log output
    * @param charset
    */
-  public SourceFilesEnumeration(Log log, List<File> files, boolean verbose, Charset charset) {
+  public SourceFilesEnumeration(Log log, List<File> files, Charset charset) {
     this.suppliers = new ArrayList<>();
-
     for (int i = 0, j = files.size(); i < j; ++i) {
       File file = files.get(i);
-      log.info("Processing source file [" + ((verbose) ? file.getPath() : file.getName()) + "].");
+      log.info("Processing source file [" + file.getName() + "].");
+      log.debug("Full path is [" + file.getPath() + "].");
       this.suppliers.add(new FileInputStreamSupplier(file));
       if (i < j - 1) {
         this.suppliers.add(new NewlineInputStreamSupplier(charset));

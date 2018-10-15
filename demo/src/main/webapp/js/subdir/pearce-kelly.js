@@ -162,4 +162,5 @@ var PearceKellyDetector = (function () {
     return PearceKellyDetector;
 }());
 
+window.foobar = 42;
 window.PearceKellyDetector = PearceKellyDetector; // end-of-file

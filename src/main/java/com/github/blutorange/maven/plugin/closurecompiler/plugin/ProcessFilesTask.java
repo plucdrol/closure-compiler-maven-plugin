@@ -22,11 +22,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Reader;
 import java.io.SequenceInputStream;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +44,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.DirectoryScanner;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
@@ -66,12 +70,11 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    */
   private static void addNewSourceFile(Collection<File> files, File sourceFile, MojoMetadata mojoMeta) throws IOException {
     if (sourceFile.exists()) {
-      mojoMeta.getLog().debug("Adding source file [" + (mojoMeta.isVerbose() ? sourceFile.getPath() : sourceFile.getName()) + "].");
+      mojoMeta.getLog().debug("Adding source file [" + sourceFile.getPath() + "].");
       files.add(sourceFile.getCanonicalFile());
     }
     else {
-      throw new FileNotFoundException("The source file ["
-          + (mojoMeta.isVerbose() ? sourceFile.getPath() : sourceFile.getName()) + "] does not exist.");
+      throw new FileNotFoundException("The source file [" + sourceFile.getPath() + "] does not exist.");
     }
   }
 
@@ -136,7 +139,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
   protected final File targetDir;
 
-  protected final boolean verbose;
+  protected final BuildContext buildContext;
 
   /**
    * Task constructor.
@@ -163,7 +166,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       List<String> includes, List<String> excludes,
       String outputFilename, ClosureConfig closureConfig) throws IOException {
     this.log = mojoMeta.getLog();
-    this.verbose = mojoMeta.isVerbose();
+    this.buildContext = mojoMeta.getBuildContext();
     this.bufferSize = bufferSize;
     this.encoding = Charset.forName(mojoMeta.getEncoding());
     this.skipMerge = skipMerge;
@@ -186,9 +189,10 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
   private void assertTarget(File source, File target) throws MojoFailureException {
     if (target.getAbsolutePath().equals(source.getAbsolutePath())) {
-      String msg = "The source file [" + (verbose ? source.getPath() : source.getName())
-          + "] has the same name as the output file [" + (verbose ? target.getPath() : target.getName()) + "].";
+      String msg;
+      msg = "The source file [" + source.getName() + "] has the same name as the output file [" + target.getName() + "].";
       log.warn(msg);
+      log.debug("Full path for source file is [" + source.getPath() + "] and for target file [" + target.getPath() + "]");
       throw new MojoFailureException(msg);
     }
   }
@@ -203,7 +207,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     synchronized (log) {
       log.info("Starting JavaScript task:");
 
-      if (!targetDir.exists() && !targetDir.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetDir); }
+      mkDir(targetDir);
 
       if (!files.isEmpty()) {
 
@@ -212,13 +216,11 @@ public abstract class ProcessFilesTask implements Callable<Object> {
           log.info("Skipping the merge step...");
 
           for (File sourceFile : files) {
-            // Create folders to preserve sub-directory structure when only minifying
-            File targetPath = sourceFile.getParentFile();
-            if (!targetPath.exists() && !targetPath.mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + targetPath); }
+            // Create folders to preserve sub-directory structure when only minifying / copying
             File minifiedFile = outputFilenameInterpolator.apply(sourceFile);
             assertTarget(sourceFile, minifiedFile);
             if (skipMinify) {
-              FileUtils.copyFile(sourceFile, minifiedFile);
+              copy(sourceFile, minifiedFile);
             }
             else {
               minify(sourceFile, minifiedFile);
@@ -291,25 +293,94 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   }
 
   /**
+   * Creates the given directory (and parents) and informs the build context.
+   * @param directory
+   */
+  protected void mkDir(File directory) {
+    if (directory.exists()) { return; }
+    File firstThatExists = directory;
+    do {
+      firstThatExists = firstThatExists.getParentFile();
+    }
+    while (firstThatExists != null && !firstThatExists.exists());
+    try {
+      if (!directory.mkdirs()) { throw new RuntimeException("Unable to create target directory: " + directory.getPath()); }
+    }
+    finally {
+      if (firstThatExists != null) {
+        buildContext.refresh(firstThatExists);
+      }
+    }
+  }
+
+  /**
+   * Copies sourceFile to targetFile, making sure to inform the build context of the change.
+   * @param sourceFile
+   * @param targetFile
+   * @throws IOException
+   */
+  protected void copy(File sourceFile, File targetFile) throws IOException {
+    if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return; }
+    mkDir(targetFile.getParentFile());
+    try (InputStream in = new FileInputStream(sourceFile);
+        OutputStream out = buildContext.newFileOutputStream(targetFile);
+        Reader reader = new InputStreamReader(in, encoding);
+        Writer writer = new OutputStreamWriter(out, encoding)) {
+      IOUtils.copy(reader, writer);
+    }
+  }
+
+  /**
    * Merges a list of source files. Create missing parent directories if needed.
    * @param mergedFile output file resulting from the merged step
    * @throws IOException when the merge step fails
    */
   protected void merge(File mergedFile) throws IOException {
-    if (!mergedFile.getParentFile().exists() && !mergedFile.getParentFile().mkdirs()) { throw new RuntimeException("Unable to create target directory for: " + mergedFile.getParentFile()); }
+    if (!haveFilesChanged(files, Collections.singleton(mergedFile))) { return; }
 
-    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, verbose, encoding));
-        OutputStream out = new FileOutputStream(mergedFile);
+    mkDir(mergedFile.getParentFile());
+
+    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, encoding));
+        OutputStream out = buildContext.newFileOutputStream(mergedFile);
         InputStreamReader sequenceReader = new InputStreamReader(sequence, encoding);
         OutputStreamWriter outWriter = new OutputStreamWriter(out, encoding)) {
-      log.info("Creating the merged file [" + (verbose ? mergedFile.getPath() : mergedFile.getName()) + "].");
+      log.info("Creating the merged file [" + mergedFile.getName() + "].");
+      log.debug("Full path is [" + mergedFile.getPath() + "].");
 
       IOUtils.copyLarge(sequenceReader, outWriter, new char[bufferSize]);
+
+      // Make sure we end with a new line
+      outWriter.append(System.lineSeparator());
     }
     catch (IOException e) {
       log.error("Failed to concatenate files.", e);
       throw e;
     }
+  }
+
+  /**
+   * @param sourceFiles
+   * @param outputFiles
+   * @return Whether any change was made to the source / output files. If not, then we can skip the execution of the
+   * current bundle.
+   */
+  protected boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
+    boolean changed;
+    if (outputFiles.stream().allMatch(File::exists)) {
+      long oldestOutput = outputFiles.stream().map(File::lastModified).min(Long::compareTo).orElse(0L);
+      long youngestInput = sourceFiles.stream().map(File::lastModified).max(Long::compareTo).orElse(Long.MAX_VALUE);
+      changed = oldestOutput < youngestInput;
+    }
+    else {
+      changed = true;
+    }
+
+    if (!changed && log.isDebugEnabled()) {
+      log.debug("No changes since last incremental build, skipping bundle with output files ["
+          + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
+          + "].");
+    }
+    return changed;
   }
 
   /**

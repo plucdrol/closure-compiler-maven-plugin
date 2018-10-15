@@ -2,6 +2,12 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.util.Comparator;
 
+/**
+ * A tuple of two types that are comparable. By default, sort by first type, then by second.
+ * @author madgaksha
+ * @param <First>
+ * @param <Second>
+ */
 public class TwoTuple<First extends Comparable<First>, Second extends Comparable<Second>> implements Comparable<TwoTuple<First, Second>> {
   private final First first;
   private final Second seocnd;

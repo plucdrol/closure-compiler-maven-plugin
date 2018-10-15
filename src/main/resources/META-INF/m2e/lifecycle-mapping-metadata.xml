@@ -1,14 +1,17 @@
 <lifecycleMappingMetadata>
-    <pluginExecutions>
-        <pluginExecution>
-            <pluginExecutionFilter>
-                <goals>
-                    <goal>minify</goal>
-                </goals>
-            </pluginExecutionFilter>
-            <action>
-                <ignore/>
-            </action>
-        </pluginExecution>
-    </pluginExecutions>
+	<pluginExecutions>
+		<pluginExecution>
+			<pluginExecutionFilter>
+				<goals>
+					<goal>minify</goal>
+				</goals>
+			</pluginExecutionFilter>
+			<action>
+				<execute>
+					<runOnIncremental>true</runOnIncremental>
+					<runOnConfiguration>true</runOnConfiguration>
+				</execute>
+			</action>
+		</pluginExecution>
+	</pluginExecutions>
 </lifecycleMappingMetadata>

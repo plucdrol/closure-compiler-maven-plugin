@@ -34,7 +34,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 @WebFilter(filterName = "SourceMapFilter", urlPatterns = { "/js/script.min.js" })
 public class SourceMapFilter implements Filter {
-
+	
     /**
      * {@inheritDoc}
      */
@@ -52,8 +52,7 @@ public class SourceMapFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-        httpServletResponse.setHeader("SourceMap", "script.min.js.map");
-
+        httpServletResponse.setHeader("SourceMap", "merged.js.map");
         filterChain.doFilter(servletRequest, httpServletResponse);
     }
 

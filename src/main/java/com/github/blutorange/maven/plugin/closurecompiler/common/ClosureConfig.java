@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -54,9 +53,10 @@ public class ClosureConfig {
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
     CompilerOptions options = new CompilerOptions();
 
-    options.setOutputCharset(Charset.forName(mojo.getEncoding()));
+    options.setEnvironment(mojo.getClosureEnvironment());
     options.setLanguageIn(mojo.getClosureLanguageIn());
     options.setLanguageOut(mojo.getClosureLanguageOut());
+    options.setOutputCharset(Charset.forName(mojo.getEncoding()));
 
     options.setAngularPass(mojo.isClosureAngularPass());
     options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
@@ -168,13 +168,13 @@ public class ClosureConfig {
     return externs;
   }
 
-  private static UnaryOperator<String> createOutputInterpolator(MinifyMojo mojo) {
+  private static OutputInterpolator createOutputInterpolator(MinifyMojo mojo) {
     String outputWrapper = mojo.getClosureOutputWrapper();
     if (StringUtils.isBlank(outputWrapper)) {
-      return UnaryOperator.identity();
+      return OutputInterpolator.forIdentity();
     }
     else {
-      return new OutputWrapper(outputWrapper);
+      return OutputInterpolator.forPattern(outputWrapper);
     }
   }
 
@@ -206,7 +206,7 @@ public class ClosureConfig {
 
   private final boolean includeSourcesContent;
 
-  private final UnaryOperator<String> outputInterpolator;
+  private final OutputInterpolator outputInterpolator;
 
   private final Format sourceMapFormat;
 
@@ -262,7 +262,7 @@ public class ClosureConfig {
     return externs;
   }
 
-  public UnaryOperator<String> getOutputInterpolator() {
+  public OutputInterpolator getOutputInterpolator() {
     return outputInterpolator;
   }
 

@@ -35,15 +35,20 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.LogLevel;
+import com.github.blutorange.maven.plugin.closurecompiler.common.LogWrapper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
@@ -64,15 +69,22 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   @Parameter(defaultValue = "${project}", readonly = true, required = true)
   private MavenProject project;
 
+  @Component
+  private BuildContext buildContext;
+
+  private Log logWrapper;
+
   /* ************** */
   /* Global Options */
   /* ************** */
 
   /**
-   * Display additional informational messages and warnings.
+   * By default, messages are logged at the log level set by maven. This option allows you to change the log level.
+   * Valid options are {@code all}, {@code debug}, {@code info}, {@code warn}, {@code error}, {@code none}. Leave empty
+   * to use the default log level. Please note that you can only decrease, not increase, the log level.
    */
-  @Parameter(property = "verbose", defaultValue = "false")
-  private boolean verbose;
+  @Parameter(property = "logLevel", defaultValue = "")
+  private LogLevel logLevel;
 
   /**
    * Size of the buffer used to read source files.
@@ -312,7 +324,7 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    * {@code %output%}. Use marker token {@code %output|jsstring%} to do js string escaping on the output.
    * </p>
    * <p>
-   * Please take care when using this options with source maps -- the mapping will not match anymore.
+   * When using this options with a source map, the map is adjusted appropriately to match the code.
    * </p>
    * @since 2.0.0
    */
@@ -507,7 +519,8 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
       throw new MojoFailureException(e.getMessage(), e);
     }
 
-    ExecutorService executor = Executors.newFixedThreadPool(processFilesTasks.size());
+    // ExecutorService executor = Executors.newFixedThreadPool(processFilesTasks.size());
+    ExecutorService executor = Executors.newSingleThreadExecutor();
     try {
       List<Future<Object>> futures = executor.invokeAll(processFilesTasks);
       for (Future<Object> future : futures) {
@@ -556,6 +569,14 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     }
   }
 
+  @Override
+  public Log getLog() {
+    if (logWrapper == null) {
+      logWrapper = new LogWrapper(super.getLog(), logLevel);
+    }
+    return logWrapper;
+  }
+
   private Collection<Aggregation> getAggregations() throws MojoFailureException {
     if (StringUtils.isBlank(bundleConfiguration)) { return Collections.emptySet(); }
     AggregationConfiguration aggregationConfiguration;
@@ -580,6 +601,11 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public int getBufferSize() {
     return bufferSize;
+  }
+
+  @Override
+  public BuildContext getBuildContext() {
+    return buildContext;
   }
 
   public String getBundleConfiguration() {
@@ -712,11 +738,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return skipMinify;
   }
 
-  @Override
-  public boolean isVerbose() {
-    return verbose;
-  }
-
   public void setBaseSourceDir(File baseSourceDir) {
     this.baseSourceDir = baseSourceDir;
   }
@@ -727,6 +748,10 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public void setBufferSize(int bufferSize) {
     this.bufferSize = bufferSize;
+  }
+
+  public void setBuildContext(BuildContext buildContext) {
+    this.buildContext = buildContext;
   }
 
   public void setBundleConfiguration(String bundleConfiguration) {
@@ -855,9 +880,5 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public void setTargetDir(String targetDir) {
     this.targetDir = targetDir;
-  }
-
-  public void setVerbose(boolean verbose) {
-    this.verbose = verbose;
   }
 }

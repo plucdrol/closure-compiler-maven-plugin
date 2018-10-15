@@ -2,6 +2,7 @@
 
 ## 2.0.0
 
+* Support incremental builds (m2e).
 * Renamed aggregation JSON option `files` to `includes`.
 * Added aggregation JSON option to `excludes`.
 * Removed obsolete option `nosuffix`. Set `outputFilename` pattern to the desired value.
@@ -15,6 +16,8 @@
 * Renamed option `closureDefine` to closureDefineReplacements`.
 * Replaced option `suffix` with `outputFileName`. This allows for more freedom in defining 
   the output file name.
+* Replaced option `verbose` with `logLevel`. This lets you override the default maven 
+  log level for this plugin.
 * Added an option `sourceMapName` to customize how the source map is named.
 * Added an option `outputWrapper`. This is the same as `output_wrapper` from closure compiler,
   but implemented in the plugin as the closure compiler API does not expose this option.
