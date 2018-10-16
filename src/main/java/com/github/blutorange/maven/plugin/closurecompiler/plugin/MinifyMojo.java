@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -47,10 +48,12 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.LogLevel;
 import com.github.blutorange.maven.plugin.closurecompiler.common.LogWrapper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.MojoMetaImpl;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
@@ -60,7 +63,7 @@ import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
  * Goal for combining and/or minifying JavaScript files with closure compiler.
  */
 @Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
-public class MinifyMojo extends AbstractMojo implements MojoMetadata {
+public class MinifyMojo extends AbstractMojo {
 
   /* ************* */
   /* Maven options */
@@ -87,10 +90,27 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private LogLevel logLevel;
 
   /**
+   * For each bundle, this plugin performs a check whether the input or output files have changed and skips the
+   * execution in case they haven't. Set this flag to {@code true} to force the execution.
+   * @since 2.0.0
+   */
+  @Parameter(property = "force", defaultValue = "false")
+  private boolean force;
+
+  /**
    * Size of the buffer used to read source files.
    */
   @Parameter(property = "bufferSize", defaultValue = "4096")
   private int bufferSize;
+
+  /**
+   * The line separator to be used when merging files etc. Defaults to the default system line separator. Special
+   * characters are entered escaped. So for example, to use a new line feed as the separator, set this property to
+   * {@code \n} (two characters, a backslash and the letter n).
+   * @since 2.0.0
+   */
+  @Parameter(property = "lineSeparator", defaultValue = "")
+  private String lineSeparator;
 
   /**
    * If a supported character set is specified, it will be used to read the input file. Otherwise, it will assume that
@@ -101,6 +121,32 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    */
   @Parameter(property = "encoding", defaultValue = "${project.build.sourceEncoding}", alias = "charset")
   private String encoding;
+
+  /**
+   * Skip the merge step. Minification will be applied to each source file individually.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMerge", defaultValue = "false")
+  private boolean skipMerge;
+
+  /**
+   * Skip the minify step. Useful when merging files that are already minified.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMinify", defaultValue = "false")
+  private boolean skipMinify;
+
+  /**
+   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
+   * project base directory.
+   * @since 1.7.5
+   */
+  @Parameter(property = "bundleConfiguration", defaultValue = "")
+  private String bundleConfiguration;
+
+  /* *********** */
+  /* File Options */
+  /* ************ */
 
   /**
    * <p>
@@ -122,20 +168,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private String outputFilename;
 
   /**
-   * Skip the merge step. Minification will be applied to each source file individually.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMerge", defaultValue = "false")
-  private boolean skipMerge;
-
-  /**
-   * Skip the minify step. Useful when merging files that are already minified.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMinify", defaultValue = "false")
-  private boolean skipMinify;
-
-  /**
    * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
    * directory. Use variables such as {@code basedir} to make it relative to the current directory.
    */
@@ -148,18 +180,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    */
   @Parameter(property = "baseTargetDir", defaultValue = "${project.build.directory}/${project.build.finalName}")
   private File baseTargetDir;
-
-  /**
-   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
-   * project base directory.
-   * @since 1.7.5
-   */
-  @Parameter(property = "bundleConfiguration", defaultValue = "")
-  private String bundleConfiguration;
-
-  /* ****************** */
-  /* JavaScript Options */
-  /* ****************** */
 
   /**
    * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
@@ -472,12 +492,10 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
       List<String> includes, List<String> excludes, String outputFilename)
       throws IOException {
-    return new ProcessJSFilesTask(this, bufferSize,
-        skipMerge, skipMinify,
-        baseSourceDir, baseTargetDir,
-        sourceDir, targetDir,
-        includes, excludes,
-        outputFilename, closureConfig);
+    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify);
+    FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, outputFilename, outputFilename, includes, excludes, outputFilename);
+    MojoMetadata mojoMeta = new MojoMetaImpl(project, getLog(), encoding, buildContext);
+    return new ProcessJSFilesTask(mojoMeta, processConfig, fileSpecifier, closureConfig);
   }
 
   private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
@@ -540,11 +558,17 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   }
 
   private void fillOptionalValues() {
-    if (Strings.isNullOrEmpty(targetDir)) {
+    if (StringUtils.isBlank(targetDir)) {
       targetDir = sourceDir;
     }
-    if (Strings.isNullOrEmpty(encoding)) {
+    if (StringUtils.isBlank(encoding)) {
       encoding = Charset.defaultCharset().name();
+    }
+    if (StringUtils.isBlank(lineSeparator)) {
+      lineSeparator = System.lineSeparator();
+    }
+    else {
+      lineSeparator = StringEscapeUtils.unescapeJava(lineSeparator);
     }
     if (excludes == null) {
       excludes = new ArrayList<>();
@@ -567,14 +591,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     if (closureDependencyEntryPoints == null) {
       closureDependencyEntryPoints = new ArrayList<>();
     }
-  }
-
-  @Override
-  public Log getLog() {
-    if (logWrapper == null) {
-      logWrapper = new LogWrapper(super.getLog(), logLevel);
-    }
-    return logWrapper;
   }
 
   private Collection<Aggregation> getAggregations() throws MojoFailureException {
@@ -603,7 +619,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return bufferSize;
   }
 
-  @Override
   public BuildContext getBuildContext() {
     return buildContext;
   }
@@ -660,7 +675,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return closureWarningLevels;
   }
 
-  @Override
   public String getEncoding() {
     return encoding;
   }
@@ -673,11 +687,30 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return includes;
   }
 
+  public String getLineSeparator() {
+    return lineSeparator;
+  }
+
+  @Override
+  public Log getLog() {
+    if (logWrapper == null) {
+      logWrapper = new LogWrapper(super.getLog(), logLevel);
+    }
+    return logWrapper;
+  }
+
+  public LogLevel getLogLevel() {
+    return logLevel;
+  }
+
+  public Log getLogWrapper() {
+    return logWrapper;
+  }
+
   public String getOutputFilename() {
     return outputFilename;
   }
 
-  @Override
   public MavenProject getProject() {
     return project;
   }
@@ -728,6 +761,10 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public boolean isClosureTrustedStrings() {
     return closureTrustedStrings;
+  }
+
+  public boolean isForce() {
+    return force;
   }
 
   public boolean isSkipMerge() {
@@ -854,8 +891,24 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     this.excludes = excludes;
   }
 
+  public void setForce(boolean force) {
+    this.force = force;
+  }
+
   public void setIncludes(ArrayList<String> includes) {
     this.includes = includes;
+  }
+
+  public void setLineSeparator(String lineSeparator) {
+    this.lineSeparator = lineSeparator;
+  }
+
+  public void setLogLevel(LogLevel logLevel) {
+    this.logLevel = logLevel;
+  }
+
+  public void setLogWrapper(Log logWrapper) {
+    this.logWrapper = logWrapper;
   }
 
   public void setOutputFilename(String outputFilename) {

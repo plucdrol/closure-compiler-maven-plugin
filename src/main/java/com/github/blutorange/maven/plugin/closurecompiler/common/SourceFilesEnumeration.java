@@ -45,7 +45,7 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    * @param verbose show source file paths in log output
    * @param charset
    */
-  public SourceFilesEnumeration(Log log, List<File> files, Charset charset) {
+  public SourceFilesEnumeration(Log log, List<File> files, Charset charset, String lineSeparator) {
     this.suppliers = new ArrayList<>();
     for (int i = 0, j = files.size(); i < j; ++i) {
       File file = files.get(i);
@@ -53,7 +53,7 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
       log.debug("Full path is [" + file.getPath() + "].");
       this.suppliers.add(new FileInputStreamSupplier(file));
       if (i < j - 1) {
-        this.suppliers.add(new NewlineInputStreamSupplier(charset));
+        this.suppliers.add(new NewlineInputStreamSupplier(charset, lineSeparator));
       }
     }
   }
@@ -90,14 +90,16 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    */
   private static class NewlineInputStreamSupplier implements InputStreamSupplier {
     private final Charset charset;
+    private final String lineSeparator;
 
-    public NewlineInputStreamSupplier(Charset charset) {
+    public NewlineInputStreamSupplier(Charset charset, String lineSeparator) {
       this.charset = charset;
+      this.lineSeparator = lineSeparator;
     }
 
     @Override
     public InputStream get() {
-      return new ByteArrayInputStream(System.lineSeparator().getBytes(charset));
+      return new ByteArrayInputStream(lineSeparator.getBytes(charset));
     }
   }
 

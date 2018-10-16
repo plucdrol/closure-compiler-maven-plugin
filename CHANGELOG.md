@@ -18,6 +18,8 @@
   the output file name.
 * Replaced option `verbose` with `logLevel`. This lets you override the default maven 
   log level for this plugin.
+* Added an option `force` to skip the check for changed files.
+* Added an option `lineSeparator`. Defaults to the system line separator.
 * Added an option `sourceMapName` to customize how the source map is named.
 * Added an option `outputWrapper`. This is the same as `output_wrapper` from closure compiler,
   but implemented in the plugin as the closure compiler API does not expose this option.
