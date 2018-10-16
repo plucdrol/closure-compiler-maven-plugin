@@ -37,3 +37,6 @@ Closure Compiler Maven Plugin
   * {{{./examples/bundle.html}Bundle Configuration}}
 
   * {{{./examples/exclude.html}Exclude source files from WAR package}}
+
+  * {{{./examples/m2e.html}Eclipse m2e maven integration}}
+  

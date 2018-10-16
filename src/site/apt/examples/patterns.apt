@@ -9,9 +9,12 @@
 
 Using include/exclude patterns
 
-  Supports include/exclude patterns for lexicographical ordering. All files matching an <<<include>>> are sorted alphabetically.
-  Files from different <<<include>>>'s are added in the order as specified when merging files.
+  This plugin supports include/exclude patterns. When bundling into one file, the order in which the source files were specified is preserved. Specifically:
 
+  * For each <<<include>>>, find all files matching the wildcard pattern (observing the <<<excludes>>>).
+  * For each <<<include>>>, sort the matching files alphabetically.
+  * Then add the matching files for each <<<include>>> in the order the <<<includes>>> were specified.
+  
 +---+
 <project>
   <!-- ... -->
@@ -26,8 +29,10 @@ Using include/exclude patterns
           <execution>
             <id>default-minify</id>
             <configuration>
+              <!-- When bundling into one file, first adds prerequisite files, then custom files. -->
               <includes>
-                <include>**</include>
+                <include>**/*Prerequisites.js</include>
+                <include>**/*Custom.js</include>
               </includes>
               <excludes>
                 <exclude>**/*.min.js</exclude>

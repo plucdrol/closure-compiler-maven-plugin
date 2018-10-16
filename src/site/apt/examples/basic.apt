@@ -9,7 +9,7 @@
 
 Basic Configuration
 
-  The only requirement for Minify Maven Plugin to run is to have source files to process.
+  The only requirement for Closure Compiler Maven Plugin to run is to have source files to process.
 
 +---+
 <project>

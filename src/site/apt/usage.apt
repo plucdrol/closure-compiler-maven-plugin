@@ -51,7 +51,7 @@ See also {{{./examples/patterns.html}Using include/exclude patterns}}.
             <configuration>
 
               <!-- These are the defaults -->
-              <charset>UTF-8</charset>
+              <encoding>UTF-8</encoding>
               <baseSourceDir>${basedir}/src/main/webapp</baseSourceDir>
               <baseTargetDir>${project.build.directory}/${project.build.finalName}</baseTargetDir>
               <sourceDir>js</sourceDir>

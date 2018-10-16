@@ -1,4 +1,4 @@
-**WORK-IN-PROGRESS**
+** WORK-IN-PROGRESS, snapshot release available **
 
 # Closure Compiler Maven Plugin
 
@@ -46,13 +46,20 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 For more information, check the [documentation](http://blutorange.github.com/closure-compiler-maven-plugin/)
 or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/tree/master/demo).
 
+# Build site
+
+* Edit files in /src/site
+* To upload to github, set `dryRun` in `pom.xml` to `false`.
+* `mvn clean plugin:report site`
+
 # Release
 
 * Update version in `pom.xml` and `demo/pom.xml`.
 * Update version in `site/src/*`.
-* Generate site with `mvn clean plugin:report site`, check it, then upload by setting `dryRun` 
-  to `false` and running the command again.
-* `mvn clean install deploy`
+* Generate site, check links
+* Upload site to github
+* `mvn clean install`
+* `mvn -P release deploy`
 
 # License
 
