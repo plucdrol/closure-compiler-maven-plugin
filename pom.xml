@@ -284,7 +284,7 @@
 				<version>${site-maven-plugin-version}</version>
 				<configuration>
 					<message>Creating site for ${project.version}</message>
-					<dryRun>false</dryRun>
+					<dryRun>true</dryRun>
 					<noJekyll>true</noJekyll>
 				</configuration>
 				<executions>

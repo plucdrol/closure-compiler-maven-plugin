@@ -23,7 +23,7 @@ Closure Compiler Maven Plugin
 
   f you are missing an option from Closure Compiler, feel free to create an issue. There are many, but most of them are not hard too add.
 
-  If you feel like the plugin is missing a feature or has a defect, you can fill a feature request or bug report in the {{{./issue-tracking.html}issue tracker}}. When creating a new issue, please provide a comprehensive description of your concern. Especially for fixing bugs it is crucial that the developers can reproduce your problem. For this reason, entire debug logs, POMs or most preferably little demo projects attached to the issue are very much appreciated. Of course, patches are welcome, too. Contributors can check out the project from the  {{{./source-repository.html}source repository}}.
+  If you feel like the plugin is missing a feature or has a defect, you can fill a feature request or bug report in the {{{./issue-management.html}issue tracker}}. When creating a new issue, please provide a comprehensive description of your concern. Especially for fixing bugs it is crucial that the developers can reproduce your problem. For this reason, entire debug logs, POMs or most preferably little demo projects attached to the issue are very much appreciated. Of course, patches are welcome, too. Contributors can check out the project from the  {{{./scm.html}source repository}}.
 
 
 * Examples
@@ -39,4 +39,6 @@ Closure Compiler Maven Plugin
   * {{{./examples/exclude.html}Exclude source files from WAR package}}
 
   * {{{./examples/m2e.html}Eclipse m2e maven integration}}
+  
+  * {{{./examples/watch.html}Watching for file changes}}
   

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <faqs id="FAQ" title="Frequently Asked Questions">
     <part id="General">
+        <faq id="m2e-integration">
+            <question>Can you add a new option from Closure Compiler?</question>
+            <answer>
+                <p>Sure, no problem. <a href="./issue-management.html">Open a new issue</a></p>.
+            </answer>
+        </faq>
         <faq id="execution-bundles">
             <question>Is it possible to create multiple bundles?</question>
             <answer>
@@ -12,6 +18,18 @@
             <question>Where can I find a complete list of the available options to configure Closure Compiler Maven Plugin?</question>
             <answer>
                 <p>See <a href="minify-mojo.html">minify:minify</a> goal overview page.</p>
+            </answer>
+        </faq>
+        <faq id="watch-files">
+            <question>Does Closure Compiler Maven Plugin support watching for file changes?</question>
+            <answer>
+                <p>Google Closure Compiler itself does not sport a watch mode, but see <a href="./examples/watch.html">the example for watching for file changes</a></p>.
+            </answer>
+        </faq>
+        <faq id="m2e-integration">
+            <question>Does Closure Compiler Maven Plugin integrate with Eclipse m2e?</question>
+            <answer>
+                <p><a href="./examples/m2e.html">Yes</a></p>.
             </answer>
         </faq>
         <faq id="alternative-compilers">
