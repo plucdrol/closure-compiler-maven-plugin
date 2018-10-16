@@ -3,12 +3,12 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.UnaryOperator;
+import java.util.function.BinaryOperator;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.StringSubstitutor;
 
-public class FilenameInterpolator implements UnaryOperator<File> {
+public class FilenameInterpolator implements BinaryOperator<File> {
   private final String pattern;
   private final String prefix;
   private final String suffix;
@@ -26,11 +26,11 @@ public class FilenameInterpolator implements UnaryOperator<File> {
   }
 
   @Override
-  public File apply(File inputFile) {
-    return interpolate(inputFile, null);
+  public File apply(File inputFile, File targetDirectory) {
+    return interpolate(inputFile, targetDirectory, null);
   }
 
-  public File interpolate(File inputFile, Map<String, String> additionalData) {
+  public File interpolate(File inputFile, File targetDirectory, Map<String, String> additionalData) {
     String inputFilename = inputFile.getName();
     Map<String, String> data = new HashMap<>();
     data.put("filename", inputFilename);
@@ -40,8 +40,8 @@ public class FilenameInterpolator implements UnaryOperator<File> {
       data.putAll(additionalData);
     }
     StringSubstitutor substitutor = new StringSubstitutor(data, prefix, suffix, escapeChar);
-    String sourceMapFilename = substitutor.replace(pattern);
-    File outputFile = new File(inputFile.getParentFile(), sourceMapFilename);
-    return outputFile;
+    String interpolatedFilename = substitutor.replace(pattern);
+    File interpolatedFile = new File(targetDirectory.isDirectory() ? targetDirectory : targetDirectory.getParentFile(), interpolatedFilename);
+    return interpolatedFile;
   }
 }

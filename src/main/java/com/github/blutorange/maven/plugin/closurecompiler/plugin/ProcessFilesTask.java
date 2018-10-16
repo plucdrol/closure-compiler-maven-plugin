@@ -217,7 +217,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
           for (File sourceFile : files) {
             // Create folders to preserve sub-directory structure when only minifying / copying
-            File minifiedFile = outputFilenameInterpolator.apply(sourceFile);
+            File minifiedFile = outputFilenameInterpolator.apply(sourceFile, targetDir);
             assertTarget(sourceFile, minifiedFile);
             if (skipMinify) {
               copy(sourceFile, minifiedFile);
@@ -229,13 +229,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         }
         // Merge-only
         else if (skipMinify) {
-          File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME));
+          File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
           merge(mergedFile);
           log.info("Skipping the minify step...");
         }
         // Minify + merge
         else {
-          File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME));
+          File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
           minify(files, minifiedFile);
         }
       }

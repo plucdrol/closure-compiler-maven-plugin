@@ -94,7 +94,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
   @Override
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
-    File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile);
+    File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile, minifiedFile);
 
     if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMap() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
 
