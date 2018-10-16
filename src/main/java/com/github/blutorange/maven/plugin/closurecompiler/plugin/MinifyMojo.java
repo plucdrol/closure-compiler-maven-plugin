@@ -57,6 +57,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutput
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 
 /**
@@ -361,41 +362,27 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureIncludeSourcesContent;
 
   /**
+   * How compiler should prune files based on the provide-require dependency graph.
+   * <ul>
+   * <li>{@code NONE} All files will be included in the compilation</li>
+   * <li>{@code LOOSE}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are not either an ES6 or CommonJS module will be automatically treated as entry points. Module files
+   * will be included only if referenced from an entry point.</li>
+   * <li>{@code STRICT}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are neither an ES6 or CommonJS module will be dropped. Module files will be included only if
+   * referenced from an entry point.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
+  private DependencyMode closureDependencyMode;
+
+  /**
    * <p>
-   * Enables or disables dependency sorting mode. If true, we will sort the input files based on dependency information
-   * in them.
+   * When you use {@code closureDependencyMode} STRICT or LOOSE, you must specify to the compiler what the entry points
+   * of your application are. Beginning at those entry points, it will trace through the files to discover what sources
+   * are actually referenced and will drop all other files.
    * </p>
-   * <p>
-   * If {@code true}, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always
-   * come before a file that {@code goog.requires} symbol X.
-   * @since 1.7.4
-   */
-  @Parameter(property = "closureSortDependencies", defaultValue = "false")
-  private boolean closureDependencySorting;
-
-  /**
-   * Enables or disables dependency pruning mode. In dependency pruning mode, we will look for all files that provide a
-   * symbol. Unless that file is a transitive dependency of a file that we're using, we will remove it from the
-   * compilation job. This does not affect how we handle files that do not provide symbols. See setMoocherDropping for
-   * information on how these are handled.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureDependencyPruning", defaultValue = "false")
-  private boolean closureDependencyPruning;
-
-  /**
-   * Enables or disables moocher dropping mode. A 'moocher' is a file that does not provide any symbols (though they may
-   * require symbols). This is usually because they don't want to tie themselves to a particular dependency system
-   * (e.g., Closure's goog.provide, CommonJS modules). So they rely on other people to manage dependencies on them. If
-   * true, we drop these files when we prune dependencies. If false, we always keep these files and anything they depend
-   * on. The default is false. Notice that this option only makes sense if dependency pruning is on, and a set of entry
-   * points is specified.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureDependencyMoocherDropping", defaultValue = "false")
-  private boolean closureDependencyMoocherDropping;
-
-  /**
    * <p>
    * Adds a collection of symbols to always keep. In dependency pruning mode, we will automatically keep all the
    * transitive dependencies of these symbols. The syntactic form of a symbol depends on the type of dependency
@@ -403,13 +390,13 @@ public class MinifyMojo extends AbstractMojo {
    * points can be scoped to a module by specifying {@code mod2:foo.bar}.
    * </p>
    * <p>
-   * There are two different types of entry points, closurer and modules:
+   * There are two different types of entry points, closures and modules:
    * <ul>
-   * <li>{@code closure}: A closure namespaces used as an entry point. May start with {@code goog:} when provided as a
+   * <li>{@code closure}: A closure namespace used as an entry point. May start with {@code goog:} when provided as a
    * flag from the command line. Closure entry points may also be formatted as: {@code goog:moduleName:name.space} which
    * specifies that the module name and provided namespace are different</li>
    * <li>{@code file}: Must start with the prefix {@code file:}. AES6 or CommonJS modules used as an entry point. The
-   * file path is relative to the project base dir.</li>
+   * file path is relative to the {@code sourceDir}.</li>
    * </ul>
    * @since 2.0.0
    */
@@ -735,18 +722,6 @@ public class MinifyMojo extends AbstractMojo {
     return closureCreateSourceMap;
   }
 
-  public boolean isClosureDependencyMoocherDropping() {
-    return closureDependencyMoocherDropping;
-  }
-
-  public boolean isClosureDependencyPruning() {
-    return closureDependencyPruning;
-  }
-
-  public boolean isClosureDependencySorting() {
-    return closureDependencySorting;
-  }
-
   public boolean isClosureIncludeSourcesContent() {
     return closureIncludeSourcesContent;
   }
@@ -817,18 +792,6 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureDependencyEntryPoints(List<String> closureDependencyEntryPoints) {
     this.closureDependencyEntryPoints = closureDependencyEntryPoints;
-  }
-
-  public void setClosureDependencyMoocherDropping(boolean closureDependencyMoocherDropping) {
-    this.closureDependencyMoocherDropping = closureDependencyMoocherDropping;
-  }
-
-  public void setClosureDependencyPruning(boolean closureDependencyPruning) {
-    this.closureDependencyPruning = closureDependencyPruning;
-  }
-
-  public void setClosureDependencySorting(boolean closureDependencySorting) {
-    this.closureDependencySorting = closureDependencySorting;
   }
 
   public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
@@ -909,6 +872,14 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setLogWrapper(Log logWrapper) {
     this.logWrapper = logWrapper;
+  }
+
+  public DependencyMode getClosureDependencyMode() {
+    return closureDependencyMode;
+  }
+
+  public void setClosureDependencyMode(DependencyMode closureDependencyMode) {
+    this.closureDependencyMode = closureDependencyMode;
   }
 
   public void setOutputFilename(String outputFilename) {

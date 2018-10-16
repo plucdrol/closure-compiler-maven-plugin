@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
@@ -66,25 +65,41 @@
 						<id>default-minify</id>
 						<configuration>
 							<includes>
-								<include>subdir/pearce-kelly.js</include>
 								<include>blutorange.js</include>
+								<include>subdir/pearce-kelly.js</include>
 							</includes>
-							<logLevel>debug</logLevel>
-							<closureWarningLevels>
-								<es5Strict>OFF</es5Strict>
-							</closureWarningLevels>
 							<outputFilename>merged.js</outputFilename>
-							<closureCreateSourceMap>true</closureCreateSourceMap>
+
 							<closureLanguageIn>ECMASCRIPT_2016</closureLanguageIn>
 							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
-							<closureIncludeSourcesContent>true</closureIncludeSourcesContent>
+
+							<!-- Advanced options, not necessary -->
+
+							<!-- Create a source map, set output type to `inline` to create inline source map. -->
+							<closureCreateSourceMap>true</closureCreateSourceMap>
 							<closureSourceMapOutputType>reference</closureSourceMapOutputType>
+							<closureIncludeSourcesContent>true</closureIncludeSourcesContent>
+
+							<!-- blutorange.js depends on subdir/pearce-kelly.js -->
+							<!-- We enabled dependency sorting via STRICT dependency mode -->
+							<!-- This makes the compiler reorder the source files so that blutorange.js comes last -->
+							<closureDependencyMode>STRICT</closureDependencyMode>
+							<closureDependencyEntryPoints>
+								<closureDependencyEntryPoint>file:blutorange.js</closureDependencyEntryPoint>
+							</closureDependencyEntryPoints>
+
+							<!-- If a constant called DEFINE_TEST is found in the JavaScript code, its value is replace with false. -->
 							<closureDefine>
 								<DEFINE_TEST>false</DEFINE_TEST>
 							</closureDefine>
+
+							<!-- Change warning levels -->
+							<closureWarningLevels>
+								<es5Strict>OFF</es5Strict>
+							</closureWarningLevels>
+
 							<!--closureCompilationLevel>ADVANCED_OPTIMIZATIONS</closureCompilationLevel -->
-							<!--closureExterns> <closureExtern>extern/external-lib.js</closureExtern> 
-								</closureExterns -->
+							<!--closureExterns> <closureExtern>extern/external-lib.js</closureExtern> </closureExterns -->
 						</configuration>
 						<goals>
 							<goal>minify</goal>
@@ -102,6 +117,7 @@
 					</execution>
 				</executions>
 			</plugin>
+			
 			<!-- Generate Minify maven Plugin demo binary: $ mvn assembly:single -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

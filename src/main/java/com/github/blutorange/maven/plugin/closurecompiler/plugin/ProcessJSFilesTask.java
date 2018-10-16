@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.maven.plugin.MojoFailureException;
+
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
@@ -69,16 +71,17 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
    * @param mergedFile input file resulting from the merged step
    * @param minifiedFile output file resulting from the minify step
    * @throws IOException when the minify step fails
+   * @throws MojoFailureException
    */
   @Override
-  protected void minify(File mergedFile, File minifiedFile) throws IOException {
+  protected void minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException {
     List<File> srcFiles = new ArrayList<File>();
     srcFiles.add(mergedFile);
     minify(srcFiles, minifiedFile);
   }
 
   @Override
-  protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
+  protected void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException {
     File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile, minifiedFile);
 
     if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMap() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
@@ -95,15 +98,17 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       mojoMeta.getLog().info("Creating the minified file [" + minifiedFile.getName() + "].");
       mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "].");
 
+      File baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
+
       List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
       for (File srcFile : srcFiles) {
         InputStream in = new FileInputStream(srcFile);
-        SourceFile input = SourceFile.fromInputStream(relativizeSourceFile(srcFile, minifiedFile, sourceMapFile), in, mojoMeta.getEncoding());
+        SourceFile input = SourceFile.fromInputStream(FileHelper.relativizePath(baseDirForSourceFiles, srcFile), in, mojoMeta.getEncoding());
         sourceFileList.add(input);
       }
 
       // Create compiler options
-      CompilerOptions options = closureConfig.getCompilerOptions(sourceMapFile);
+      CompilerOptions options = closureConfig.getCompilerOptions(minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
 
       mojoMeta.getLog().debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
 
@@ -141,9 +146,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     logCompressionGains(srcFiles, minifiedFile);
   }
 
-  private String relativizeSourceFile(File srcFile, File minifiedFile, File sourceMapFile) throws IOException {
-    return FileHelper.relativizePath(closureConfig.isCreateSourceMap() && closureConfig.getSourceMapOutputType() != SourceMapOutputType.inline ? sourceMapFile : minifiedFile, srcFile);
-    // return srcFile.getPath();
+  private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
+    return (closureConfig.isCreateSourceMap() && closureConfig.getSourceMapOutputType() != SourceMapOutputType.inline ? sourceMapFile : minifiedFile).getParentFile();
   }
 
   private void checkForErrors(Compiler compiler) {

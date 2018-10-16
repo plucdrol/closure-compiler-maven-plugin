@@ -369,14 +369,16 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param mergedFile input file resulting from the merged step
    * @param minifiedFile output file resulting from the minify step
    * @throws IOException when the minify step fails
+   * @throws MojoFailureException
    */
-  abstract void minify(File mergedFile, File minifiedFile) throws IOException;
+  abstract void minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException;
 
   /**
    * Minifies a list of source files into a single file. Create missing parent directories if needed.
    * @param srcFiles list of input files
    * @param minifiedFile output file resulting from the minify step
    * @throws IOException when the minify step fails
+   * @throws MojoFailureException
    */
-  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException;
+  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException;
 }
