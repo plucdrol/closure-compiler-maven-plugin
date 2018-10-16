@@ -1,4 +1,9 @@
 /*
+ * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
+ * below. Changes were made to this file.
+ */
+
+/*
  * Minify Maven Plugin
  * https://github.com/samaxes/minify-maven-plugin
  *
@@ -16,7 +21,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.samaxes.maven.minify.demo;
+package com.github.blutorange.maven.plugin.closurecompiler.demo;
 
 import java.io.IOException;
 

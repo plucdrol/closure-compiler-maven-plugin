@@ -55,32 +55,6 @@
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
-			<!-- For Eclipse / M2E integration: If you do not want to run the plugin 
-				automatically when a JS resource changes. -->
-			<!-- <plugin> -->
-			<!-- <groupId>org.eclipse.m2e</groupId> -->
-			<!-- <artifactId>lifecycle-mapping</artifactId> -->
-			<!-- <version>1.0.0</version> -->
-			<!-- <configuration> -->
-			<!-- <lifecycleMappingMetadata> -->
-			<!-- <pluginExecutions> -->
-			<!-- <pluginExecution> -->
-			<!-- <pluginExecutionFilter> -->
-			<!-- <groupId>com.github.blutorange</groupId> -->
-			<!-- <artifactId>closure-compiler-maven-plugin</artifactId> -->
-			<!-- <versionRange>[2.0.0,)</versionRange> -->
-			<!-- <goals> -->
-			<!-- <goal>minify</goal> -->
-			<!-- </goals> -->
-			<!-- </pluginExecutionFilter> -->
-			<!-- <action> -->
-			<!-- <ignore /> -->
-			<!-- </action> -->
-			<!-- </pluginExecution> -->
-			<!-- </pluginExecutions> -->
-			<!-- </lifecycleMappingMetadata> -->
-			<!-- </configuration> -->
-			<!-- </plugin> -->
 			<plugin>
 				<groupId>com.github.blutorange</groupId>
 				<artifactId>closure-compiler-maven-plugin</artifactId>

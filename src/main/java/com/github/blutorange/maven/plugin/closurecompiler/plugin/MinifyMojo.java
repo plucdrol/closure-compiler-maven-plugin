@@ -493,7 +493,7 @@ public class MinifyMojo extends AbstractMojo {
       List<String> includes, List<String> excludes, String outputFilename)
       throws IOException {
     FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify);
-    FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, outputFilename, outputFilename, includes, excludes, outputFilename);
+    FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, sourceDir, targetDir, includes, excludes, outputFilename);
     MojoMetadata mojoMeta = new MojoMetaImpl(project, getLog(), encoding, buildContext);
     return new ProcessJSFilesTask(mojoMeta, processConfig, fileSpecifier, closureConfig);
   }

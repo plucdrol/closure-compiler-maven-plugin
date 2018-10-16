@@ -27,9 +27,11 @@ import java.util.Collections;
 import java.util.List;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
+import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
@@ -96,7 +98,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
       for (File srcFile : srcFiles) {
         InputStream in = new FileInputStream(srcFile);
-        SourceFile input = SourceFile.fromInputStream(srcFile.getName(), in, mojoMeta.getEncoding());
+        SourceFile input = SourceFile.fromInputStream(relativizeSourceFile(srcFile, minifiedFile, sourceMapFile), in, mojoMeta.getEncoding());
         sourceFileList.add(input);
       }
 
@@ -137,6 +139,11 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     }
 
     logCompressionGains(srcFiles, minifiedFile);
+  }
+
+  private String relativizeSourceFile(File srcFile, File minifiedFile, File sourceMapFile) throws IOException {
+    return FileHelper.relativizePath(closureConfig.isCreateSourceMap() && closureConfig.getSourceMapOutputType() != SourceMapOutputType.inline ? sourceMapFile : minifiedFile, srcFile);
+    // return srcFile.getPath();
   }
 
   private void checkForErrors(Compiler compiler) {
