@@ -219,6 +219,7 @@ public class ClosureConfig {
   /**
    * Create a new closure compiler configuration from the mojo configuration.
    * @param mojo Mojo with the options.
+   * @throws MojoFailureException When the configuration is invalid or cannot be parsed.
    */
   public ClosureConfig(MinifyMojo mojo) throws MojoFailureException {
     this.compilationLevel = mojo.getClosureCompilationLevel();
@@ -276,6 +277,10 @@ public class ClosureConfig {
 
   public boolean isCreateSourceMap() {
     return sourceMapFormat != null;
+  }
+  
+  public boolean isCreateSourceMapFile() {
+    return isCreateSourceMap() && sourceMapOutputType.isCreateFile();
   }
 
   public LanguageMode getLanguageOut() {

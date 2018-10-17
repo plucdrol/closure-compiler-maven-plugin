@@ -96,9 +96,11 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException {
     File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile, minifiedFile);
 
-    if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMap() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
+    if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMapFile() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
 
+	mkDir(targetDir);
     mkDir(minifiedFile.getParentFile());
+	
     if (closureConfig.isCreateSourceMap()) {
       mkDir(sourceMapFile.getParentFile());
     }
@@ -169,11 +171,10 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private void createSourceMap(Writer writer, Compiler compiler, File minifiedFile, File sourceMapFile) throws IOException {
-    log.info("Creating the minified files map [" + sourceMapFile.getName() + "].");
-    log.debug("Full path is [" + sourceMapFile.getPath() + "].");
 
     switch (closureConfig.getSourceMapOutputType()) {
       case inline:
+		log.info("Creating the inline source map.");
         StringBuilder sb = new StringBuilder();
         compiler.getSourceMap().appendTo(sb, minifiedFile.getName());
         DataUrl unserialized = new DataUrlBuilder() //
@@ -202,6 +203,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private void flushSourceMap(File sourceMapFile, String minifyFileName, SourceMap sourceMap) throws IOException {
+    log.info("Creating the minified files map [" + sourceMapFile.getName() + "].");
+    log.debug("Full path is [" + sourceMapFile.getPath() + "].");
+
     try (OutputStream out = buildContext.newFileOutputStream(sourceMapFile); Writer writer = new OutputStreamWriter(out, encoding)) {
       sourceMap.appendTo(writer, minifyFileName);
     }

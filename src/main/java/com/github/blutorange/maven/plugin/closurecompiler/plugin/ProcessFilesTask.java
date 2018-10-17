@@ -207,8 +207,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     synchronized (log) {
       log.info("Starting JavaScript task:");
 
-      mkDir(targetDir);
-
       if (!files.isEmpty()) {
 
         // Minify only
@@ -321,6 +319,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    */
   protected void copy(File sourceFile, File targetFile) throws IOException {
     if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return; }
+    mkDir(targetDir);
     mkDir(targetFile.getParentFile());
     try (InputStream in = new FileInputStream(sourceFile);
         OutputStream out = buildContext.newFileOutputStream(targetFile);
@@ -338,6 +337,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   protected void merge(File mergedFile) throws IOException {
     if (!haveFilesChanged(files, Collections.singleton(mergedFile))) { return; }
 
+    mkDir(targetDir);
     mkDir(mergedFile.getParentFile());
 
     try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, encoding));
@@ -366,20 +366,29 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    */
   protected boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
     boolean changed;
+	long oldestOutput = 0L;
+	long youngestInput = Long.MAX_VALUE;
     if (outputFiles.stream().allMatch(File::exists)) {
-      long oldestOutput = outputFiles.stream().map(File::lastModified).min(Long::compareTo).orElse(0L);
-      long youngestInput = sourceFiles.stream().map(File::lastModified).max(Long::compareTo).orElse(Long.MAX_VALUE);
+      oldestOutput = outputFiles.stream().map(File::lastModified).min(Long::compareTo).orElse(0L);
+      youngestInput = sourceFiles.stream().map(File::lastModified).max(Long::compareTo).orElse(Long.MAX_VALUE);
       changed = oldestOutput < youngestInput;
     }
     else {
       changed = true;
     }
 
-    if (!changed && log.isDebugEnabled()) {
-      log.debug("No changes since last incremental build, skipping bundle with output files ["
-          + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
-          + "].");
-    }
+    if (log.isDebugEnabled()) {
+      if (!changed) {
+        log.debug("No changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], skipping bundle with output files ["
+            + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
+            + "].");
+      }
+	  else {
+		  log.debug("Changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], processing bundle with output files ["
+            + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
+            + "].");
+	  }
+	}
     return changed;
   }
 
