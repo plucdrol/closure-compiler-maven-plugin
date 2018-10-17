@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 function merge(adapter, arr1, arr2) {
     var res = [];
     var len1 = arr1.length;
@@ -30,10 +29,12 @@ function merge(adapter, arr1, arr2) {
     }
     return res;
 }
+
 function sort(adapter, vertices) {
     return vertices.map(function (v) { return ({ key: adapter.getData(v).order, val: v }); }).sort(function (v1, v2) { return v1.key - v2.key; }).map(function (v) { return v.val; });
 }
-var PearceKellyDetector = (function () {
+
+export const PearceKellyDetector = (function () {
     function PearceKellyDetector() {
         this.id = 0;
         this.stack = [];
@@ -161,6 +162,3 @@ var PearceKellyDetector = (function () {
     };
     return PearceKellyDetector;
 }());
-
-window.foobar = 42;
-window.PearceKellyDetector = PearceKellyDetector; // end-of-file

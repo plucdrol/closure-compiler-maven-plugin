@@ -21,6 +21,7 @@
             <item name="Bundle Configuration" href="examples/bundle.html" />
             <item name="Exclude source files from WAR package" href="examples/exclude.html" />
             <item name="Eclipse m2e maven integration" href="examples/m2e.html" />
+            <item name="Watching for file changes" href="examples/watch.html" />
         </menu>
         <menu ref="reports" />
     </body>

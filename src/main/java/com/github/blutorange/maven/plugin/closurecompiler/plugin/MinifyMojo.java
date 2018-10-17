@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -47,20 +48,23 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.LogLevel;
 import com.github.blutorange.maven.plugin.closurecompiler.common.LogWrapper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.MojoMetaImpl;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 
 /**
  * Goal for combining and/or minifying JavaScript files with closure compiler.
  */
 @Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
-public class MinifyMojo extends AbstractMojo implements MojoMetadata {
+public class MinifyMojo extends AbstractMojo {
 
   /* ************* */
   /* Maven options */
@@ -87,10 +91,27 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private LogLevel logLevel;
 
   /**
+   * For each bundle, this plugin performs a check whether the input or output files have changed and skips the
+   * execution in case they haven't. Set this flag to {@code true} to force the execution.
+   * @since 2.0.0
+   */
+  @Parameter(property = "force", defaultValue = "false")
+  private boolean force;
+
+  /**
    * Size of the buffer used to read source files.
    */
   @Parameter(property = "bufferSize", defaultValue = "4096")
   private int bufferSize;
+
+  /**
+   * The line separator to be used when merging files etc. Defaults to the default system line separator. Special
+   * characters are entered escaped. So for example, to use a new line feed as the separator, set this property to
+   * {@code \n} (two characters, a backslash and the letter n).
+   * @since 2.0.0
+   */
+  @Parameter(property = "lineSeparator", defaultValue = "")
+  private String lineSeparator;
 
   /**
    * If a supported character set is specified, it will be used to read the input file. Otherwise, it will assume that
@@ -101,6 +122,32 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    */
   @Parameter(property = "encoding", defaultValue = "${project.build.sourceEncoding}", alias = "charset")
   private String encoding;
+
+  /**
+   * Skip the merge step. Minification will be applied to each source file individually.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMerge", defaultValue = "false")
+  private boolean skipMerge;
+
+  /**
+   * Skip the minify step. Useful when merging files that are already minified.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMinify", defaultValue = "false")
+  private boolean skipMinify;
+
+  /**
+   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
+   * project base directory.
+   * @since 1.7.5
+   */
+  @Parameter(property = "bundleConfiguration", defaultValue = "")
+  private String bundleConfiguration;
+
+  /* *********** */
+  /* File Options */
+  /* ************ */
 
   /**
    * <p>
@@ -122,20 +169,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private String outputFilename;
 
   /**
-   * Skip the merge step. Minification will be applied to each source file individually.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMerge", defaultValue = "false")
-  private boolean skipMerge;
-
-  /**
-   * Skip the minify step. Useful when merging files that are already minified.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMinify", defaultValue = "false")
-  private boolean skipMinify;
-
-  /**
    * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
    * directory. Use variables such as {@code basedir} to make it relative to the current directory.
    */
@@ -148,18 +181,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    */
   @Parameter(property = "baseTargetDir", defaultValue = "${project.build.directory}/${project.build.finalName}")
   private File baseTargetDir;
-
-  /**
-   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
-   * project base directory.
-   * @since 1.7.5
-   */
-  @Parameter(property = "bundleConfiguration", defaultValue = "")
-  private String bundleConfiguration;
-
-  /* ****************** */
-  /* JavaScript Options */
-  /* ****************** */
 
   /**
    * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
@@ -341,41 +362,27 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private boolean closureIncludeSourcesContent;
 
   /**
+   * How compiler should prune files based on the provide-require dependency graph.
+   * <ul>
+   * <li>{@code NONE} All files will be included in the compilation</li>
+   * <li>{@code LOOSE}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are not either an ES6 or CommonJS module will be automatically treated as entry points. Module files
+   * will be included only if referenced from an entry point.</li>
+   * <li>{@code STRICT}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are neither an ES6 or CommonJS module will be dropped. Module files will be included only if
+   * referenced from an entry point.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
+  private DependencyMode closureDependencyMode;
+
+  /**
    * <p>
-   * Enables or disables dependency sorting mode. If true, we will sort the input files based on dependency information
-   * in them.
+   * When you use {@code closureDependencyMode} STRICT or LOOSE, you must specify to the compiler what the entry points
+   * of your application are. Beginning at those entry points, it will trace through the files to discover what sources
+   * are actually referenced and will drop all other files.
    * </p>
-   * <p>
-   * If {@code true}, automatically sort dependencies so that a file that {@code goog.provides} symbol X will always
-   * come before a file that {@code goog.requires} symbol X.
-   * @since 1.7.4
-   */
-  @Parameter(property = "closureSortDependencies", defaultValue = "false")
-  private boolean closureDependencySorting;
-
-  /**
-   * Enables or disables dependency pruning mode. In dependency pruning mode, we will look for all files that provide a
-   * symbol. Unless that file is a transitive dependency of a file that we're using, we will remove it from the
-   * compilation job. This does not affect how we handle files that do not provide symbols. See setMoocherDropping for
-   * information on how these are handled.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureDependencyPruning", defaultValue = "false")
-  private boolean closureDependencyPruning;
-
-  /**
-   * Enables or disables moocher dropping mode. A 'moocher' is a file that does not provide any symbols (though they may
-   * require symbols). This is usually because they don't want to tie themselves to a particular dependency system
-   * (e.g., Closure's goog.provide, CommonJS modules). So they rely on other people to manage dependencies on them. If
-   * true, we drop these files when we prune dependencies. If false, we always keep these files and anything they depend
-   * on. The default is false. Notice that this option only makes sense if dependency pruning is on, and a set of entry
-   * points is specified.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureDependencyMoocherDropping", defaultValue = "false")
-  private boolean closureDependencyMoocherDropping;
-
-  /**
    * <p>
    * Adds a collection of symbols to always keep. In dependency pruning mode, we will automatically keep all the
    * transitive dependencies of these symbols. The syntactic form of a symbol depends on the type of dependency
@@ -383,13 +390,13 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
    * points can be scoped to a module by specifying {@code mod2:foo.bar}.
    * </p>
    * <p>
-   * There are two different types of entry points, closurer and modules:
+   * There are two different types of entry points, closures and modules:
    * <ul>
-   * <li>{@code closure}: A closure namespaces used as an entry point. May start with {@code goog:} when provided as a
+   * <li>{@code closure}: A closure namespace used as an entry point. May start with {@code goog:} when provided as a
    * flag from the command line. Closure entry points may also be formatted as: {@code goog:moduleName:name.space} which
    * specifies that the module name and provided namespace are different</li>
    * <li>{@code file}: Must start with the prefix {@code file:}. AES6 or CommonJS modules used as an entry point. The
-   * file path is relative to the project base dir.</li>
+   * file path is relative to the {@code sourceDir}.</li>
    * </ul>
    * @since 2.0.0
    */
@@ -472,12 +479,10 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
       List<String> includes, List<String> excludes, String outputFilename)
       throws IOException {
-    return new ProcessJSFilesTask(this, bufferSize,
-        skipMerge, skipMinify,
-        baseSourceDir, baseTargetDir,
-        sourceDir, targetDir,
-        includes, excludes,
-        outputFilename, closureConfig);
+    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify);
+    FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, sourceDir, targetDir, includes, excludes, outputFilename);
+    MojoMetadata mojoMeta = new MojoMetaImpl(project, getLog(), encoding, buildContext);
+    return new ProcessJSFilesTask(mojoMeta, processConfig, fileSpecifier, closureConfig);
   }
 
   private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
@@ -540,11 +545,17 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
   }
 
   private void fillOptionalValues() {
-    if (Strings.isNullOrEmpty(targetDir)) {
+    if (StringUtils.isBlank(targetDir)) {
       targetDir = sourceDir;
     }
-    if (Strings.isNullOrEmpty(encoding)) {
+    if (StringUtils.isBlank(encoding)) {
       encoding = Charset.defaultCharset().name();
+    }
+    if (StringUtils.isBlank(lineSeparator)) {
+      lineSeparator = System.lineSeparator();
+    }
+    else {
+      lineSeparator = StringEscapeUtils.unescapeJava(lineSeparator);
     }
     if (excludes == null) {
       excludes = new ArrayList<>();
@@ -567,14 +578,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     if (closureDependencyEntryPoints == null) {
       closureDependencyEntryPoints = new ArrayList<>();
     }
-  }
-
-  @Override
-  public Log getLog() {
-    if (logWrapper == null) {
-      logWrapper = new LogWrapper(super.getLog(), logLevel);
-    }
-    return logWrapper;
   }
 
   private Collection<Aggregation> getAggregations() throws MojoFailureException {
@@ -603,7 +606,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return bufferSize;
   }
 
-  @Override
   public BuildContext getBuildContext() {
     return buildContext;
   }
@@ -660,7 +662,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return closureWarningLevels;
   }
 
-  @Override
   public String getEncoding() {
     return encoding;
   }
@@ -673,11 +674,30 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return includes;
   }
 
+  public String getLineSeparator() {
+    return lineSeparator;
+  }
+
+  @Override
+  public Log getLog() {
+    if (logWrapper == null) {
+      logWrapper = new LogWrapper(super.getLog(), logLevel);
+    }
+    return logWrapper;
+  }
+
+  public LogLevel getLogLevel() {
+    return logLevel;
+  }
+
+  public Log getLogWrapper() {
+    return logWrapper;
+  }
+
   public String getOutputFilename() {
     return outputFilename;
   }
 
-  @Override
   public MavenProject getProject() {
     return project;
   }
@@ -702,18 +722,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     return closureCreateSourceMap;
   }
 
-  public boolean isClosureDependencyMoocherDropping() {
-    return closureDependencyMoocherDropping;
-  }
-
-  public boolean isClosureDependencyPruning() {
-    return closureDependencyPruning;
-  }
-
-  public boolean isClosureDependencySorting() {
-    return closureDependencySorting;
-  }
-
   public boolean isClosureIncludeSourcesContent() {
     return closureIncludeSourcesContent;
   }
@@ -728,6 +736,10 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public boolean isClosureTrustedStrings() {
     return closureTrustedStrings;
+  }
+
+  public boolean isForce() {
+    return force;
   }
 
   public boolean isSkipMerge() {
@@ -780,18 +792,6 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
 
   public void setClosureDependencyEntryPoints(List<String> closureDependencyEntryPoints) {
     this.closureDependencyEntryPoints = closureDependencyEntryPoints;
-  }
-
-  public void setClosureDependencyMoocherDropping(boolean closureDependencyMoocherDropping) {
-    this.closureDependencyMoocherDropping = closureDependencyMoocherDropping;
-  }
-
-  public void setClosureDependencyPruning(boolean closureDependencyPruning) {
-    this.closureDependencyPruning = closureDependencyPruning;
-  }
-
-  public void setClosureDependencySorting(boolean closureDependencySorting) {
-    this.closureDependencySorting = closureDependencySorting;
   }
 
   public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
@@ -854,8 +854,32 @@ public class MinifyMojo extends AbstractMojo implements MojoMetadata {
     this.excludes = excludes;
   }
 
+  public void setForce(boolean force) {
+    this.force = force;
+  }
+
   public void setIncludes(ArrayList<String> includes) {
     this.includes = includes;
+  }
+
+  public void setLineSeparator(String lineSeparator) {
+    this.lineSeparator = lineSeparator;
+  }
+
+  public void setLogLevel(LogLevel logLevel) {
+    this.logLevel = logLevel;
+  }
+
+  public void setLogWrapper(Log logWrapper) {
+    this.logWrapper = logWrapper;
+  }
+
+  public DependencyMode getClosureDependencyMode() {
+    return closureDependencyMode;
+  }
+
+  public void setClosureDependencyMode(DependencyMode closureDependencyMode) {
+    this.closureDependencyMode = closureDependencyMode;
   }
 
   public void setOutputFilename(String outputFilename) {

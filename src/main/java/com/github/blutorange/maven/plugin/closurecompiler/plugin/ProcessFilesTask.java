@@ -25,7 +25,6 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.SequenceInputStream;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,12 +41,12 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.DirectoryScanner;
-import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
@@ -117,73 +116,51 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         .collect(Collectors.toList());
   }
 
-  protected final Integer bufferSize;
+  protected MojoMetadata mojoMeta;
 
   protected final ClosureConfig closureConfig;
-
-  protected final Charset encoding;
 
   protected final List<File> files = new ArrayList<>();
 
   protected final boolean includesEmpty;
 
-  protected final Log log;
-
   private final FilenameInterpolator outputFilenameInterpolator;
 
-  protected final boolean skipMerge;
-
-  protected final boolean skipMinify;
+  protected final FileProcessConfig processConfig;
 
   protected final File sourceDir;
 
   protected final File targetDir;
 
-  protected final BuildContext buildContext;
+  protected FileSpecifier fileSpecifier;
 
   /**
    * Task constructor.
    * @param mojoMeta Base mojo data.
    * @param bufferSize size of the buffer used to read source files
-   * @param suffix final file name suffix
-   * @param nosuffix whether to use a suffix for the minified file name or not
+   * @param force Whether the check for changed files is skipped.
    * @param skipMerge whether to skip the merge step or not
    * @param skipMinify whether to skip the minify step or not
-   * @param baseSourceDir web resources source directory
-   * @param baseTargetDir web resources target directory
-   * @param sourceDir directory containing source files
-   * @param includes list of source files to include
-   * @param excludes list of source files to exclude
-   * @param targetDir directory to write the final file
-   * @param outputFilename the output file name
+   * @param fileSpecifier Details about the input / output files.
    * @param closureConfig Google closure configuration
    * @throws IOException
    */
-  public ProcessFilesTask(MojoMetadata mojoMeta, int bufferSize,
-      boolean skipMerge, boolean skipMinify,
-      File baseSourceDir, File baseTargetDir,
-      String sourceDir, String targetDir,
-      List<String> includes, List<String> excludes,
-      String outputFilename, ClosureConfig closureConfig) throws IOException {
-    this.log = mojoMeta.getLog();
-    this.buildContext = mojoMeta.getBuildContext();
-    this.bufferSize = bufferSize;
-    this.encoding = Charset.forName(mojoMeta.getEncoding());
-    this.skipMerge = skipMerge;
-    this.skipMinify = skipMinify;
+  public ProcessFilesTask(MojoMetadata mojoMeta, FileProcessConfig processConfig, FileSpecifier fileSpecifier, ClosureConfig closureConfig) throws IOException {
+    this.mojoMeta = mojoMeta;
+    this.processConfig = processConfig;
 
     File projectBasedir = mojoMeta.getProject().getBasedir();
-    this.sourceDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, baseSourceDir), sourceDir).getAbsoluteFile().getCanonicalFile();
-    this.targetDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, baseTargetDir), targetDir).getAbsoluteFile().getCanonicalFile();
-    this.outputFilenameInterpolator = new FilenameInterpolator(outputFilename);
+    this.sourceDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseSourceDir()), fileSpecifier.getSourceDir()).getAbsoluteFile().getCanonicalFile();
+    this.targetDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseTargetDir()), fileSpecifier.getTargetDir()).getAbsoluteFile().getCanonicalFile();
+    this.outputFilenameInterpolator = new FilenameInterpolator(fileSpecifier.getOutputFilename());
 
-    for (File include : getFilesToInclude(this.sourceDir, includes, excludes)) {
+    for (File include : getFilesToInclude(this.sourceDir, fileSpecifier.getIncludes(), fileSpecifier.getExcludes())) {
       if (!files.contains(include)) {
         addNewSourceFile(files, include, mojoMeta);
       }
     }
 
-    this.includesEmpty = includes.isEmpty();
+    this.includesEmpty = fileSpecifier.getIncludes().isEmpty();
     this.closureConfig = closureConfig;
   }
 
@@ -191,8 +168,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     if (target.getAbsolutePath().equals(source.getAbsolutePath())) {
       String msg;
       msg = "The source file [" + source.getName() + "] has the same name as the output file [" + target.getName() + "].";
-      log.warn(msg);
-      log.debug("Full path for source file is [" + source.getPath() + "] and for target file [" + target.getPath() + "]");
+      mojoMeta.getLog().warn(msg);
+      mojoMeta.getLog().debug("Full path for source file is [" + source.getPath() + "] and for target file [" + target.getPath() + "]");
       throw new MojoFailureException(msg);
     }
   }
@@ -204,20 +181,20 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    */
   @Override
   public Object call() throws IOException, MojoFailureException {
-    synchronized (log) {
-      log.info("Starting JavaScript task:");
+    synchronized (mojoMeta.getLog()) {
+      mojoMeta.getLog().info("Starting JavaScript task:");
 
       if (!files.isEmpty()) {
 
         // Minify only
-        if (skipMerge) {
-          log.info("Skipping the merge step...");
+        if (processConfig.isSkipMerge()) {
+          mojoMeta.getLog().info("Skipping the merge step...");
 
           for (File sourceFile : files) {
             // Create folders to preserve sub-directory structure when only minifying / copying
             File minifiedFile = outputFilenameInterpolator.apply(sourceFile, targetDir);
             assertTarget(sourceFile, minifiedFile);
-            if (skipMinify) {
+            if (processConfig.isSkipMinify()) {
               copy(sourceFile, minifiedFile);
             }
             else {
@@ -226,10 +203,10 @@ public abstract class ProcessFilesTask implements Callable<Object> {
           }
         }
         // Merge-only
-        else if (skipMinify) {
+        else if (processConfig.isSkipMinify()) {
           File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
           merge(mergedFile);
-          log.info("Skipping the minify step...");
+          mojoMeta.getLog().info("Skipping the minify step...");
         }
         // Minify + merge
         else {
@@ -239,7 +216,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       }
       else if (!includesEmpty) {
         // 'files' list will be empty if source file paths or names added to the project's POM are invalid.
-        log.error("No valid JavaScript source files found to process.");
+        mojoMeta.getLog().error("No valid JavaScript source files found to process.");
       }
     }
 
@@ -269,7 +246,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       try (InputStream in = new FileInputStream(minifiedFile);
           OutputStream out = new FileOutputStream(temp);
           GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
-        IOUtils.copy(in, outGZIP, bufferSize);
+        IOUtils.copy(in, outGZIP, processConfig.getBufferSize());
       }
 
       long uncompressedSize = 0;
@@ -279,14 +256,14 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         }
       }
 
-      log.info("Uncompressed size: " + uncompressedSize + " bytes.");
-      log.info("Compressed size: " + minifiedFile.length() + " bytes minified (" + temp.length()
+      mojoMeta.getLog().info("Uncompressed size: " + uncompressedSize + " bytes.");
+      mojoMeta.getLog().info("Compressed size: " + minifiedFile.length() + " bytes minified (" + temp.length()
           + " bytes gzipped).");
 
       temp.deleteOnExit();
     }
     catch (IOException e) {
-      log.debug("Failed to calculate the gzipped file size.", e);
+      mojoMeta.getLog().debug("Failed to calculate the gzipped file size.", e);
     }
   }
 
@@ -306,7 +283,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
     finally {
       if (firstThatExists != null) {
-        buildContext.refresh(firstThatExists);
+        mojoMeta.getBuildContext().refresh(firstThatExists);
       }
     }
   }
@@ -322,9 +299,9 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     mkDir(targetDir);
     mkDir(targetFile.getParentFile());
     try (InputStream in = new FileInputStream(sourceFile);
-        OutputStream out = buildContext.newFileOutputStream(targetFile);
-        Reader reader = new InputStreamReader(in, encoding);
-        Writer writer = new OutputStreamWriter(out, encoding)) {
+        OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(targetFile);
+        Reader reader = new InputStreamReader(in, mojoMeta.getEncoding());
+        Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
       IOUtils.copy(reader, writer);
     }
   }
@@ -340,20 +317,20 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     mkDir(targetDir);
     mkDir(mergedFile.getParentFile());
 
-    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(log, files, encoding));
-        OutputStream out = buildContext.newFileOutputStream(mergedFile);
-        InputStreamReader sequenceReader = new InputStreamReader(sequence, encoding);
-        OutputStreamWriter outWriter = new OutputStreamWriter(out, encoding)) {
-      log.info("Creating the merged file [" + mergedFile.getName() + "].");
-      log.debug("Full path is [" + mergedFile.getPath() + "].");
+    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(mojoMeta.getLog(), files, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
+        OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
+        InputStreamReader sequenceReader = new InputStreamReader(sequence, mojoMeta.getEncoding());
+        OutputStreamWriter outWriter = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
+      mojoMeta.getLog().info("Creating the merged file [" + mergedFile.getName() + "].");
+      mojoMeta.getLog().debug("Full path is [" + mergedFile.getPath() + "].");
 
-      IOUtils.copyLarge(sequenceReader, outWriter, new char[bufferSize]);
+      IOUtils.copyLarge(sequenceReader, outWriter, new char[processConfig.getBufferSize()]);
 
       // Make sure we end with a new line
-      outWriter.append(System.lineSeparator());
+      outWriter.append(processConfig.getLineSeparator());
     }
     catch (IOException e) {
-      log.error("Failed to concatenate files.", e);
+      mojoMeta.getLog().error("Failed to concatenate files.", e);
       throw e;
     }
   }
@@ -368,6 +345,10 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     boolean changed;
 	long oldestOutput = 0L;
 	long youngestInput = Long.MAX_VALUE;
+    if (processConfig.isForce()) {
+      mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
+      return true;
+    }
     if (outputFiles.stream().allMatch(File::exists)) {
       oldestOutput = outputFiles.stream().map(File::lastModified).min(Long::compareTo).orElse(0L);
       youngestInput = sourceFiles.stream().map(File::lastModified).max(Long::compareTo).orElse(Long.MAX_VALUE);
@@ -376,15 +357,14 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     else {
       changed = true;
     }
-
-    if (log.isDebugEnabled()) {
+    if (mojoMeta.getLog().isDebugEnabled()) {
       if (!changed) {
-        log.debug("No changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], skipping bundle with output files ["
+        mojoMeta.getLog().debug("No changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], skipping bundle with output files ["
             + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
             + "].");
       }
 	  else {
-		  log.debug("Changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], processing bundle with output files ["
+		  mojoMeta.getLog().debug("Changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], processing bundle with output files ["
             + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
             + "].");
 	  }
@@ -397,14 +377,16 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param mergedFile input file resulting from the merged step
    * @param minifiedFile output file resulting from the minify step
    * @throws IOException when the minify step fails
+   * @throws MojoFailureException
    */
-  abstract void minify(File mergedFile, File minifiedFile) throws IOException;
+  abstract void minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException;
 
   /**
    * Minifies a list of source files into a single file. Create missing parent directories if needed.
    * @param srcFiles list of input files
    * @param minifiedFile output file resulting from the minify step
    * @throws IOException when the minify step fails
+   * @throws MojoFailureException
    */
-  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException;
+  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException;
 }

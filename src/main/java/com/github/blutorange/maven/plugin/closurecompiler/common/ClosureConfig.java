@@ -14,12 +14,13 @@
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.SerializationUtils;
@@ -32,6 +33,7 @@ import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.DependencyOptions;
 import com.google.javascript.jscomp.DiagnosticGroup;
@@ -60,7 +62,6 @@ public class ClosureConfig {
 
     options.setAngularPass(mojo.isClosureAngularPass());
     options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
-    options.setDependencyOptions(createDependencyOptions(mojo));
     options.setDefineReplacements(createDefineReplacements(mojo));
     options.setExtraAnnotationNames(mojo.getClosureExtraAnnotations());
     options.setPrettyPrint(mojo.isClosurePrettyPrint());
@@ -141,22 +142,32 @@ public class ClosureConfig {
     return defineReplacements;
   }
 
-  private static DependencyOptions createDependencyOptions(MinifyMojo mojo) {
+  private DependencyOptions createDependencyOptions(File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
     DependencyOptions dependencyOptions = new DependencyOptions();
 
-    dependencyOptions.setDependencySorting(mojo.isClosureDependencySorting());
-    dependencyOptions.setDependencyPruning(mojo.isClosureDependencyPruning());
-    dependencyOptions.setMoocherDropping(mojo.isClosureDependencyMoocherDropping());
-
-    dependencyOptions.setEntryPoints(CollectionUtils.emptyIfNull(mojo.getClosureDependencyEntryPoints()).stream().map(entryPoint -> {
+    // Map entry points
+    Collection<ModuleIdentifier> entryPointsMapped = new ArrayList<>();
+    for (String entryPoint : CollectionUtils.emptyIfNull(entryPoints)) {
       if (entryPoint.startsWith(FILE_PREFIX)) {
-        File file = new File(mojo.getProject().getBasedir(), entryPoint.substring(FILE_PREFIX.length()));
-        return ModuleIdentifier.forFile(file.getAbsolutePath());
+        File file = new File(sourceDir, entryPoint.substring(FILE_PREFIX.length())).getCanonicalFile();
+        entryPointsMapped.add(ModuleIdentifier.forFile(FileHelper.relativizePath(baseDirForSourceFiles, file)));
       }
       else {
-        return ModuleIdentifier.forClosure(entryPoint);
+        entryPointsMapped.add(ModuleIdentifier.forClosure(entryPoint));
       }
-    }).collect(Collectors.toList()));
+    }
+
+    // Set dependency mode
+    if (dependencyMode == CompilerOptions.DependencyMode.STRICT) {
+      if (entryPoints.isEmpty()) { throw new MojoFailureException("When dependency_mode=STRICT, you must specify at least one entry_point"); }
+      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(true);
+    }
+    else if (dependencyMode == CompilerOptions.DependencyMode.LOOSE
+        || !entryPoints.isEmpty()) {
+      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(false);
+    }
+
+    dependencyOptions.setEntryPoints(entryPointsMapped);
     return dependencyOptions;
   }
 
@@ -216,6 +227,10 @@ public class ClosureConfig {
 
   private final LanguageMode languageOut;
 
+  private final DependencyMode dependencyMode;
+
+  private final Collection<String> entryPoints;
+
   /**
    * Create a new closure compiler configuration from the mojo configuration.
    * @param mojo Mojo with the options.
@@ -228,6 +243,8 @@ public class ClosureConfig {
     this.languageOut = mojo.getClosureLanguageOut();
     this.sourceMapFormat = mojo.isClosureCreateSourceMap() ? SourceMap.Format.V3 : null;
     this.sourceMapOutputType = mojo.getClosureSourceMapOutputType();
+    this.dependencyMode = mojo.getClosureDependencyMode();
+    this.entryPoints = new ArrayList<>(mojo.getClosureDependencyEntryPoints());
 
     this.sourceMapInterpolator = new FilenameInterpolator(mojo.getClosureSourceMapName());
     this.compilerOptions = createCompilerOptions(mojo);
@@ -239,8 +256,11 @@ public class ClosureConfig {
     return compilationLevel;
   }
 
-  public CompilerOptions getCompilerOptions(File sourceMapFile) {
+  public CompilerOptions getCompilerOptions(File minifiedFile, File sourceMapFile, File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
     CompilerOptions compilerOptions = SerializationUtils.clone(this.compilerOptions);
+
+    // Apply dependency options
+    compilerOptions.setDependencyOptions(createDependencyOptions(baseDirForSourceFiles, sourceDir));
 
     // Apply compilation level
     compilationLevel.setOptionsForCompilationLevel(compilerOptions);

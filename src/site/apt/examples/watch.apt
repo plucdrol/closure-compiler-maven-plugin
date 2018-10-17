@@ -1,0 +1,73 @@
+ ------
+ Watch
+ ------
+ Andre Wachsmuth
+ ------
+ 2018-09-08
+ ------
+
+Watching for file changes
+
+  When working on a project, it helps to have your files built automatically when you change a source file. There may be subtle differences
+  between the source files and the merged, transpiled and minified output. To detect possible bugs and errors as soon as possible, I recommend
+  you develop with the built JavaScript files. Closure compiler itself does not offer a watch mode. This leaves you with two options:
+  
+  * If you are using Eclipse, see {{{./m2e.html}m2e maven integration}}.
+  
+  * Outside of eclipse, you can use a third-party maven plugin to watch for file changes and trigger the execution of this plugin. See below for an example.
+  
++---+
+<project>
+  <!-- ... -->
+  <build>
+    <plugins>
+      <!-- ... -->
+
+      <!-- Watch for changes and recompile JS resources -->
+     <plugin>
+       <groupId>com.fizzed</groupId>
+       <artifactId>fizzed-watcher-maven-plugin</artifactId>
+       <version>1.0.6</version>
+       <configuration>
+         <!-- Files to watch for changes -->
+         <watches>
+           <watch>
+             <directory>${basedir}/path/to/your/js/files</directory>
+           </watch>
+         </watches>
+         <skipTouch>true</skipTouch>
+         <!-- Goal to run when a files has changed -->
+         <goals>
+           <goal>generate-resources</goal>
+         </goals>
+         <!-- Optional profile to activate -->
+         <profiles>
+           <profile>development</profile>
+         </profiles>
+       </configuration>
+     </plugin>
+
+      <plugin>
+        <groupId>com.github.blutorange</groupId>
+        <artifactId>closure-compiler-maven-plugin</artifactId>
+        <version>2.0.0</version>
+        <executions>
+          <execution>
+            <id>default-minify</id>
+            <configuration>
+              <includes>
+                <include>myfiles.js</include>
+              </includes>
+            </configuration>
+            <goals>
+              <goal>minify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- ... -->
+    </plugins>
+  </build>
+  <!-- ... -->
+</project>
++---+

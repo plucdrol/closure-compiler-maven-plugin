@@ -1,8 +1,11 @@
+import { PearceKellyDetector } from "./subdir/pearce-kelly.js";
+
 class Blutorange {
 	constructor()  {
 		this.version = "final";
 	}
 	sayHello(name) {
+		console.log(new PearceKellyDetector());
 		return `こんにちは,${name}!`;
 	}
 	static getInstance() {
