@@ -55,18 +55,50 @@ public class ClosureConfig {
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
     CompilerOptions options = new CompilerOptions();
 
+    options.setAngularPass(mojo.isClosureAngularPass());
+    options.setClosurePass(mojo.isClosureProcessCommonJsModules() ? true : mojo.isClosureProcessClosurePrimitives());
+    options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
+    options.setDartPass(mojo.isClosureDartPass());
+    options.setDefineReplacements(createDefineReplacements(mojo));
+    options.setEmitUseStrict(mojo.isClosureEmitUseStrict());
     options.setEnvironment(mojo.getClosureEnvironment());
+    options.setExtraAnnotationNames(mojo.getClosureExtraAnnotations());
+    if (!mojo.getClosureForceInjectLibs().isEmpty()) {
+      options.setForceLibraryInjection(mojo.getClosureForceInjectLibs());
+    }
     options.setLanguageIn(mojo.getClosureLanguageIn());
     options.setLanguageOut(mojo.getClosureLanguageOut());
+    options.setModuleResolutionMode(mojo.getClosureModuleResolution());
     options.setOutputCharset(Charset.forName(mojo.getEncoding()));
-
-    options.setAngularPass(mojo.isClosureAngularPass());
-    options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
-    options.setDefineReplacements(createDefineReplacements(mojo));
-    options.setExtraAnnotationNames(mojo.getClosureExtraAnnotations());
+    options.setPreferLineBreakAtEndOfFile(true);
+    options.setPreferSingleQuotes(mojo.isClosurePreferSingleQuotes());
     options.setPrettyPrint(mojo.isClosurePrettyPrint());
+    options.setPreventLibraryInjection(!mojo.isClosureInjectLibraries());
+    options.setProcessCommonJSModules(mojo.isClosureProcessCommonJsModules());
+    if (StringUtils.isNotEmpty(mojo.getClosureRenameVariablePrefix())) {
+      options.setRenamePrefix(mojo.getClosureRenameVariablePrefix());
+    }
+    if (StringUtils.isNotEmpty(mojo.getClosureRenamePrefixNamespace())) {
+      options.setRenamePrefixNamespace(mojo.getClosureRenamePrefixNamespace());
+    }
     options.setRewritePolyfills(mojo.isClosureRewritePolyfills());
+    options.setStrictModeInput(mojo.isClosureStrictModeInput());
     options.setTrustedStrings(mojo.isClosureTrustedStrings());
+
+    // Apply compilation level
+    mojo.getClosureCompilationLevel().setOptionsForCompilationLevel(options);
+    if (mojo.isClosureAssumeFunctionWrapper()) {
+      mojo.getClosureCompilationLevel().setWrappedOutputOptimizations(options);
+    }
+    if (mojo.isClosureDebug()) {
+      mojo.getClosureCompilationLevel().setDebugOptionsForCompilationLevel(options);
+    }
+    if (mojo.isClosureUseTypesForOptimization()) {
+      mojo.getClosureCompilationLevel().setTypeBasedOptimizationOptions(options);
+    }
+
+    // Warning levels. First apply default, then specified overrides.
+    mojo.getClosureWarningLevel().setOptionsForWarningLevel(options);
     createWarningLevels(mojo).forEach(options::setWarningLevel);
 
     return options;
@@ -142,35 +174,6 @@ public class ClosureConfig {
     return defineReplacements;
   }
 
-  private DependencyOptions createDependencyOptions(File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
-    DependencyOptions dependencyOptions = new DependencyOptions();
-
-    // Map entry points
-    Collection<ModuleIdentifier> entryPointsMapped = new ArrayList<>();
-    for (String entryPoint : CollectionUtils.emptyIfNull(entryPoints)) {
-      if (entryPoint.startsWith(FILE_PREFIX)) {
-        File file = new File(sourceDir, entryPoint.substring(FILE_PREFIX.length())).getCanonicalFile();
-        entryPointsMapped.add(ModuleIdentifier.forFile(FileHelper.relativizePath(baseDirForSourceFiles, file)));
-      }
-      else {
-        entryPointsMapped.add(ModuleIdentifier.forClosure(entryPoint));
-      }
-    }
-
-    // Set dependency mode
-    if (dependencyMode == CompilerOptions.DependencyMode.STRICT) {
-      if (entryPoints.isEmpty()) { throw new MojoFailureException("When dependency_mode=STRICT, you must specify at least one entry_point"); }
-      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(true);
-    }
-    else if (dependencyMode == CompilerOptions.DependencyMode.LOOSE
-        || !entryPoints.isEmpty()) {
-      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(false);
-    }
-
-    dependencyOptions.setEntryPoints(entryPointsMapped);
-    return dependencyOptions;
-  }
-
   private static List<SourceFile> createExterns(MinifyMojo mojo) {
     List<SourceFile> externs = new ArrayList<>();
     for (String extern : mojo.getClosureExterns()) {
@@ -211,11 +214,17 @@ public class ClosureConfig {
 
   private final CompilerOptions compilerOptions;
 
+  private final DependencyMode dependencyMode;
+
+  private final Collection<String> entryPoints;
+
   private final CompilerOptions.Environment environment;
 
   private final List<SourceFile> externs;
 
   private final boolean includeSourcesContent;
+
+  private final LanguageMode languageOut;
 
   private final OutputInterpolator outputInterpolator;
 
@@ -225,12 +234,6 @@ public class ClosureConfig {
 
   private final SourceMapOutputType sourceMapOutputType;
 
-  private final LanguageMode languageOut;
-
-  private final DependencyMode dependencyMode;
-
-  private final Collection<String> entryPoints;
-
   /**
    * Create a new closure compiler configuration from the mojo configuration.
    * @param mojo Mojo with the options.
@@ -238,18 +241,47 @@ public class ClosureConfig {
    */
   public ClosureConfig(MinifyMojo mojo) throws MojoFailureException {
     this.compilationLevel = mojo.getClosureCompilationLevel();
+    this.dependencyMode = mojo.getClosureDependencyMode();
+    this.entryPoints = new ArrayList<>(mojo.getClosureDependencyEntryPoints());
     this.environment = mojo.getClosureEnvironment();
     this.includeSourcesContent = mojo.isClosureIncludeSourcesContent();
     this.languageOut = mojo.getClosureLanguageOut();
     this.sourceMapFormat = mojo.isClosureCreateSourceMap() ? SourceMap.Format.V3 : null;
     this.sourceMapOutputType = mojo.getClosureSourceMapOutputType();
-    this.dependencyMode = mojo.getClosureDependencyMode();
-    this.entryPoints = new ArrayList<>(mojo.getClosureDependencyEntryPoints());
 
     this.sourceMapInterpolator = new FilenameInterpolator(mojo.getClosureSourceMapName());
     this.compilerOptions = createCompilerOptions(mojo);
     this.externs = createExterns(mojo);
     this.outputInterpolator = createOutputInterpolator(mojo);
+  }
+
+  private DependencyOptions createDependencyOptions(File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
+    DependencyOptions dependencyOptions = new DependencyOptions();
+
+    // Map entry points
+    Collection<ModuleIdentifier> entryPointsMapped = new ArrayList<>();
+    for (String entryPoint : CollectionUtils.emptyIfNull(entryPoints)) {
+      if (entryPoint.startsWith(FILE_PREFIX)) {
+        File file = new File(sourceDir, entryPoint.substring(FILE_PREFIX.length())).getCanonicalFile();
+        entryPointsMapped.add(ModuleIdentifier.forFile(FileHelper.relativizePath(baseDirForSourceFiles, file)));
+      }
+      else {
+        entryPointsMapped.add(ModuleIdentifier.forClosure(entryPoint));
+      }
+    }
+
+    // Set dependency mode
+    if (dependencyMode == CompilerOptions.DependencyMode.STRICT) {
+      if (entryPoints.isEmpty()) { throw new MojoFailureException("When dependency_mode=STRICT, you must specify at least one entry_point"); }
+      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(true);
+    }
+    else if (dependencyMode == CompilerOptions.DependencyMode.LOOSE
+        || !entryPoints.isEmpty()) {
+      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(false);
+    }
+
+    dependencyOptions.setEntryPoints(entryPointsMapped);
+    return dependencyOptions;
   }
 
   public CompilationLevel getCompilationLevel() {
@@ -261,9 +293,6 @@ public class ClosureConfig {
 
     // Apply dependency options
     compilerOptions.setDependencyOptions(createDependencyOptions(baseDirForSourceFiles, sourceDir));
-
-    // Apply compilation level
-    compilationLevel.setOptionsForCompilationLevel(compilerOptions);
 
     // Tell the compiler to create a source map, if configured.
     if (sourceMapFormat != null) {
@@ -283,6 +312,10 @@ public class ClosureConfig {
     return externs;
   }
 
+  public LanguageMode getLanguageOut() {
+    return languageOut;
+  }
+
   public OutputInterpolator getOutputInterpolator() {
     return outputInterpolator;
   }
@@ -298,12 +331,8 @@ public class ClosureConfig {
   public boolean isCreateSourceMap() {
     return sourceMapFormat != null;
   }
-  
+
   public boolean isCreateSourceMapFile() {
     return isCreateSourceMap() && sourceMapOutputType.isCreateFile();
-  }
-
-  public LanguageMode getLanguageOut() {
-    return languageOut;
   }
 }

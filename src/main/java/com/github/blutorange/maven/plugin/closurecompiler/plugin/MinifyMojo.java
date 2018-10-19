@@ -25,10 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -59,114 +55,14 @@ import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
+import com.google.javascript.jscomp.WarningLevel;
+import com.google.javascript.jscomp.deps.ModuleLoader.ResolutionMode;
 
 /**
  * Goal for combining and/or minifying JavaScript files with closure compiler.
  */
-@Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = true)
+@Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = false)
 public class MinifyMojo extends AbstractMojo {
-
-  /* ************* */
-  /* Maven options */
-  /* ************* */
-
-  @Parameter(defaultValue = "${project}", readonly = true, required = true)
-  private MavenProject project;
-
-  @Component
-  private BuildContext buildContext;
-
-  private Log logWrapper;
-
-  /* ************** */
-  /* Global Options */
-  /* ************** */
-
-  /**
-   * By default, messages are logged at the log level set by maven. This option allows you to change the log level.
-   * Valid options are {@code all}, {@code debug}, {@code info}, {@code warn}, {@code error}, {@code none}. Leave empty
-   * to use the default log level. Please note that you can only decrease, not increase, the log level.
-   */
-  @Parameter(property = "logLevel", defaultValue = "")
-  private LogLevel logLevel;
-
-  /**
-   * For each bundle, this plugin performs a check whether the input or output files have changed and skips the
-   * execution in case they haven't. Set this flag to {@code true} to force the execution.
-   * @since 2.0.0
-   */
-  @Parameter(property = "force", defaultValue = "false")
-  private boolean force;
-
-  /**
-   * Size of the buffer used to read source files.
-   */
-  @Parameter(property = "bufferSize", defaultValue = "4096")
-  private int bufferSize;
-
-  /**
-   * The line separator to be used when merging files etc. Defaults to the default system line separator. Special
-   * characters are entered escaped. So for example, to use a new line feed as the separator, set this property to
-   * {@code \n} (two characters, a backslash and the letter n).
-   * @since 2.0.0
-   */
-  @Parameter(property = "lineSeparator", defaultValue = "")
-  private String lineSeparator;
-
-  /**
-   * If a supported character set is specified, it will be used to read the input file. Otherwise, it will assume that
-   * the platform's default character set is being used. The output file is encoded using the same character set.<br/>
-   * See the <a href="http://www.iana.org/assignments/character-sets">IANA Charset Registry</a> for a list of valid
-   * encoding types.
-   * @since 1.3.2
-   */
-  @Parameter(property = "encoding", defaultValue = "${project.build.sourceEncoding}", alias = "charset")
-  private String encoding;
-
-  /**
-   * Skip the merge step. Minification will be applied to each source file individually.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMerge", defaultValue = "false")
-  private boolean skipMerge;
-
-  /**
-   * Skip the minify step. Useful when merging files that are already minified.
-   * @since 1.5.2
-   */
-  @Parameter(property = "skipMinify", defaultValue = "false")
-  private boolean skipMinify;
-
-  /**
-   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
-   * project base directory.
-   * @since 1.7.5
-   */
-  @Parameter(property = "bundleConfiguration", defaultValue = "")
-  private String bundleConfiguration;
-
-  /* *********** */
-  /* File Options */
-  /* ************ */
-
-  /**
-   * <p>
-   * The output file name of the processed files.
-   * </p>
-   * <p>
-   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
-   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
-   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
-   * file.
-   * </p>
-   * <p>
-   * If merging files, by default the basename is set to {@code script} and the extension to {@code js}, so that the
-   * resulting merged file is called {@code script.min.js}.
-   * </p>
-   * @since 2.0.0
-   */
-  @Parameter(property = "outputFileName", defaultValue = "#{basename}.min.#{extension}")
-  private String outputFilename;
 
   /**
    * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
@@ -183,36 +79,201 @@ public class MinifyMojo extends AbstractMojo {
   private File baseTargetDir;
 
   /**
-   * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
+   * Size of the buffer used to read source files.
    */
-  @Parameter(property = "sourceDir", defaultValue = "js")
-  private String sourceDir;
+  @Parameter(property = "bufferSize", defaultValue = "4096")
+  private int bufferSize;
+
+  @Component
+  private BuildContext buildContext;
 
   /**
-   * JavaScript files to include. Specified as fileset patterns which are relative to the JavaScript source directory.
-   * @since 1.2
+   * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to the
+   * project base directory.
+   * @since 1.7.5
    */
-  @Parameter(property = "includes")
-  private ArrayList<String> includes;
+  @Parameter(property = "bundleConfiguration", defaultValue = "")
+  private String bundleConfiguration;
 
   /**
-   * JavaScript files to exclude. Specified as fileset patterns which are relative to the JavaScript source directory.
-   * @since 1.2
+   * Generate {@code $inject} properties for AngularJS for functions annotated with {@code @ngInject}.
+   * @since 1.7.3
    */
-  @Parameter(property = "excludes")
-  private ArrayList<String> excludes;
+  @Parameter(property = "closureAngularPass", defaultValue = "false")
+  private boolean closureAngularPass;
 
   /**
-   * JavaScript target directory. Takes the same value as {@code jsSourceDir} when empty. This is relative to the
-   * {@link #baseTargetDir}.
-   * @since 1.3.2
+   * Enable additional optimizations based on the assumption that the output will be wrapped with a function wrapper.
+   * This flag is used to indicate that "global" declarations will not actually be global but instead isolated to the
+   * compilation unit. This enables additional optimizations.
+   * @since 2.1
    */
-  @Parameter(property = "targetDir", defaultValue = "js")
-  private String targetDir;
+  @Parameter(property = "closureAssumeFunctionWrapper", defaultValue = "false")
+  private boolean closureAssumeFunctionWrapper;
 
-  /* ************************************ */
-  /* Google Closure Compiler Only Options */
-  /* ************************************ */
+  /**
+   * Whether the error output from the closure compiler is colorized. Color codes may not be supported by all terminals.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureColorizeErrorOutput", defaultValue = "true")
+  private boolean closureColorizeErrorOutput;
+
+  /**
+   * The degree of compression and optimization to apply to your JavaScript.<br/>
+   * There are three possible compilation levels:
+   * <ul>
+   * <li>{@code WHITESPACE_ONLY}: Just removes whitespace and comments from your JavaScript.</li>
+   * <li>{@code SIMPLE_OPTIMIZATIONS}: Performs compression and optimization that does not interfere with the
+   * interaction between the compiled JavaScript and other JavaScript. This level renames only local variables.</li>
+   * <li>{@code ADVANCED_OPTIMIZATIONS}: Achieves the highest level of compression by renaming symbols in your
+   * JavaScript. When using {@code ADVANCED_OPTIMIZATIONS} compilation you must perform extra steps to preserve
+   * references to external symbols. See <a href="/closure/compiler/docs/api-tutorial3">Advanced Compilation and
+   * Externs</a> for more information about {@code ADVANCED_OPTIMIZATIONS}.</li>
+   * <li>{@code BUNDLE}: Leaves all compiler options unchanged. For advanced usage if you want to seet the releavant
+   * options yourself.</li>
+   * </ul>
+   * @since 1.7.2
+   */
+  @Parameter(property = "closureCompilationLevel", defaultValue = "SIMPLE_OPTIMIZATIONS")
+  private CompilationLevel closureCompilationLevel;
+
+  /**
+   * Collects information mapping the generated (compiled) source back to its original source for debugging purposes.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureCreateSourceMap", defaultValue = "false")
+  private boolean closureCreateSourceMap;
+
+  /**
+   * Rewrite Dart Dev Compiler output to be compiler-friendly.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureDartPass", defaultValue = "false")
+  private boolean closureDartPass;
+
+  /**
+   * Enable debugging options. Property renaming uses long mangled names which can be mapped back to the original name.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureDebug", defaultValue = "false")
+  private boolean closureDebug;
+
+  /**
+   * Override the value of variables annotated with {@code @define}.<br/>
+   * The format is:
+   * 
+   * <pre>
+   * <code class="language-java">
+   * &lt;define>
+   *     &lt;name>value&lt;/name>
+   * &lt;/define>
+   * </code>
+   * </pre>
+   * 
+   * where {@code <name>} is the name of a {@code @define} variable and {@code value} is a JavaScript boolean, number or
+   * string literal. That is, use quotation marks to specify a string: {@code "First line\nseconds line"}
+   * @since 1.7.5
+   */
+  @Parameter(property = "closureDefineReplacements")
+  private HashMap<String, String> closureDefineReplacements;
+
+  /**
+   * <p>
+   * When you use {@code closureDependencyMode} STRICT or LOOSE, you must specify to the compiler what the entry points
+   * of your application are. Beginning at those entry points, it will trace through the files to discover what sources
+   * are actually referenced and will drop all other files.
+   * </p>
+   * <p>
+   * Adds a collection of symbols to always keep. In dependency pruning mode, we will automatically keep all the
+   * transitive dependencies of these symbols. The syntactic form of a symbol depends on the type of dependency
+   * primitives we're using. For example, {@code goog.provide('foo.bar')} provides the symbol {@code foo.bar}. Entry
+   * points can be scoped to a module by specifying {@code mod2:foo.bar}.
+   * </p>
+   * <p>
+   * There are two different types of entry points, closures and modules:
+   * <ul>
+   * <li>{@code closure}: A closure namespace used as an entry point. May start with {@code goog:} when provided as a
+   * flag from the command line. Closure entry points may also be formatted as: {@code goog:moduleName:name.space} which
+   * specifies that the module name and provided namespace are different</li>
+   * <li>{@code file}: Must start with the prefix {@code file:}. AES6 or CommonJS modules used as an entry point. The
+   * file path is relative to the {@code sourceDir}.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyEntryPoints")
+  private List<String> closureDependencyEntryPoints;
+
+  /**
+   * How compiler should prune files based on the provide-require dependency graph.
+   * <ul>
+   * <li>{@code NONE} All files will be included in the compilation</li>
+   * <li>{@code LOOSE}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are not either an ES6 or CommonJS module will be automatically treated as entry points. Module files
+   * will be included only if referenced from an entry point.</li>
+   * <li>{@code STRICT}Files must be discoverable from specified entry points. Files which do not goog.provide a
+   * namespace and are neither an ES6 or CommonJS module will be dropped. Module files will be included only if
+   * referenced from an entry point.</li>
+   * </ul>
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
+  private DependencyMode closureDependencyMode;
+
+  /**
+   * Start output with <code>'use strict';</code>.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureEmitUseStrict", defaultValue = "true")
+  private boolean closureEmitUseStrict;
+
+  /**
+   * Determines the set of builtin externs to load.<br/>
+   * Options: BROWSER, CUSTOM.
+   * @since 1.7.5
+   */
+  @Parameter(property = "closureEnvironment", defaultValue = "BROWSER")
+  private CompilerOptions.Environment closureEnvironment;
+
+  /**
+   * List of JavaScript files containing code that declares function names or other symbols. Use {@code closureExterns}
+   * to preserve symbols that are defined outside of the code you are compiling. The {@code closureExterns} parameter
+   * only has an effect if you are using a {@code CompilationLevel} of {@code ADVANCED_OPTIMIZATIONS}.<br/>
+   * These file names are relative to {@link #baseSourceDir} directory.
+   * @since 1.7.2
+   */
+  @Parameter(property = "closureExterns")
+  private ArrayList<String> closureExterns;
+
+  /**
+   * A whitelist of tag names in JSDoc. Needed to support JSDoc extensions like ngdoc.
+   * @since 1.7.5
+   */
+  @Parameter(property = "closureExtraAnnotations")
+  private ArrayList<String> closureExtraAnnotations;
+
+  /**
+   * Force injection of named runtime libraries. The format is &lt;name&gt; where &lt;name&gt; is the name of a runtime
+   * library. Possible libraries include: <code>base</code>, <code>es6_runtime</code>, <code>runtime_type_check</code>
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureForceInjectLibs")
+  private List<String> closureForceInjectLibs;
+
+  /**
+   * If {@code true}, include the content of the source file in the source map directly (via the {@code sourceContent}
+   * property). This makes the source file bigger, but does not require the original source file to be added to the
+   * browser dev tools.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureIncludeSourcesContent", defaultValue = "false")
+  private boolean closureIncludeSourcesContent;
+
+  /**
+   * Allow injecting runtime libraries.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureInjectLibraries", defaultValue = "true")
+  private boolean closureInjectLibraries;
 
   /**
    * Refers to which version of ECMAScript to assume when checking for errors in your code.<br/>
@@ -254,90 +315,20 @@ public class MinifyMojo extends AbstractMojo {
   private LanguageMode closureLanguageOut;
 
   /**
-   * Extension of the source map, if one is created. By default, the extension {@code .map} is added to the minified
-   * file. Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
-   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
-   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
-   * file.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureSourceMapName", defaultValue = "#{filename}.map")
-  private String closureSourceMapName;
-
-  /**
-   * Determines the set of builtin externs to load.<br/>
-   * Options: BROWSER, CUSTOM.
-   * @since 1.7.5
-   */
-  @Parameter(property = "closureEnvironment", defaultValue = "BROWSER")
-  private CompilerOptions.Environment closureEnvironment;
-
-  /**
-   * The degree of compression and optimization to apply to your JavaScript.<br/>
-   * There are three possible compilation levels:
+   * Specifies how the compiler locates modules.
    * <ul>
-   * <li>{@code WHITESPACE_ONLY}: Just removes whitespace and comments from your JavaScript.</li>
-   * <li>{@code SIMPLE_OPTIMIZATIONS}: Performs compression and optimization that does not interfere with the
-   * interaction between the compiled JavaScript and other JavaScript. This level renames only local variables.</li>
-   * <li>{@code ADVANCED_OPTIMIZATIONS}: Achieves the highest level of compression by renaming symbols in your
-   * JavaScript. When using {@code ADVANCED_OPTIMIZATIONS} compilation you must perform extra steps to preserve
-   * references to external symbols. See <a href="/closure/compiler/docs/api-tutorial3">Advanced Compilation and
-   * Externs</a> for more information about {@code ADVANCED_OPTIMIZATIONS}.</li>
-   * <li>{@code BUNDLE}: Leaves all compiler options unchanged. For advanced usage if you want to seet the releavant
-   * options yourself.</li>
+   * <li><code>BROWSER</code>: Requires all module imports to begin with a '.' or '/' and have a file extension. Mimics
+   * the behavior of MS Edge.</li>
+   * <li><code>NODE</code>: Uses the node module rules. Modules which do not begin with a "." or "/" character are
+   * looked up from the appropriate node_modules folder. Includes the ability to require directories and JSON files.
+   * Exact match, then ".js", then ".json" file extensions are searched.</li>
+   * <li><code>WEBPACK</code>: Looks up modules from a special lookup map. Uses a lookup map provided by webpack to
+   * locate modules from a numeric id used during import.</li>
    * </ul>
-   * @since 1.7.2
+   * @since 2.1.0
    */
-  @Parameter(property = "closureCompilationLevel", defaultValue = "SIMPLE_OPTIMIZATIONS")
-  private CompilationLevel closureCompilationLevel;
-
-  /**
-   * List of JavaScript files containing code that declares function names or other symbols. Use {@code closureExterns}
-   * to preserve symbols that are defined outside of the code you are compiling. The {@code closureExterns} parameter
-   * only has an effect if you are using a {@code CompilationLevel} of {@code ADVANCED_OPTIMIZATIONS}.<br/>
-   * These file names are relative to {@link #baseSourceDir} directory.
-   * @since 1.7.2
-   */
-  @Parameter(property = "closureExterns")
-  private ArrayList<String> closureExterns;
-
-  /**
-   * <p>
-   * Collects information mapping the generated (compiled) source back to its original source for debugging purposes.
-   * </p>
-   * @since 1.7.3
-   */
-  @Parameter(property = "closureCreateSourceMap", defaultValue = "false")
-  private boolean closureCreateSourceMap;
-
-  /**
-   * Whether the error output from the closure compiler is colorized. Color codes may not be supported by all terminals.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureColorizeErrorOutput", defaultValue = "true")
-  private boolean closureColorizeErrorOutput;
-
-  /**
-   * If {@code true}, the processed ("minified") file is pretty printed (formatted with new lines).
-   * @since 2.0.0
-   */
-  @Parameter(property = "closurePrettyPrint", defaultValue = "false")
-  private boolean closurePrettyPrint;
-
-  /**
-   * If {@code true}, ES6 polyfills are written to the output file (such as for Set, Map etc.)
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureRewritePolyfills", defaultValue = "true")
-  private boolean closureRewritePolyfills;
-
-  /**
-   * If {@code false}, converts some characters such as '&lt;' and '&gt;' to '\x3c' and '\x3d' so that they are safe to
-   * put inside a script tag in an HTML file.
-   * @since 2.0.0
-   */
-  @Parameter(property = "closureTrustedStrings", defaultValue = "true")
-  private boolean closureTrustedStrings;
+  @Parameter(property = "closureModuleResolution", defaultValue = "BROWSER")
+  private ResolutionMode closureModuleResolution;
 
   /**
    * <p>
@@ -353,55 +344,66 @@ public class MinifyMojo extends AbstractMojo {
   private String closureOutputWrapper;
 
   /**
-   * If {@code true}, include the content of the source file in the source map directly (via the {@code sourceContent}
-   * property). This makes the source file bigger, but does not require the original source file to be added to the
-   * browser dev tools.
-   * @since 2.0.0
+   * Normally, when there are an equal number of single and double quotes in a string, the compiler will use double
+   * quotes. Set this to true to prefer single quotes.
+   * @since 2.1.0
    */
-  @Parameter(property = "closureIncludeSourcesContent", defaultValue = "false")
-  private boolean closureIncludeSourcesContent;
+  @Parameter(property = "closurePreferSingleQuotes", defaultValue = "false")
+  private boolean closurePreferSingleQuotes;
 
   /**
-   * How compiler should prune files based on the provide-require dependency graph.
-   * <ul>
-   * <li>{@code NONE} All files will be included in the compilation</li>
-   * <li>{@code LOOSE}Files must be discoverable from specified entry points. Files which do not goog.provide a
-   * namespace and are not either an ES6 or CommonJS module will be automatically treated as entry points. Module files
-   * will be included only if referenced from an entry point.</li>
-   * <li>{@code STRICT}Files must be discoverable from specified entry points. Files which do not goog.provide a
-   * namespace and are neither an ES6 or CommonJS module will be dropped. Module files will be included only if
-   * referenced from an entry point.</li>
-   * </ul>
+   * If {@code true}, the processed ("minified") file is pretty printed (formatted with new lines).
    * @since 2.0.0
    */
-  @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
-  private DependencyMode closureDependencyMode;
+  @Parameter(property = "closurePrettyPrint", defaultValue = "false")
+  private boolean closurePrettyPrint;
 
   /**
-   * <p>
-   * When you use {@code closureDependencyMode} STRICT or LOOSE, you must specify to the compiler what the entry points
-   * of your application are. Beginning at those entry points, it will trace through the files to discover what sources
-   * are actually referenced and will drop all other files.
-   * </p>
-   * <p>
-   * Adds a collection of symbols to always keep. In dependency pruning mode, we will automatically keep all the
-   * transitive dependencies of these symbols. The syntactic form of a symbol depends on the type of dependency
-   * primitives we're using. For example, {@code goog.provide('foo.bar')} provides the symbol {@code foo.bar}. Entry
-   * points can be scoped to a module by specifying {@code mod2:foo.bar}.
-   * </p>
-   * <p>
-   * There are two different types of entry points, closures and modules:
-   * <ul>
-   * <li>{@code closure}: A closure namespace used as an entry point. May start with {@code goog:} when provided as a
-   * flag from the command line. Closure entry points may also be formatted as: {@code goog:moduleName:name.space} which
-   * specifies that the module name and provided namespace are different</li>
-   * <li>{@code file}: Must start with the prefix {@code file:}. AES6 or CommonJS modules used as an entry point. The
-   * file path is relative to the {@code sourceDir}.</li>
-   * </ul>
+   * Processes built-ins from the Closure library, such as <code>goog.require()</code>, <code>goog.provide()</code>, and
+   * <code>goog.exportSymbol( )</code>.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureProcessClosurePrimitives", defaultValue = "true")
+  private boolean closureProcessClosurePrimitives;
+
+  /**
+   * Process CommonJS modules to a concatenable form.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureProcessCommonJsModules", defaultValue = "false")
+  private boolean closureProcessCommonJsModules;
+
+  /**
+   * Specifies the name of an object that will be used to store all non-extern globals.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureRenamePrefixNamespace", defaultValue = "")
+  private String closureRenamePrefixNamespace;
+
+  /**
+   * Specifies a prefix that will be prepended to all variables.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureRenameVariablePrefix", defaultValue = "")
+  private String closureRenameVariablePrefix;
+
+  /**
+   * If {@code true}, ES6 polyfills are written to the output file (such as for Set, Map etc.)
    * @since 2.0.0
    */
-  @Parameter(property = "closureDependencyEntryPoints")
-  private List<String> closureDependencyEntryPoints;
+  @Parameter(property = "closureRewritePolyfills", defaultValue = "true")
+  private boolean closureRewritePolyfills;
+
+  /**
+   * Extension of the source map, if one is created. By default, the extension {@code .map} is added to the minified
+   * file. Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
+   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
+   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
+   * file.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureSourceMapName", defaultValue = "#{filename}.map")
+  private String closureSourceMapName;
 
   /**
    * After creating the source map, the browser needs to find it. There are several options available:
@@ -418,6 +420,37 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureSourceMapOutputType", defaultValue = "reference")
   private SourceMapOutputType closureSourceMapOutputType;
+
+  /**
+   * Assume input sources are to run in strict mode.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureStrictModeInput", defaultValue = "true")
+  private boolean closureStrictModeInput;
+
+  /**
+   * If {@code false}, converts some characters such as '&lt;' and '&gt;' to '\x3c' and '\x3d' so that they are safe to
+   * put inside a script tag in an HTML file.
+   * @since 2.0.0
+   */
+  @Parameter(property = "closureTrustedStrings", defaultValue = "true")
+  private boolean closureTrustedStrings;
+
+  /**
+   * Enable or disable the optimizations based on available type information. Inaccurate type annotations may result in
+   * incorrect results.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureUseTypesForOptimization", defaultValue = "false")
+  private boolean closureUseTypesForOptimization;
+
+  /**
+   * Specifies the warning level to use: <code>QUIET</code>, <code>DEFAULT</code>, or <code>VERBOSE</code>. You can
+   * override specific warnings via {@link #closureWarningLevels}.
+   * @since 2.1.0
+   */
+  @Parameter(property = "closureWarningLevel", defaultValue = "DEFAULT")
+  private WarningLevel closureWarningLevel;
 
   /**
    * Treat certain warnings as the specified CheckLevel:
@@ -444,37 +477,105 @@ public class MinifyMojo extends AbstractMojo {
   private HashMap<String, String> closureWarningLevels;
 
   /**
-   * Generate {@code $inject} properties for AngularJS for functions annotated with {@code @ngInject}.
-   * @since 1.7.3
+   * If a supported character set is specified, it will be used to read the input file. Otherwise, it will assume that
+   * the platform's default character set is being used. The output file is encoded using the same character set.<br/>
+   * See the <a href="http://www.iana.org/assignments/character-sets">IANA Charset Registry</a> for a list of valid
+   * encoding types.
+   * @since 1.3.2
    */
-  @Parameter(property = "closureAngularPass", defaultValue = "false")
-  private boolean closureAngularPass;
+  @Parameter(property = "encoding", defaultValue = "${project.build.sourceEncoding}", alias = "charset")
+  private String encoding;
 
   /**
-   * A whitelist of tag names in JSDoc. Needed to support JSDoc extensions like ngdoc.
-   * @since 1.7.5
+   * JavaScript files to exclude. Specified as fileset patterns which are relative to the JavaScript source directory.
+   * @since 1.2
    */
-  @Parameter(property = "closureExtraAnnotations")
-  private ArrayList<String> closureExtraAnnotations;
+  @Parameter(property = "excludes")
+  private ArrayList<String> excludes;
 
   /**
-   * Override the value of variables annotated with {@code @define}.<br/>
-   * The format is:
-   * 
-   * <pre>
-   * <code class="language-java">
-   * &lt;define>
-   *     &lt;name>value&lt;/name>
-   * &lt;/define>
-   * </code>
-   * </pre>
-   * 
-   * where {@code <name>} is the name of a {@code @define} variable and {@code value} is a JavaScript boolean, number or
-   * string literal. That is, use quotation marks to specify a string: {@code "First line\nseconds line"}
-   * @since 1.7.5
+   * For each bundle, this plugin performs a check whether the input or output files have changed and skips the
+   * execution in case they haven't. Set this flag to {@code true} to force the execution.
+   * @since 2.0.0
    */
-  @Parameter(property = "closureDefineReplacements")
-  private HashMap<String, String> closureDefineReplacements;
+  @Parameter(property = "force", defaultValue = "false")
+  private boolean force;
+
+  /**
+   * JavaScript files to include. Specified as fileset patterns which are relative to the JavaScript source directory.
+   * @since 1.2
+   */
+  @Parameter(property = "includes")
+  private ArrayList<String> includes;
+
+  /**
+   * The line separator to be used when merging files etc. Defaults to the default system line separator. Special
+   * characters are entered escaped. So for example, to use a new line feed as the separator, set this property to
+   * {@code \n} (two characters, a backslash and the letter n).
+   * @since 2.0.0
+   */
+  @Parameter(property = "lineSeparator", defaultValue = "")
+  private String lineSeparator;
+
+  /**
+   * By default, messages are logged at the log level set by maven. This option allows you to change the log level.
+   * Valid options are {@code all}, {@code debug}, {@code info}, {@code warn}, {@code error}, {@code none}. Leave empty
+   * to use the default log level. Please note that you can only decrease, not increase, the log level.
+   */
+  @Parameter(property = "logLevel", defaultValue = "")
+  private LogLevel logLevel;
+
+  private Log logWrapper;
+
+  /**
+   * <p>
+   * The output file name of the processed files.
+   * </p>
+   * <p>
+   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
+   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
+   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
+   * file.
+   * </p>
+   * <p>
+   * If merging files, by default the basename is set to {@code script} and the extension to {@code js}, so that the
+   * resulting merged file is called {@code script.min.js}.
+   * </p>
+   * @since 2.0.0
+   */
+  @Parameter(property = "outputFileName", defaultValue = "#{basename}.min.#{extension}")
+  private String outputFilename;
+
+  @Parameter(defaultValue = "${project}", readonly = true, required = true)
+  private MavenProject project;
+
+  /**
+   * Skip the merge step. Minification will be applied to each source file individually.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMerge", defaultValue = "false")
+  private boolean skipMerge;
+
+  /**
+   * Skip the minify step. Useful when merging files that are already minified.
+   * @since 1.5.2
+   */
+  @Parameter(property = "skipMinify", defaultValue = "false")
+  private boolean skipMinify;
+
+  /**
+   * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
+   */
+  @Parameter(property = "sourceDir", defaultValue = "js")
+  private String sourceDir;
+
+  /**
+   * JavaScript target directory. Takes the same value as {@code jsSourceDir} when empty. This is relative to the
+   * {@link #baseTargetDir}.
+   * @since 1.3.2
+   */
+  @Parameter(property = "targetDir", defaultValue = "js")
+  private String targetDir;
 
   private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
       List<String> includes, List<String> excludes, String outputFilename)
@@ -524,22 +625,14 @@ public class MinifyMojo extends AbstractMojo {
       throw new MojoFailureException(e.getMessage(), e);
     }
 
-    // ExecutorService executor = Executors.newFixedThreadPool(processFilesTasks.size());
-    ExecutorService executor = Executors.newSingleThreadExecutor();
     try {
-      List<Future<Object>> futures = executor.invokeAll(processFilesTasks);
-      for (Future<Object> future : futures) {
-        try {
-          future.get();
-        }
-        catch (ExecutionException e) {
-          throw new MojoExecutionException(e.getMessage(), e);
-        }
+      for (ProcessFilesTask task : processFilesTasks) {
+        task.call();
       }
-      executor.shutdown();
     }
-    catch (InterruptedException e) {
-      executor.shutdownNow();
+    catch (Exception e) {
+      if (e.getCause() instanceof MojoFailureException) { throw (MojoFailureException)e.getCause(); }
+      if (e.getCause() instanceof MojoExecutionException) { throw (MojoExecutionException)e.getCause(); }
       throw new MojoExecutionException(e.getMessage(), e);
     }
   }
@@ -577,6 +670,9 @@ public class MinifyMojo extends AbstractMojo {
     }
     if (closureDependencyEntryPoints == null) {
       closureDependencyEntryPoints = new ArrayList<>();
+    }
+    if (closureForceInjectLibs == null) {
+      closureForceInjectLibs = new ArrayList<>();
     }
   }
 
@@ -626,6 +722,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureDependencyEntryPoints;
   }
 
+  public DependencyMode getClosureDependencyMode() {
+    return closureDependencyMode;
+  }
+
   public CompilerOptions.Environment getClosureEnvironment() {
     return closureEnvironment;
   }
@@ -638,6 +738,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureExtraAnnotations;
   }
 
+  public List<String> getClosureForceInjectLibs() {
+    return closureForceInjectLibs;
+  }
+
   public LanguageMode getClosureLanguageIn() {
     return closureLanguageIn;
   }
@@ -646,8 +750,20 @@ public class MinifyMojo extends AbstractMojo {
     return closureLanguageOut;
   }
 
+  public ResolutionMode getClosureModuleResolution() {
+    return closureModuleResolution;
+  }
+
   public String getClosureOutputWrapper() {
     return closureOutputWrapper;
+  }
+
+  public String getClosureRenamePrefixNamespace() {
+    return closureRenamePrefixNamespace;
+  }
+
+  public String getClosureRenameVariablePrefix() {
+    return closureRenameVariablePrefix;
   }
 
   public String getClosureSourceMapName() {
@@ -656,6 +772,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public SourceMapOutputType getClosureSourceMapOutputType() {
     return closureSourceMapOutputType;
+  }
+
+  public WarningLevel getClosureWarningLevel() {
+    return closureWarningLevel;
   }
 
   public HashMap<String, String> getClosureWarningLevels() {
@@ -714,6 +834,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureAngularPass;
   }
 
+  public boolean isClosureAssumeFunctionWrapper() {
+    return closureAssumeFunctionWrapper;
+  }
+
   public boolean isClosureColorizeErrorOutput() {
     return closureColorizeErrorOutput;
   }
@@ -722,20 +846,56 @@ public class MinifyMojo extends AbstractMojo {
     return closureCreateSourceMap;
   }
 
+  public boolean isClosureDartPass() {
+    return closureDartPass;
+  }
+
+  public boolean isClosureDebug() {
+    return closureDebug;
+  }
+
+  public boolean isClosureEmitUseStrict() {
+    return closureEmitUseStrict;
+  }
+
   public boolean isClosureIncludeSourcesContent() {
     return closureIncludeSourcesContent;
+  }
+
+  public boolean isClosureInjectLibraries() {
+    return closureInjectLibraries;
+  }
+
+  public boolean isClosurePreferSingleQuotes() {
+    return closurePreferSingleQuotes;
   }
 
   public boolean isClosurePrettyPrint() {
     return closurePrettyPrint;
   }
 
+  public boolean isClosureProcessClosurePrimitives() {
+    return closureProcessClosurePrimitives;
+  }
+
+  public boolean isClosureProcessCommonJsModules() {
+    return closureProcessCommonJsModules;
+  }
+
   public boolean isClosureRewritePolyfills() {
     return closureRewritePolyfills;
   }
 
+  public boolean isClosureStrictModeInput() {
+    return closureStrictModeInput;
+  }
+
   public boolean isClosureTrustedStrings() {
     return closureTrustedStrings;
+  }
+
+  public boolean isClosureUseTypesForOptimization() {
+    return closureUseTypesForOptimization;
   }
 
   public boolean isForce() {
@@ -774,6 +934,10 @@ public class MinifyMojo extends AbstractMojo {
     this.closureAngularPass = closureAngularPass;
   }
 
+  public void setClosureAssumeFunctionWrapper(boolean closureAssumeFunctionWrapper) {
+    this.closureAssumeFunctionWrapper = closureAssumeFunctionWrapper;
+  }
+
   public void setClosureColorizeErrorOutput(boolean closureColorizeErrorOutput) {
     this.closureColorizeErrorOutput = closureColorizeErrorOutput;
   }
@@ -786,12 +950,28 @@ public class MinifyMojo extends AbstractMojo {
     this.closureCreateSourceMap = closureCreateSourceMap;
   }
 
+  public void setClosureDartPass(boolean closureDartPass) {
+    this.closureDartPass = closureDartPass;
+  }
+
+  public void setClosureDebug(boolean closureDebug) {
+    this.closureDebug = closureDebug;
+  }
+
   public void setClosureDefineReplacements(HashMap<String, String> closureDefineReplacements) {
     this.closureDefineReplacements = closureDefineReplacements;
   }
 
   public void setClosureDependencyEntryPoints(List<String> closureDependencyEntryPoints) {
     this.closureDependencyEntryPoints = closureDependencyEntryPoints;
+  }
+
+  public void setClosureDependencyMode(DependencyMode closureDependencyMode) {
+    this.closureDependencyMode = closureDependencyMode;
+  }
+
+  public void setClosureEmitUseStrict(boolean closureEmitUseStrict) {
+    this.closureEmitUseStrict = closureEmitUseStrict;
   }
 
   public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
@@ -806,8 +986,16 @@ public class MinifyMojo extends AbstractMojo {
     this.closureExtraAnnotations = closureExtraAnnotations;
   }
 
+  public void setClosureForceInjectLibs(List<String> closureForceInjectLibs) {
+    this.closureForceInjectLibs = closureForceInjectLibs;
+  }
+
   public void setClosureIncludeSourcesContent(boolean closureIncludeSourcesContent) {
     this.closureIncludeSourcesContent = closureIncludeSourcesContent;
+  }
+
+  public void setClosureInjectLibraries(boolean closureInjectLibraries) {
+    this.closureInjectLibraries = closureInjectLibraries;
   }
 
   public void setClosureLanguageIn(LanguageMode closureLanguageIn) {
@@ -818,12 +1006,36 @@ public class MinifyMojo extends AbstractMojo {
     this.closureLanguageOut = closureLanguageOut;
   }
 
+  public void setClosureModuleResolution(ResolutionMode closureModuleResolution) {
+    this.closureModuleResolution = closureModuleResolution;
+  }
+
   public void setClosureOutputWrapper(String closureOutputWrapper) {
     this.closureOutputWrapper = closureOutputWrapper;
   }
 
+  public void setClosurePreferSingleQuotes(boolean closurePreferSingleQuotes) {
+    this.closurePreferSingleQuotes = closurePreferSingleQuotes;
+  }
+
   public void setClosurePrettyPrint(boolean closurePrettyPrint) {
     this.closurePrettyPrint = closurePrettyPrint;
+  }
+
+  public void setClosureProcessClosurePrimitives(boolean closureProcessClosurePrimitives) {
+    this.closureProcessClosurePrimitives = closureProcessClosurePrimitives;
+  }
+
+  public void setClosureProcessCommonJsModules(boolean closureProcessCommonJsModules) {
+    this.closureProcessCommonJsModules = closureProcessCommonJsModules;
+  }
+
+  public void setClosureRenamePrefixNamespace(String closureRenamePrefixNamespace) {
+    this.closureRenamePrefixNamespace = closureRenamePrefixNamespace;
+  }
+
+  public void setClosureRenameVariablePrefix(String closureRenameVariablePrefix) {
+    this.closureRenameVariablePrefix = closureRenameVariablePrefix;
   }
 
   public void setClosureRewritePolyfills(boolean closureRewritePolyfills) {
@@ -838,8 +1050,20 @@ public class MinifyMojo extends AbstractMojo {
     this.closureSourceMapOutputType = closureSourceMapOutputType;
   }
 
+  public void setClosureStrictModeInput(boolean closureStrictModeInput) {
+    this.closureStrictModeInput = closureStrictModeInput;
+  }
+
   public void setClosureTrustedStrings(boolean closureTrustedStrings) {
     this.closureTrustedStrings = closureTrustedStrings;
+  }
+
+  public void setClosureUseTypesForOptimization(boolean closureUseTypesForOptimization) {
+    this.closureUseTypesForOptimization = closureUseTypesForOptimization;
+  }
+
+  public void setClosureWarningLevel(WarningLevel closureWarningLevel) {
+    this.closureWarningLevel = closureWarningLevel;
   }
 
   public void setClosureWarningLevels(HashMap<String, String> closureWarningLevels) {
@@ -872,14 +1096,6 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setLogWrapper(Log logWrapper) {
     this.logWrapper = logWrapper;
-  }
-
-  public DependencyMode getClosureDependencyMode() {
-    return closureDependencyMode;
-  }
-
-  public void setClosureDependencyMode(DependencyMode closureDependencyMode) {
-    this.closureDependencyMode = closureDependencyMode;
   }
 
   public void setOutputFilename(String outputFilename) {

@@ -28,18 +28,18 @@ import java.util.List;
 
 import org.apache.maven.plugin.MojoFailureException;
 
+import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
-import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutputType;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.JSError;
-import com.google.javascript.jscomp.LightweightMessageFormatter;
-import com.google.javascript.jscomp.MessageFormatter;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
 
@@ -86,9 +86,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
     if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMapFile() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
 
-	mkDir(targetDir);
+    mkDir(targetDir);
     mkDir(minifiedFile.getParentFile());
-	
+
     if (closureConfig.isCreateSourceMapFile()) {
       mkDir(sourceMapFile.getParentFile());
     }
@@ -124,7 +124,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       compiler.compile(externs, sourceFileList, options);
 
       // Check for errors.
-      checkForErrors(compiler);
+      checkForErrors(compiler, baseDirForSourceFiles);
 
       // Write compiled file to output file
       writer.append(outputInterpolator.apply(compiler.toSource()));
@@ -152,22 +152,23 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     return (closureConfig.isCreateSourceMapFile() ? sourceMapFile : minifiedFile).getParentFile();
   }
 
-  private void checkForErrors(Compiler compiler) {
+  private void checkForErrors(Compiler compiler, File baseDirForSourceFiles) {
+    // Add file warnings
+    Arrays.stream(compiler.getWarnings()).forEach(warning -> {
+      ClosureCompileFileMessage.ofWarning(warning, compiler, baseDirForSourceFiles).addTo(mojoMeta.getBuildContext());
+    });
+
     JSError[] errors = compiler.getErrors();
     if (errors.length > 0) {
-      StringBuilder msg = new StringBuilder("JSCompiler errors\n");
-      MessageFormatter formatter = new LightweightMessageFormatter(compiler);
-      for (JSError e : errors) {
-        msg.append(formatter.formatError(e));
-      }
-      throw new RuntimeException(msg.toString());
+      Iterable<FileMessage> fileErrors = Arrays.stream(errors).map(error -> ClosureCompileFileMessage.ofError(error, compiler, baseDirForSourceFiles))::iterator;
+      throw new FileException(fileErrors);
     }
   }
 
   private void createSourceMap(Writer writer, Compiler compiler, File minifiedFile, File sourceMapFile) throws IOException {
     switch (closureConfig.getSourceMapOutputType()) {
       case inline:
-		mojoMeta.getLog().info("Creating the inline source map.");
+        mojoMeta.getLog().info("Creating the inline source map.");
         StringBuilder sb = new StringBuilder();
         compiler.getSourceMap().appendTo(sb, minifiedFile.getName());
         DataUrl unserialized = new DataUrlBuilder() //

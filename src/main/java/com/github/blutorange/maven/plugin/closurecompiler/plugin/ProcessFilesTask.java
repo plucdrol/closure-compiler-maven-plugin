@@ -42,8 +42,10 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.DirectoryScanner;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
@@ -185,33 +187,19 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       mojoMeta.getLog().info("Starting JavaScript task:");
 
       if (!files.isEmpty()) {
-
-        // Minify only
-        if (processConfig.isSkipMerge()) {
-          mojoMeta.getLog().info("Skipping the merge step...");
-
-          for (File sourceFile : files) {
-            // Create folders to preserve sub-directory structure when only minifying / copying
-            File minifiedFile = outputFilenameInterpolator.apply(sourceFile, targetDir);
-            assertTarget(sourceFile, minifiedFile);
-            if (processConfig.isSkipMinify()) {
-              copy(sourceFile, minifiedFile);
-            }
-            else {
-              minify(sourceFile, minifiedFile);
-            }
-          }
+        files.forEach(file -> mojoMeta.getBuildContext().removeMessages(file));
+        try {
+          processFiles();
         }
-        // Merge-only
-        else if (processConfig.isSkipMinify()) {
-          File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
-          merge(mergedFile);
-          mojoMeta.getLog().info("Skipping the minify step...");
+        catch (FileException e) {
+          e.getFileErrors().forEach(fileError -> fileError.addTo(mojoMeta.getBuildContext()));
+          throw new MojoFailureException("Closure compilation failure", e);
         }
-        // Minify + merge
-        else {
-          File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
-          minify(files, minifiedFile);
+        catch (Exception e) {
+          files.forEach(file -> {
+            mojoMeta.getBuildContext().addMessage(file, 1, 1, e.getMessage(), BuildContext.SEVERITY_ERROR, e);
+          });
+          throw e;
         }
       }
       else if (!includesEmpty) {
@@ -221,6 +209,41 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
 
     return null;
+  }
+
+  /**
+   * Copy, merge and / or minify the input files.
+   * @throws IOException
+   * @throws MojoFailureException
+   */
+  private void processFiles() throws IOException, MojoFailureException {
+    // Minify only
+    if (processConfig.isSkipMerge()) {
+      mojoMeta.getLog().info("Skipping the merge step...");
+
+      for (File sourceFile : files) {
+        // Create folders to preserve sub-directory structure when only minifying / copying
+        File minifiedFile = outputFilenameInterpolator.apply(sourceFile, targetDir);
+        assertTarget(sourceFile, minifiedFile);
+        if (processConfig.isSkipMinify()) {
+          copy(sourceFile, minifiedFile);
+        }
+        else {
+          minify(sourceFile, minifiedFile);
+        }
+      }
+    }
+    // Merge-only
+    else if (processConfig.isSkipMinify()) {
+      File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
+      merge(mergedFile);
+      mojoMeta.getLog().info("Skipping the minify step...");
+    }
+    // Minify + merge
+    else {
+      File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
+      minify(files, minifiedFile);
+    }
   }
 
   /**
@@ -342,33 +365,35 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * current bundle.
    */
   protected boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
-    boolean changed;
-	long oldestOutput = 0L;
-	long youngestInput = Long.MAX_VALUE;
     if (processConfig.isForce()) {
-      mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
-      return true;
+      if (mojoMeta.getBuildContext().isIncremental()) {
+        mojoMeta.getLog().warn("Force is enabled, but building incrementally. Using the force option in an m2e incremental build will result in an endless build loop.");
+      }
+      else {
+        mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
+        return true;
+      }
     }
-    if (outputFiles.stream().allMatch(File::exists)) {
-      oldestOutput = outputFiles.stream().map(File::lastModified).min(Long::compareTo).orElse(0L);
-      youngestInput = sourceFiles.stream().map(File::lastModified).max(Long::compareTo).orElse(Long.MAX_VALUE);
-      changed = oldestOutput < youngestInput;
+    boolean changed;
+    boolean hasDelta = sourceFiles.stream().anyMatch(mojoMeta.getBuildContext()::hasDelta);
+    if (hasDelta) {
+      changed = true;
     }
     else {
-      changed = true;
+      changed = false;
     }
     if (mojoMeta.getLog().isDebugEnabled()) {
       if (!changed) {
-        mojoMeta.getLog().debug("No changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], skipping bundle with output files ["
+        mojoMeta.getLog().debug("No changes since last build, skipping bundle with output files ["
             + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
             + "].");
       }
-	  else {
-		  mojoMeta.getLog().debug("Changes since last build [timestamps " + oldestOutput + " < " + youngestInput + "], processing bundle with output files ["
+      else {
+        mojoMeta.getLog().debug("Changes since last build [timestamps processing bundle with output files ["
             + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
             + "].");
-	  }
-	}
+      }
+    }
     return changed;
   }
 

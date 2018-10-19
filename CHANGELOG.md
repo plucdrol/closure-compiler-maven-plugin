@@ -1,13 +1,11 @@
 # Closure Compiler Maven Plugin
 
-## 2.0.0
+## 2.1.0
 
-* Support incremental builds (m2e).
-* Renamed aggregation JSON option `files` to `includes`.
-* Added aggregation JSON option to `excludes`.
 * Removed obsolete option `nosuffix`. Set `outputFilename` pattern to the desired value.
 * Removed obsolete option `jsSourceFiles` (alias `jsFiles`). Files are now merged in 
   the order as specified by `includes`.
+* Renamed aggregation JSON option `files` to `includes`.
 * Renamed option `jsSourceDir` to `sourceDir` and `jsTargetDir` to `targetDir`.
 * Renamed option `webappSourceDir` to `baseSourceDir` and `webappTargetDir` to `baseTargetDir`.
 * Renamed option `jsSourceExcludes` (alias `jsExcludes`) to `excludes` and `jsSourceIncludes` 
@@ -43,6 +41,8 @@
   one task: closure compiler.
 * Adopt [Semantic Versioning](http://semver.org/) scheme.
 * Remove @deprecated options.
+* Support incremental builds (m2e).
+* Added aggregation JSON option to `excludes`.
 
 ## 1.7.6
 
