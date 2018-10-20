@@ -41,7 +41,7 @@ public class FilenameInterpolator implements BinaryOperator<File> {
     }
     StringSubstitutor substitutor = new StringSubstitutor(data, prefix, suffix, escapeChar);
     String interpolatedFilename = substitutor.replace(pattern);
-    File interpolatedFile = new File(targetDirectory.isDirectory() ? targetDirectory : targetDirectory.getParentFile(), interpolatedFilename);
+    File interpolatedFile = new File(targetDirectory, interpolatedFilename);
     return interpolatedFile;
   }
 }
