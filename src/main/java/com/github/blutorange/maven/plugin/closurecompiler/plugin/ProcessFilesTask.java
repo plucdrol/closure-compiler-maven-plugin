@@ -14,7 +14,6 @@
 package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -41,6 +40,8 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.CountingOutputStream;
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.sonatype.plexus.build.incremental.BuildContext;
@@ -119,7 +120,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         .collect(Collectors.toList());
   }
 
-  protected MojoMetadata mojoMeta;
+  protected final MojoMetadata mojoMeta;
 
   protected final ClosureConfig closureConfig;
 
@@ -127,15 +128,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
   protected final boolean includesEmpty;
 
-  private final FilenameInterpolator outputFilenameInterpolator;
+  protected final FilenameInterpolator outputFilenameInterpolator;
 
   protected final FileProcessConfig processConfig;
 
   protected final File sourceDir;
 
   protected final File targetDir;
-
-  protected FileSpecifier fileSpecifier;
 
   /**
    * Task constructor.
@@ -262,12 +261,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       byte[] minifiedData = minified.getBytes(mojoMeta.getEncoding());
       long compressedSize = minifiedData.length;
       long compressedSizeGzip;
+
       try (InputStream in = new ByteArrayInputStream(minifiedData);
-          ByteArrayOutputStream out = new ByteArrayOutputStream();
-          OutputStream outGZIP = new GZIPOutputStream(out)) {
+          CountingOutputStream out = new CountingOutputStream(new NullOutputStream());
+          GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
         IOUtils.copy(in, outGZIP, processConfig.getBufferSize());
-        outGZIP.flush();
-        compressedSizeGzip = out.size();
+        outGZIP.finish();
+        compressedSizeGzip = out.getByteCount();
       }
 
       long uncompressedSize = 0;
@@ -324,6 +324,9 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
       IOUtils.copy(reader, writer);
     }
+    mojoMeta.getLog().info("Creating the copied file [" + targetFile.getName() + "].");
+    mojoMeta.getLog().debug("Full path is [" + targetFile.getPath() + "].");
+
     return true;
   }
 

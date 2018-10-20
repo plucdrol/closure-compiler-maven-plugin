@@ -13,7 +13,7 @@ public class FileProcessConfig {
     this.bufferSize = bufferSize;
     this.force = force;
     this.skipMerge = skipMerge;
-    this.skipMinify = skipMerge;
+    this.skipMinify = skipMinify;
   }
 
   public boolean isSkipMerge() {
