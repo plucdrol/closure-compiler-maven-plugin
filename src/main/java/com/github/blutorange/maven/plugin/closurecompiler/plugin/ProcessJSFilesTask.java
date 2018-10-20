@@ -127,7 +127,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       checkForErrors(compiler, baseDirForSourceFiles);
 
       // Write compiled file to output file
-      writer.append(outputInterpolator.apply(compiler.toSource()));
+      String compiled = compiler.toSource();
+      writer.append(outputInterpolator.apply(compiled));
 
       // Create source map if configured.
       if (closureConfig.isCreateSourceMap()) {
@@ -138,14 +139,14 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
       // Make sure we end with a new line
       writer.append(processConfig.getLineSeparator());
+
+      logCompressionGains(srcFiles, compiled);
     }
     catch (IOException e) {
       mojoMeta.getLog().error("Failed to compress the JavaScript file [" + minifiedFile.getName() + "].", e);
       mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "]");
       throw e;
     }
-
-    logCompressionGains(srcFiles, minifiedFile);
   }
 
   private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {

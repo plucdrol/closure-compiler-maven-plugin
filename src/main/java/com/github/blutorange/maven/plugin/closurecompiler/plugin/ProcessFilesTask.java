@@ -13,10 +13,11 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -185,9 +186,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   public Object call() throws IOException, MojoFailureException {
     synchronized (mojoMeta.getLog()) {
       mojoMeta.getLog().info("Starting JavaScript task:");
-
       if (!files.isEmpty()) {
-        files.forEach(file -> mojoMeta.getBuildContext().removeMessages(file));
         try {
           processFiles();
         }
@@ -213,6 +212,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
 
   /**
    * Copy, merge and / or minify the input files.
+   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
+   * change).
    * @throws IOException
    * @throws MojoFailureException
    */
@@ -246,15 +247,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
   }
 
-  /**
-   * Logs compression gains.
-   * @param mergedFile input file resulting from the merged step
-   * @param minifiedFile output file resulting from the minify step
-   */
-  void logCompressionGains(File mergedFile, File minifiedFile) {
-    List<File> srcFiles = new ArrayList<File>();
-    srcFiles.add(mergedFile);
-    logCompressionGains(srcFiles, minifiedFile);
+  protected void removeMessages(Collection<File> files) {
+    files.forEach(file -> mojoMeta.getBuildContext().removeMessages(file));
   }
 
   /**
@@ -262,14 +256,18 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param srcFiles list of input files to compress
    * @param minifiedFile output file resulting from the minify step
    */
-  void logCompressionGains(List<File> srcFiles, File minifiedFile) {
+  protected void logCompressionGains(List<File> srcFiles, String minified) {
+    if (!mojoMeta.getLog().isInfoEnabled() || mojoMeta.getBuildContext().isIncremental()) { return; }
     try {
-      File temp = File.createTempFile(minifiedFile.getName(), ".gz");
-
-      try (InputStream in = new FileInputStream(minifiedFile);
-          OutputStream out = new FileOutputStream(temp);
-          GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
+      byte[] minifiedData = minified.getBytes(mojoMeta.getEncoding());
+      long compressedSize = minifiedData.length;
+      long compressedSizeGzip;
+      try (InputStream in = new ByteArrayInputStream(minifiedData);
+          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          OutputStream outGZIP = new GZIPOutputStream(out)) {
         IOUtils.copy(in, outGZIP, processConfig.getBufferSize());
+        outGZIP.flush();
+        compressedSizeGzip = out.size();
       }
 
       long uncompressedSize = 0;
@@ -280,10 +278,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       }
 
       mojoMeta.getLog().info("Uncompressed size: " + uncompressedSize + " bytes.");
-      mojoMeta.getLog().info("Compressed size: " + minifiedFile.length() + " bytes minified (" + temp.length()
-          + " bytes gzipped).");
-
-      temp.deleteOnExit();
+      mojoMeta.getLog().info("Compressed size: " + compressedSize + " bytes minified (" + compressedSizeGzip + " bytes gzipped).");
     }
     catch (IOException e) {
       mojoMeta.getLog().debug("Failed to calculate the gzipped file size.", e);
@@ -315,10 +310,12 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * Copies sourceFile to targetFile, making sure to inform the build context of the change.
    * @param sourceFile
    * @param targetFile
+   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
+   * change).
    * @throws IOException
    */
-  protected void copy(File sourceFile, File targetFile) throws IOException {
-    if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return; }
+  protected boolean copy(File sourceFile, File targetFile) throws IOException {
+    if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return false; }
     mkDir(targetDir);
     mkDir(targetFile.getParentFile());
     try (InputStream in = new FileInputStream(sourceFile);
@@ -327,11 +324,14 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
       IOUtils.copy(reader, writer);
     }
+    return true;
   }
 
   /**
    * Merges a list of source files. Create missing parent directories if needed.
    * @param mergedFile output file resulting from the merged step
+   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
+   * change).
    * @throws IOException when the merge step fails
    */
   protected void merge(File mergedFile) throws IOException {
@@ -352,10 +352,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       // Make sure we end with a new line
       outWriter.append(processConfig.getLineSeparator());
     }
-    catch (IOException e) {
-      mojoMeta.getLog().error("Failed to concatenate files.", e);
-      throw e;
-    }
   }
 
   /**
@@ -365,34 +361,24 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * current bundle.
    */
   protected boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
-    if (processConfig.isForce()) {
-      if (mojoMeta.getBuildContext().isIncremental()) {
-        mojoMeta.getLog().warn("Force is enabled, but building incrementally. Using the force option in an m2e incremental build will result in an endless build loop.");
-      }
-      else {
-        mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
-        return true;
-      }
-    }
     boolean changed;
-    boolean hasDelta = sourceFiles.stream().anyMatch(mojoMeta.getBuildContext()::hasDelta);
-    if (hasDelta) {
+    if (processConfig.isForce() && mojoMeta.getBuildContext().isIncremental()) {
+      mojoMeta.getLog().warn("Force is enabled, but building incrementally. Using the force option in an m2e incremental build will result in an endless build loop.");
+    }
+
+    if (processConfig.isForce()) {
+      mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
       changed = true;
     }
     else {
-      changed = false;
+      changed = sourceFiles.stream().anyMatch(mojoMeta.getBuildContext()::hasDelta);
+    }
+    if (changed) {
+      removeMessages(sourceFiles);
     }
     if (mojoMeta.getLog().isDebugEnabled()) {
-      if (!changed) {
-        mojoMeta.getLog().debug("No changes since last build, skipping bundle with output files ["
-            + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
-            + "].");
-      }
-      else {
-        mojoMeta.getLog().debug("Changes since last build [timestamps processing bundle with output files ["
-            + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", "))
-            + "].");
-      }
+      String prefix = changed ? "Changes since last build, processing bundle with output files [" : "No changes since last build, skipping bundle with output files [";
+      mojoMeta.getLog().debug(prefix + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", ")) + "].");
     }
     return changed;
   }
@@ -401,6 +387,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * Minifies a source file. Create missing parent directories if needed.
    * @param mergedFile input file resulting from the merged step
    * @param minifiedFile output file resulting from the minify step
+   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
+   * change).
    * @throws IOException when the minify step fails
    * @throws MojoFailureException
    */
@@ -410,6 +398,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * Minifies a list of source files into a single file. Create missing parent directories if needed.
    * @param srcFiles list of input files
    * @param minifiedFile output file resulting from the minify step
+   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
+   * change).
    * @throws IOException when the minify step fails
    * @throws MojoFailureException
    */
