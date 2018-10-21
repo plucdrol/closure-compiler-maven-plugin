@@ -74,6 +74,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<github.global.server>github</github.global.server>
+		<maven-version>3.5.4</maven-version>
 		<maven-resources-plugin-version>3.1.0</maven-resources-plugin-version>
 		<maven-compiler-plugin-version>3.8.0</maven-compiler-plugin-version>
 		<maven-plugin-plugin-version>3.5.2</maven-plugin-plugin-version>
@@ -89,8 +90,9 @@
 		<maven-project-info-reports-plugin-version>3.0.0</maven-project-info-reports-plugin-version>
 		<maven-gpg-plugin-version>1.6</maven-gpg-plugin-version>
 		<maven-project-version>2.2.1</maven-project-version>
+		<maven-plugin-testing-harness-version>3.3.0</maven-plugin-testing-harness-version>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<skipTests>true</skipTests>
+		<junit-version>4.12</junit-version>
 		<nexus-staging-version>1.6.8</nexus-staging-version>
 		<closure-compiler-version>v20181008</closure-compiler-version>
 		<dataurl-version>2.0.0</dataurl-version>
@@ -104,6 +106,62 @@
 	</properties>
 
 	<dependencies>
+
+		<!-- Test -->
+		<dependency>
+			<groupId>org.apache.maven.plugin-testing</groupId>
+			<artifactId>maven-plugin-testing-harness</artifactId>
+			<version>${maven-plugin-testing-harness-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- <dependency> -->
+		<!-- <groupId>org.apache.maven</groupId> -->
+		<!-- <artifactId>maven-aether-provider</artifactId> -->
+		<!-- <version>${maven-}</version> -->
+		<!-- <scope>test</scope> -->
+		<!-- </dependency> -->
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-compat</artifactId>
+			<version>${maven-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-core</artifactId>
+			<version>${maven-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-model</artifactId>
+			<version>${maven-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-embedder</artifactId>
+			<version>3.5.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.25</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.25</version>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- Provided -->
 		<dependency>
@@ -277,7 +335,7 @@
 				<version>${maven-site-plugin-version}</version>
 			</plugin>
 
-			<!-- Generate a new version of the Maven site-->
+			<!-- Generate a new version of the Maven site -->
 			<plugin>
 				<groupId>com.github.github</groupId>
 				<artifactId>site-maven-plugin</artifactId>
