@@ -564,6 +564,24 @@ public class MinifyMojo extends AbstractMojo {
   private boolean skipMinify;
 
   /**
+   * <p>
+   * When this plugin is executed as part of an m2e incremental build and this option is set to <code>true</code>, skip
+   * the execution of this plugin.
+   * </p>
+   * <p>
+   * For the m2e integration, this plugin is configured by default to run on incremental builds. When having a project
+   * opened in Eclipse, this recreates the minified files every time a source file is changed.
+   * </p>
+   * <p>
+   * You can disable this behavior via the org.eclipse.m2e/lifefycle-mapping plugin. As this is rather verbose, this
+   * option offers a convenient way of disabling incremental builds. Please note that tecnically this plugin is still
+   * executed on every incremental build cycle, but exits immediately without doing any work.
+   * </p>
+   */
+  @Parameter(property = "skipRunOnIncremental", defaultValue = "false")
+  private boolean skipRunOnIncremental;
+
+  /**
    * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
    */
   @Parameter(property = "sourceDir", defaultValue = "js")
@@ -610,6 +628,10 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+    if (getBuildContext().isIncremental() && skipRunOnIncremental) {
+      getLog().info("skipRunOnIncremental was to true, so skipping incremental build.");
+      return;
+    }
     if (skipMerge && skipMinify) {
       getLog().warn("Both merge and minify steps are configured to be skipped. Files will only be copied to their destination without any processing");
     }
@@ -910,6 +932,10 @@ public class MinifyMojo extends AbstractMojo {
     return skipMinify;
   }
 
+  public boolean isSkipRunOnIncremental() {
+    return skipRunOnIncremental;
+  }
+
   public void setBaseSourceDir(File baseSourceDir) {
     this.baseSourceDir = baseSourceDir;
   }
@@ -1112,6 +1138,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setSkipMinify(boolean skipMinify) {
     this.skipMinify = skipMinify;
+  }
+
+  public void setSkipRunOnIncremental(boolean skipRunOnIncremental) {
+    this.skipRunOnIncremental = skipRunOnIncremental;
   }
 
   public void setSourceDir(String sourceDir) {

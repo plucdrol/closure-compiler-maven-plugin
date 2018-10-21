@@ -12,7 +12,33 @@ Eclipse m2e integration
   and save a relevant source JavaScript file, the minified / bundled files are recreated. The plugin checks whether a relevant source
   file was changed and won't run if you just edited a Java file etc.
   
-  To turn of this behavior and have the plugin run only when doing a manual full build, use the lifecycle-mapping plugin:
+  To turn of this behavior and have the plugin run only when doing a manual full build, use the skipRunOnIncremental option:
+  
++---+
+<project>
+  <!-- ... -->
+  <build>
+    <plugins>
+      <!-- ... -->
+      <plugin>
+        <groupId>com.github.blutorange</groupId>
+        <artifactId>closure-compiler-maven-plugin</artifactId>
+        <version>2.0.0</version>
+        <configuration>
+          <!-- ... -->
+          <skipRunOnIncremental>true</skipRunOnIncremental>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <!-- ... -->
+</project>
++---+
+
+
+  Please note that technically, the plugin is still executed on every incremental build cycle,
+  but skips any processing and should not take any time. If you need to turn off the plugin
+  completely, use the lifecycle-plugin:
 
 +---+
 <project>
