@@ -54,12 +54,38 @@ or the [demo applications](https://github.com/blutorange/closure-compiler-maven-
 
 # Release
 
-* Update version in `pom.xml` and `demo/pom.xml`.
+* Update version in `pom.xml` and `src/test/resources/projects/pom.xml`.
 * Update version in `site/src/*`.
 * Generate site, check links
-* Upload site to github
+* Upload site to github (see above)
+* Upload source to github
 * `mvn clean install`
 * `mvn -P release deploy`
+
+# Test
+
+The test projects need a built version of the plugin, so make a full local build first:
+
+```sh
+mvn clean install -DskipTests
+```
+
+Now test away
+
+```sh
+mvn clean package test
+```
+
+To add a new test, go to `src/test/resources/projects/`, copy one of the test projects as a base (except `parent`). Open the pom.xml
+and change the `artifactId` to a new name. Edit the closure compiler configuration as necessary. Add input JavaScript files to
+the directory `test` and the expected output files to the directory `expected`. Finally open `MinifyMojoTest` and add a new test method:
+
+```java
+  @Test
+  public void testMyproject() throws Exception {
+    runMinify("myproject");
+  }
+```
 
 # License
 

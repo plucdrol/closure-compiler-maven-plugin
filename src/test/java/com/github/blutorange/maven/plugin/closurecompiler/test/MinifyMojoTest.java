@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -26,6 +27,8 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 
 public class MinifyMojoTest {
 
+  private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
+  
   @Rule
   public TestResources testResources = new TestResources("src/test/resources/projects", "target/test-projects");
 
@@ -40,19 +43,31 @@ public class MinifyMojoTest {
     runMinify("minimal");
   }
 
+  @Test
+  public void testCompilationlevel() throws Exception {
+    runMinify("compilationlevel");
+  }
+
   private void runMinify(String projectName) throws Exception {
+    File parentdir = testResources.getBasedir("parent").getCanonicalFile();
+    File parentPom = new File(parentdir, "pom.xml");
+    File parentPomNew = new File(parentdir.getParentFile(), "pom.xml");
+    assertTrue(parentPom.exists());
+    FileUtils.copyFile(parentPom, parentPomNew);
+
     File basedir = testResources.getBasedir(projectName).getCanonicalFile();
     File pom = new File(basedir, "pom.xml");
     assertTrue(pom.exists());
 
     clean(basedir);
-    invokeMaven(pom);
+    invokeMaven(parentPomNew, "install");
+    invokeMaven(pom, "package");
     assertDirContent(basedir);
   }
 
-  private void invokeMaven(File pom) throws IOException {
+  private void invokeMaven(File pom, String goal) throws IOException {
     MavenCli cli = new MavenCli();
-    String[] args = new String[] { "clean", "com.github.blutorange:closure-compiler-maven-plugin:minify" };
+    String[] args = new String[] { "clean", goal };
     System.setProperty("maven.multiModuleProjectDirectory", pom.getParent());
     cli.doMain(args, pom.getParent(), System.out, System.err);
   }
@@ -64,6 +79,8 @@ public class MinifyMojoTest {
     assertTrue(actual.exists());
     Map<String, File> expectedFiles = listFiles(expected);
     Map<String, File> actualFiles = listFiles(actual);
+    LOG.info("Comparing actual files [" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",")) + "]");
+    LOG.info("to the expected files [" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",")) + "]");
     assertTrue(expectedFiles.size() > 0);
     assertEquals(expectedFiles.size(), actualFiles.size());
     assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));

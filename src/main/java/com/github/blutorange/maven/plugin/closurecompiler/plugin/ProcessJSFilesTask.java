@@ -95,39 +95,40 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
     OutputInterpolator outputInterpolator = closureConfig.getOutputInterpolator();
 
-    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
+    mojoMeta.getLog().info("Creating the minified file [" + minifiedFile.getName() + "].");
+    mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "].");
 
-      mojoMeta.getLog().info("Creating the minified file [" + minifiedFile.getName() + "].");
-      mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "].");
+    File baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
 
-      File baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
-
-      List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
-      for (File srcFile : srcFiles) {
-        InputStream in = new FileInputStream(srcFile);
+    List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
+    for (File srcFile : srcFiles) {
+      try (InputStream in = new FileInputStream(srcFile)) {
         SourceFile input = SourceFile.fromInputStream(FileHelper.relativizePath(baseDirForSourceFiles, srcFile), in, mojoMeta.getEncoding());
         sourceFileList.add(input);
       }
+    }
 
-      // Create compiler options
-      CompilerOptions options = closureConfig.getCompilerOptions(minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
+    // Create compiler options
+    CompilerOptions options = closureConfig.getCompilerOptions(minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
 
-      mojoMeta.getLog().debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
+    mojoMeta.getLog().debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
 
-      // Set (external) libraries to be available
-      List<SourceFile> externs = new ArrayList<>();
-      externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
-      externs.addAll(closureConfig.getExterns());
+    // Set (external) libraries to be available
+    List<SourceFile> externs = new ArrayList<>();
+    externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
+    externs.addAll(closureConfig.getExterns());
 
-      final Compiler compiler = new Compiler();
-      // Now compile
-      compiler.compile(externs, sourceFileList, options);
+    final Compiler compiler = new Compiler();
+    // Now compile
+    compiler.compile(externs, sourceFileList, options);
 
-      // Check for errors.
-      checkForErrors(compiler, baseDirForSourceFiles);
+    // Check for errors.
+    checkForErrors(compiler, baseDirForSourceFiles);
 
-      // Write compiled file to output file
-      String compiled = compiler.toSource();
+    // Write compiled file to output file
+    String compiled = compiler.toSource();
+
+    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
       writer.append(outputInterpolator.apply(compiled));
 
       // Create source map if configured.
@@ -139,14 +140,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
       // Make sure we end with a new line
       writer.append(processConfig.getLineSeparator());
-
-      logCompressionGains(srcFiles, compiled);
     }
-    catch (IOException e) {
-      mojoMeta.getLog().error("Failed to compress the JavaScript file [" + minifiedFile.getName() + "].", e);
-      mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "]");
-      throw e;
-    }
+    
+    logCompressionGains(srcFiles, compiled);
   }
 
   private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
