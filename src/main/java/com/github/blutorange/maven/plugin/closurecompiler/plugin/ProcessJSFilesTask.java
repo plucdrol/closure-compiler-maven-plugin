@@ -128,9 +128,10 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     // Write compiled file to output file
     String compiled = compiler.toSource();
 
-    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile); Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
+    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile)) {
+      Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
       writer.append(outputInterpolator.apply(compiled));
-
+      
       // Create source map if configured.
       if (closureConfig.isCreateSourceMap()) {
         // Adjust source map for output wrapper.

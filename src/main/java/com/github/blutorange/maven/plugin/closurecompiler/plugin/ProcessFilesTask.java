@@ -194,7 +194,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
           throw new MojoFailureException("Closure compilation failure", e);
         }
         catch (Exception e) {
-          logFailure(null);
+          logFailure(e);
           files.forEach(file -> {
             mojoMeta.getBuildContext().addMessage(file, 1, 1, e.getMessage(), BuildContext.SEVERITY_ERROR, e);
           });
@@ -210,11 +210,11 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     return null;
   }
 
-  private void logFailure(FileException e) {
-    if (e != null) {
-      e.getFileErrors().forEach(fileError -> fileError.addTo(mojoMeta.getBuildContext()));
+  private void logFailure(Exception e) {
+    if (e != null && e instanceof FileException) {
+      ((FileException)e).getFileErrors().forEach(fileError -> fileError.addTo(mojoMeta.getBuildContext()));
     }
-    mojoMeta.getLog().error("Failed to process the source files [" + files.stream().map(File::getName).collect(Collectors.joining(", ")) + "].", e);
+	mojoMeta.getLog().error("Failed to process the source files [" + files.stream().map(File::getName).collect(Collectors.joining(", ")) + "].", e);
     mojoMeta.getLog().debug("Full path is [" + files.stream().map(File::getPath).collect(Collectors.joining(", ")) + "]");
   }
 
