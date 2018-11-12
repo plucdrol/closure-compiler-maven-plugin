@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoFailureException;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
@@ -128,10 +129,19 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     // Write compiled file to output file
     String compiled = compiler.toSource();
 
-    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile)) {
-      Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+    OutputStream out = null;
+    Writer writer = null;
+    try {
+      out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile);
+      try {
+        writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+      }
+      finally {
+        // When the writer constructor threw an exception
+        if (writer == null && out != null) out.close();
+      }
       writer.append(outputInterpolator.apply(compiled));
-      
+
       // Create source map if configured.
       if (closureConfig.isCreateSourceMap()) {
         // Adjust source map for output wrapper.
@@ -142,7 +152,11 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       // Make sure we end with a new line
       writer.append(processConfig.getLineSeparator());
     }
-    
+    finally {
+      // Closing the OutputStream as well causes a StreamClosed exception in m2e
+      writer.close();
+    }
+
     logCompressionGains(srcFiles, compiled);
   }
 
