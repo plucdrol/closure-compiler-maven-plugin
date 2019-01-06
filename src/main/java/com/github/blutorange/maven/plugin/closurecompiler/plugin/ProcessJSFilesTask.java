@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoFailureException;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
@@ -156,6 +155,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       // Closing the OutputStream as well causes a StreamClosed exception in m2e
       writer.close();
     }
+
+    mojoMeta.getBuildContext().refresh(minifiedFile);
 
     logCompressionGains(srcFiles, compiled);
   }

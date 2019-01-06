@@ -1,5 +1,3 @@
-** WORK-IN-PROGRESS, snapshot release available **
-
 # Closure Compiler Maven Plugin
 
 Forked from [Minify Maven Plugin](http://samaxes.github.io/minify-maven-plugin/). That project seems to be inactive. In line with the principle of single
@@ -21,7 +19,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutornage</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.0.0-SNAPSHOT</version>
+      <version>2.1.0</version>
       <executions>
         <execution>
           <id>default-minify</id>
@@ -52,9 +50,12 @@ or the [demo applications](https://github.com/blutorange/closure-compiler-maven-
 * To upload to github, set `dryRun` in `pom.xml` to `false`.
 * `mvn clean plugin:report site`
 
+If `dryRun` is set to `true`, you can check out the site in `target/site/index.html`.
+
 # Release
 
-* Update version in `pom.xml` and `src/test/resources/projects/pom.xml`.
+* `mvn versions:display-dependency-updates`
+* Update version in `pom.xml` and `src/test/resources/projects/parent/pom.xml`.
 * Update version in `site/src/*`.
 * Generate site, check links
 * Upload site to github (see above)

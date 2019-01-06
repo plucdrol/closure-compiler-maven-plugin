@@ -2,6 +2,7 @@
 
 ## 2.1.0
 
+* Update closure-compiler to latest version (v20181210)
 * Removed obsolete option `nosuffix`. Set `outputFilename` pattern to the desired value.
 * Removed obsolete option `jsSourceFiles` (alias `jsFiles`). Files are now merged in 
   the order as specified by `includes`.

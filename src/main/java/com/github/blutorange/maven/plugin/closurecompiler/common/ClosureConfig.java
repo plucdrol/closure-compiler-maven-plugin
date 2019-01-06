@@ -33,9 +33,9 @@ import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.DependencyOptions;
+import com.google.javascript.jscomp.DependencyOptions.DependencyMode;
 import com.google.javascript.jscomp.DiagnosticGroup;
 import com.google.javascript.jscomp.DiagnosticGroups;
 import com.google.javascript.jscomp.ModuleIdentifier;
@@ -241,7 +241,7 @@ public class ClosureConfig {
    */
   public ClosureConfig(MinifyMojo mojo) throws MojoFailureException {
     this.compilationLevel = mojo.getClosureCompilationLevel();
-    this.dependencyMode = mojo.getClosureDependencyMode();
+    this.dependencyMode = DependencyModeFlag.toDependencyMode(mojo.getClosureDependencyMode());
     this.entryPoints = new ArrayList<>(mojo.getClosureDependencyEntryPoints());
     this.environment = mojo.getClosureEnvironment();
     this.includeSourcesContent = mojo.isClosureIncludeSourcesContent();
@@ -256,8 +256,6 @@ public class ClosureConfig {
   }
 
   private DependencyOptions createDependencyOptions(File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
-    DependencyOptions dependencyOptions = new DependencyOptions();
-
     // Map entry points
     Collection<ModuleIdentifier> entryPointsMapped = new ArrayList<>();
     for (String entryPoint : CollectionUtils.emptyIfNull(entryPoints)) {
@@ -271,17 +269,18 @@ public class ClosureConfig {
     }
 
     // Set dependency mode
-    if (dependencyMode == CompilerOptions.DependencyMode.STRICT) {
-      if (entryPoints.isEmpty()) { throw new MojoFailureException("When dependency_mode=STRICT, you must specify at least one entry_point"); }
-      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(true);
+    switch (dependencyMode) {
+      case NONE:
+        return DependencyOptions.none();
+      case PRUNE:
+        return DependencyOptions.pruneForEntryPoints(entryPointsMapped);
+      case PRUNE_LEGACY:
+        return DependencyOptions.pruneLegacyForEntryPoints(entryPointsMapped);
+      case SORT_ONLY:
+        return DependencyOptions.sortOnly();
+      default:
+        throw new IllegalArgumentException("Unknown dependency mode:" + dependencyMode);
     }
-    else if (dependencyMode == CompilerOptions.DependencyMode.LOOSE
-        || !entryPoints.isEmpty()) {
-      dependencyOptions.setDependencyPruning(true).setDependencySorting(true).setMoocherDropping(false);
-    }
-
-    dependencyOptions.setEntryPoints(entryPointsMapped);
-    return dependencyOptions;
   }
 
   public CompilationLevel getCompilationLevel() {

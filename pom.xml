@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
 	<artifactId>closure-compiler-maven-plugin</artifactId>
-	<version>2.0.3</version>
+	<version>2.1.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Closure Compiler Maven Plugin</name>
@@ -75,7 +75,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<github.global.server>github</github.global.server>
-		<maven-version>3.5.4</maven-version>
+		<maven.version>3.6.0</maven.version>
+		<maven.embedder.version>3.6.0</maven.embedder.version>
 		<maven-resources-plugin-version>3.1.0</maven-resources-plugin-version>
 		<maven-compiler-plugin-version>3.8.0</maven-compiler-plugin-version>
 		<maven-plugin-plugin-version>3.5.2</maven-plugin-plugin-version>
@@ -85,25 +86,25 @@
 		<maven-release-plugin-version>2.5.3</maven-release-plugin-version>
 		<maven-site-plugin-version>3.7.1</maven-site-plugin-version>
 		<maven-jxr-plugin-version>2.1</maven-jxr-plugin-version>
-		<maven-plugin-api-version>3.5.4</maven-plugin-api-version>
-		<maven-plugin-annotations-version>3.5.2</maven-plugin-annotations-version>
+		<maven.plugin.api.version>3.6.0</maven.plugin.api.version>
+		<maven.plugin.annotations.version>3.6.0</maven.plugin.annotations.version>
 		<maven-source-plugin-version>3.0.1</maven-source-plugin-version>
 		<maven-project-info-reports-plugin-version>3.0.0</maven-project-info-reports-plugin-version>
 		<maven-gpg-plugin-version>1.6</maven-gpg-plugin-version>
-		<maven-project-version>2.2.1</maven-project-version>
-		<maven-plugin-testing-harness-version>3.3.0</maven-plugin-testing-harness-version>
+		<maven.project.version>2.2.1</maven.project.version>
+		<maven-plugin.testing.harness.version>3.3.0</maven-plugin.testing.harness.version>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<junit-version>4.12</junit-version>
-		<nexus-staging-version>1.6.8</nexus-staging-version>
-		<closure-compiler-version>v20181008</closure-compiler-version>
+		<junit.version>4.12</junit.version>
+		<nexus.staging.version>1.6.8</nexus.staging.version>
+		<closure.compiler.version>v20181210</closure.compiler.version>
 		<dataurl-version>2.0.0</dataurl-version>
 		<commons-io-version>2.6</commons-io-version>
-		<commons-collections4-version>4.2</commons-collections4-version>
+		<commons.collections4.version>4.2</commons.collections4.version>
 		<commons-lang3-version>3.8.1</commons-lang3-version>
-		<commons-text-version>1.5</commons-text-version>
-		<gson-version>2.8.5</gson-version>
-		<plexus-build-api-version>0.0.7</plexus-build-api-version>
-		<site-maven-plugin-version>0.12</site-maven-plugin-version>
+		<commons.text.version>1.6</commons.text.version>
+		<gson.version>2.8.5</gson.version>
+		<plexus.build.api.version>0.0.7</plexus.build.api.version>
+		<site.maven.plugin.version>0.12</site.maven.plugin.version>
 	</properties>
 
 	<dependencies>
@@ -112,37 +113,37 @@
 		<dependency>
 			<groupId>org.apache.maven.plugin-testing</groupId>
 			<artifactId>maven-plugin-testing-harness</artifactId>
-			<version>${maven-plugin-testing-harness-version}</version>
+			<version>${maven-plugin.testing.harness.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>${junit-version}</version>
+			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-compat</artifactId>
-			<version>${maven-version}</version>
+			<version>${maven.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-core</artifactId>
-			<version>${maven-version}</version>
+			<version>${maven.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-model</artifactId>
-			<version>${maven-version}</version>
+			<version>${maven.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-embedder</artifactId>
-			<version>3.5.3</version>
+			<version>${maven.embedder.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -162,19 +163,19 @@
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-plugin-api</artifactId>
-			<version>${maven-plugin-api-version}</version>
+			<version>${maven.plugin.api.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven.plugin-tools</groupId>
 			<artifactId>maven-plugin-annotations</artifactId>
-			<version>${maven-plugin-annotations-version}</version>
+			<version>${maven.plugin.annotations.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-project</artifactId>
-			<version>${maven-project-version}</version>
+			<version>${maven.project.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -182,12 +183,12 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-text</artifactId>
-			<version>${commons-text-version}</version>
+			<version>${commons.text.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.sonatype.plexus</groupId>
 			<artifactId>plexus-build-api</artifactId>
-			<version>${plexus-build-api-version}</version>
+			<version>${plexus.build.api.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
@@ -197,7 +198,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-collections4</artifactId>
-			<version>${commons-collections4-version}</version>
+			<version>${commons.collections4.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -212,13 +213,13 @@
 		<dependency>
 			<groupId>com.google.javascript</groupId>
 			<artifactId>closure-compiler</artifactId>
-			<version>${closure-compiler-version}</version>
+			<version>${closure.compiler.version}</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
-			<version>${gson-version}</version>
+			<version>${gson.version}</version>
 			<optional>true</optional>
 		</dependency>
 	</dependencies>
@@ -325,7 +326,7 @@
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>${nexus-staging-version}</version>
+				<version>${nexus.staging.version}</version>
 				<extensions>true</extensions>
 				<configuration>
 					<serverId>ossrh</serverId>
@@ -344,7 +345,7 @@
 			<plugin>
 				<groupId>com.github.github</groupId>
 				<artifactId>site-maven-plugin</artifactId>
-				<version>${site-maven-plugin-version}</version>
+				<version>${site.maven.plugin.version}</version>
 				<configuration>
 					<message>Creating site for ${project.version}</message>
 					<dryRun>false</dryRun>

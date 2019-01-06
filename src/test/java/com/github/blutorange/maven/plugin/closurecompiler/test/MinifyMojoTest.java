@@ -28,7 +28,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 public class MinifyMojoTest {
 
   private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
-  
+
   @Rule
   public TestResources testResources = new TestResources("src/test/resources/projects", "target/test-projects");
 
@@ -46,6 +46,11 @@ public class MinifyMojoTest {
   @Test
   public void testCompilationlevel() throws Exception {
     runMinify("compilationlevel");
+  }
+
+  @Test
+  public void testDefine() throws Exception {
+    runMinify("define");
   }
 
   private void runMinify(String projectName) throws Exception {

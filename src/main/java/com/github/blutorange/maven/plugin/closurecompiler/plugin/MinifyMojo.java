@@ -43,6 +43,7 @@ import org.sonatype.plexus.build.incremental.BuildContext;
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
+import com.github.blutorange.maven.plugin.closurecompiler.common.DependencyModeFlag;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
@@ -53,7 +54,6 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutput
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.CompilerOptions.DependencyMode;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.WarningLevel;
 import com.google.javascript.jscomp.deps.ModuleLoader.ResolutionMode;
@@ -206,18 +206,21 @@ public class MinifyMojo extends AbstractMojo {
   /**
    * How compiler should prune files based on the provide-require dependency graph.
    * <ul>
-   * <li>{@code NONE} All files will be included in the compilation</li>
-   * <li>{@code LOOSE}Files must be discoverable from specified entry points. Files which do not goog.provide a
-   * namespace and are not either an ES6 or CommonJS module will be automatically treated as entry points. Module files
-   * will be included only if referenced from an entry point.</li>
-   * <li>{@code STRICT}Files must be discoverable from specified entry points. Files which do not goog.provide a
-   * namespace and are neither an ES6 or CommonJS module will be dropped. Module files will be included only if
-   * referenced from an entry point.</li>
+   * <li>{@code NONE} All input files will be included in the compilation in the order they were specified in.</li>
+   * <li>{@code SORT_ONLY} All input files will be included in the compilation in dependency order.</li>
+   * <li>{@code PRUNE} Input files that are transitive dependencies of the entry points will be included in the
+   * compilation in dependency order. All other input files will be dropped. All entry points must be explicitly
+   * defined.</li>
+   * <li>{@code PRUNE_LEGACY} (deprecated) Input files that are transitive dependencies of the entry points will be
+   * included in the compilation in dependency order. All other input files will be dropped. In addition to the
+   * explicitly defined entry points, moochers (files not explicitly defining a module) are implicit entry points.</li>
+   * <li>{@code LOOSE} (deprecated) Same as {@code PRUNE_LEGACY}.</li>
+   * <li>{@code STRICT} (deprecated) Same as {@code PRUNE}.</li>
    * </ul>
    * @since 2.0.0
    */
   @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
-  private DependencyMode closureDependencyMode;
+  private DependencyModeFlag closureDependencyMode;
 
   /**
    * Start output with <code>'use strict';</code>.
@@ -744,7 +747,7 @@ public class MinifyMojo extends AbstractMojo {
     return closureDependencyEntryPoints;
   }
 
-  public DependencyMode getClosureDependencyMode() {
+  public DependencyModeFlag getClosureDependencyMode() {
     return closureDependencyMode;
   }
 
@@ -992,7 +995,7 @@ public class MinifyMojo extends AbstractMojo {
     this.closureDependencyEntryPoints = closureDependencyEntryPoints;
   }
 
-  public void setClosureDependencyMode(DependencyMode closureDependencyMode) {
+  public void setClosureDependencyMode(DependencyModeFlag closureDependencyMode) {
     this.closureDependencyMode = closureDependencyMode;
   }
 
