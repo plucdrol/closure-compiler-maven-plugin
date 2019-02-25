@@ -1,5 +1,9 @@
 # Closure Compiler Maven Plugin
 
+## 2.2.0 (not released yet)
+
+* Update to closure compiler `v20190215`
+
 ## 2.1.1
 
 * Fix issue #46

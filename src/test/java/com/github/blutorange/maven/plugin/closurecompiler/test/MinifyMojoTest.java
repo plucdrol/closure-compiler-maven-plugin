@@ -53,6 +53,11 @@ public class MinifyMojoTest {
     runMinify("define");
   }
 
+  @Test
+  public void testOutputWrapper() throws Exception {
+    runMinify("outputwrapper");
+  }
+
   private void runMinify(String projectName) throws Exception {
     File parentdir = testResources.getBasedir("parent").getCanonicalFile();
     File parentPom = new File(parentdir, "pom.xml");
