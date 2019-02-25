@@ -136,7 +136,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
       }
       finally {
-        // When the writer constructor threw an exception
+        // When new OutputStreamWriter threw an exception, writer is null
         if (writer == null && out != null) out.close();
       }
       writer.append(outputInterpolator.apply(compiled));
@@ -152,7 +152,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       writer.append(processConfig.getLineSeparator());
     }
     finally {
-      // Closing the OutputStream as well causes a StreamClosed exception in m2e
+      // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
+      // So we cannot use a try-with-resource
       writer.close();
     }
 

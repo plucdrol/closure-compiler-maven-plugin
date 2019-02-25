@@ -56,7 +56,8 @@ If `dryRun` is set to `true`, you can check out the site in `target/site/index.h
 
 * `mvn versions:display-dependency-updates`
 * Update version in `pom.xml` and `src/test/resources/projects/parent/pom.xml`.
-* Update version in `site/src/*`.
+* Update version in `site/src/*` and `README.md`.
+* Update CHANGELOG.md
 * Generate site, check links
 * Upload site to github (see above)
 * Upload source to github
@@ -69,6 +70,14 @@ The test projects need a built version of the plugin, so make a full local build
 
 ```sh
 mvn clean install -DskipTests
+```
+
+You may need to run an install on a test project first to download the required dependencies:
+
+```sh
+cd src/test/resources/projects/minimal/
+mvn install
+cd ../../../../../
 ```
 
 Now test away

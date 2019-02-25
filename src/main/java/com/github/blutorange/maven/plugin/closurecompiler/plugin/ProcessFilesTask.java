@@ -327,12 +327,42 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return false; }
     mkDir(targetDir);
     mkDir(targetFile.getParentFile());
-    try (InputStream in = new FileInputStream(sourceFile);
-        OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(targetFile);
-        Reader reader = new InputStreamReader(in, mojoMeta.getEncoding());
-        Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
+    
+    InputStream in = null;
+    OutputStream out = null;
+    Reader reader = null;
+    Writer writer = null;
+    try {
+      in = new FileInputStream(sourceFile);
+      out = mojoMeta.getBuildContext().newFileOutputStream(targetFile);
+      try {
+        reader = new InputStreamReader(in, mojoMeta.getEncoding());
+      }
+      finally {
+        // When new InputStreamReader threw an exception, reader is null
+        if (reader == null && in != null) in.close();
+      }
+      try {
+        writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+      }
+      finally {
+        // When new OutputStreamWriter threw an exception, writer is null
+        if (writer == null && out != null) out.close();
+      }
+      
       IOUtils.copy(reader, writer);
     }
+    finally {
+      // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
+      // So we cannot use a try-with-resource
+      try {
+        if (reader != null) reader.close();
+      }
+      finally {
+        if (writer != null) writer.close();
+      }
+    }
+    
     mojoMeta.getLog().info("Creating the copied file [" + targetFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + targetFile.getPath() + "].");
 

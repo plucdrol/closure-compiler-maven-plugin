@@ -15,14 +15,14 @@
 	<!-- </modules> -->
 
 	<properties>
-		<closure-compiler-maven-plugin-version>2.1.0</closure-compiler-maven-plugin-version>
+		<closure.compiler.maven.plugin.version>2.1.1</closure.compiler.maven.plugin.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>com.github.blutorange</groupId>
 			<artifactId>closure-compiler-maven-plugin</artifactId>
-			<version>${closure-compiler-maven-plugin-version}</version>
+			<version>${closure.compiler.maven.plugin.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -32,7 +32,7 @@
 				<plugin>
 					<groupId>com.github.blutorange</groupId>
 					<artifactId>closure-compiler-maven-plugin</artifactId>
-					<version>${closure-compiler-maven-plugin-version}</version>
+					<version>${closure.compiler.maven.plugin.version}</version>
 					<configuration>
 						<encoding>UTF8</encoding>
 						<sourceDir>test</sourceDir>

@@ -1,5 +1,11 @@
 # Closure Compiler Maven Plugin
 
+## 2.1.1
+
+* Fix issue #46
+* Update some maven dependencies (Apache Collections)
+* Remove a stray `System.out.println`
+
 ## 2.1.0
 
 * Update closure-compiler to latest version (v20181210)

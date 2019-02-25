@@ -187,7 +187,6 @@ public class OutputInterpolator implements UnaryOperator<String> {
       index = tokens.size() - 1;
     }
     if (index == 0) { return StringUtils.EMPTY; }
-    System.out.println(index);
     StringBuilder sb = new StringBuilder();
     tokens.stream().limit(index).map(Token::toSource).forEach(sb::append);;
     return sb.toString();
