@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.collections4.list.SetUniqueList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
@@ -214,7 +215,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     if (e != null && e instanceof FileException) {
       ((FileException)e).getFileErrors().forEach(fileError -> fileError.addTo(mojoMeta.getBuildContext()));
     }
-	mojoMeta.getLog().error("Failed to process the source files [" + files.stream().map(File::getName).collect(Collectors.joining(", ")) + "].", e);
+    mojoMeta.getLog().error("Failed to process the source files [" + files.stream().map(File::getName).collect(Collectors.joining(", ")) + "].", e);
     mojoMeta.getLog().debug("Full path is [" + files.stream().map(File::getPath).collect(Collectors.joining(", ")) + "]");
   }
 
@@ -327,7 +328,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return false; }
     mkDir(targetDir);
     mkDir(targetFile.getParentFile());
-    
+
     InputStream in = null;
     OutputStream out = null;
     Reader reader = null;
@@ -349,7 +350,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         // When new OutputStreamWriter threw an exception, writer is null
         if (writer == null && out != null) out.close();
       }
-      
+
       IOUtils.copy(reader, writer);
     }
     finally {
@@ -362,7 +363,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         if (writer != null) writer.close();
       }
     }
-    
+
     mojoMeta.getLog().info("Creating the copied file [" + targetFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + targetFile.getPath() + "].");
 
@@ -382,17 +383,46 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     mkDir(targetDir);
     mkDir(mergedFile.getParentFile());
 
-    try (InputStream sequence = new SequenceInputStream(new SourceFilesEnumeration(mojoMeta.getLog(), files, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
-        OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
-        InputStreamReader sequenceReader = new InputStreamReader(sequence, mojoMeta.getEncoding());
-        OutputStreamWriter outWriter = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
-      mojoMeta.getLog().info("Creating the merged file [" + mergedFile.getName() + "].");
-      mojoMeta.getLog().debug("Full path is [" + mergedFile.getPath() + "].");
+    mojoMeta.getLog().info("Creating the merged file [" + mergedFile.getName() + "].");
+    mojoMeta.getLog().debug("Full path is [" + mergedFile.getPath() + "].");
+
+    InputStream sequence = null;
+    OutputStream out = null;
+    InputStreamReader sequenceReader = null;
+    OutputStreamWriter outWriter = null;
+    try {
+      sequence = new SequenceInputStream(new SourceFilesEnumeration(mojoMeta.getLog(), files, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
+      out = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
+
+      try {
+        sequenceReader = new InputStreamReader(sequence, mojoMeta.getEncoding());
+      }
+      finally {
+        // When new InputStreamReader threw an exception, sequenceReader is null
+        if (sequenceReader == null && sequence != null) sequence.close();
+      }
+      try {
+        outWriter = new OutputStreamWriter(out, mojoMeta.getEncoding());
+      }
+      finally {
+        // When new OutputStreamWriter threw an exception, outWriter is null
+        if (outWriter == null && out != null) out.close();
+      }
 
       IOUtils.copyLarge(sequenceReader, outWriter, new char[processConfig.getBufferSize()]);
 
       // Make sure we end with a new line
       outWriter.append(processConfig.getLineSeparator());
+    }
+    finally {
+      // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
+      // So we cannot use a try-with-resource
+      try {
+        if (sequenceReader != null) sequenceReader.close();        
+      }
+      finally {
+        if (outWriter != null) outWriter.close();
+      }
     }
   }
 

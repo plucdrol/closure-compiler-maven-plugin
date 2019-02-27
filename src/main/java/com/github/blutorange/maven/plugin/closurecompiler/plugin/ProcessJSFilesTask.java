@@ -154,7 +154,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     finally {
       // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
       // So we cannot use a try-with-resource
-      writer.close();
+      if (writer != null) writer.close();
     }
 
     mojoMeta.getBuildContext().refresh(minifiedFile);
@@ -214,12 +214,28 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     mojoMeta.getLog().info("Creating the minified files map [" + sourceMapFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + sourceMapFile.getPath() + "].");
 
-    try (OutputStream out = mojoMeta.getBuildContext().newFileOutputStream(sourceMapFile); Writer writer = new OutputStreamWriter(out, mojoMeta.getEncoding())) {
+    OutputStream out = null;
+    Writer writer = null;
+    try {
+      out = mojoMeta.getBuildContext().newFileOutputStream(sourceMapFile); 
+      try {
+        writer = new OutputStreamWriter(out, mojoMeta.getEncoding());        
+      }
+      finally {
+        // When new OutputStreamWriter threw an exception, writer is null
+        if (writer == null && out != null) out.close();
+      }
+      
       sourceMap.appendTo(writer, minifyFileName);
     }
     catch (IOException e) {
       mojoMeta.getLog().error("Failed to write the JavaScript Source Map file [" + sourceMapFile.getName() + "].", e);
       mojoMeta.getLog().debug("Full path is [" + sourceMapFile.getPath() + "]");
+    }
+    finally {
+      // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
+      // So we cannot use a try-with-resource
+      if (writer != null) writer.close();
     }
   }
 }
