@@ -42,8 +42,8 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
    * Enumeration public constructor.
    * @param log Maven plugin log
    * @param files list of files
-   * @param verbose show source file paths in log output
-   * @param charset
+   * @param charset Encoding to be used.
+   * @param lineSeparator String used to separate lines.
    */
   public SourceFilesEnumeration(Log log, List<File> files, Charset charset, String lineSeparator) {
     this.suppliers = new ArrayList<>();

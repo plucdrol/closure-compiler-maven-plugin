@@ -140,10 +140,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   /**
    * Task constructor.
    * @param mojoMeta Base mojo data.
-   * @param bufferSize size of the buffer used to read source files
-   * @param force Whether the check for changed files is skipped.
-   * @param skipMerge whether to skip the merge step or not
-   * @param skipMinify whether to skip the minify step or not
+   * @param processConfig Configuration for this file task.
    * @param fileSpecifier Details about the input / output files.
    * @param closureConfig Google closure configuration
    * @throws IOException
@@ -263,7 +260,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   /**
    * Logs compression gains.
    * @param srcFiles list of input files to compress
-   * @param minifiedFile output file resulting from the minify step
+   * @param minified output file resulting from the minify step
    */
   protected void logCompressionGains(List<File> srcFiles, String minified) {
     if (!mojoMeta.getLog().isInfoEnabled() || mojoMeta.getBuildContext().isIncremental()) { return; }
@@ -373,8 +370,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   /**
    * Merges a list of source files. Create missing parent directories if needed.
    * @param mergedFile output file resulting from the merged step
-   * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
-   * change).
    * @throws IOException when the merge step fails
    */
   protected void merge(File mergedFile) throws IOException {
