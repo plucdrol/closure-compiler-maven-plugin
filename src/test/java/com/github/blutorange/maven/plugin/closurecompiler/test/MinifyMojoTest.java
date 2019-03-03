@@ -58,6 +58,11 @@ public class MinifyMojoTest {
     runMinify("outputwrapper");
   }
 
+  @Test
+  public void testSkip() throws Exception {
+    runMinify("skip");
+  }
+
   private void runMinify(String projectName) throws Exception {
     File parentdir = testResources.getBasedir("parent").getCanonicalFile();
     File parentPom = new File(parentdir, "pom.xml");
@@ -89,8 +94,8 @@ public class MinifyMojoTest {
     assertTrue(actual.exists());
     Map<String, File> expectedFiles = listFiles(expected);
     Map<String, File> actualFiles = listFiles(actual);
-    LOG.info("Comparing actual files [" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",")) + "]");
-    LOG.info("to the expected files [" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",")) + "]");
+    LOG.info("Comparing actual files [\n" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
+    LOG.info("to the expected files [\n" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
     assertTrue(expectedFiles.size() > 0);
     assertEquals(expectedFiles.size(), actualFiles.size());
     assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));

@@ -19,7 +19,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutornage</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.1.1</version>
+      <version>2.2.0</version>
       <executions>
         <execution>
           <id>default-minify</id>
@@ -42,15 +42,15 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 ```
 
 For more information, check the [documentation](http://blutorange.github.com/closure-compiler-maven-plugin/)
-or the [demo applications](https://github.com/blutorange/closure-compiler-maven-plugin/tree/master/demo).
+or the [test projects](https://github.com/blutorange/closure-compiler-maven-plugin/tree/master/src/test/resources/projects).
 
 # Build site
 
 * Edit files in /src/site
-* To upload to github, set `dryRun` in `pom.xml` to `false`.
+* To upload to github, set add the profile `site`
 * `mvn clean plugin:report site`
 
-If `dryRun` is set to `true`, you can check out the site in `target/site/index.html`.
+If rendering the site locally, you can check out the rendered site in `target/site/index.html`.
 
 # Release
 

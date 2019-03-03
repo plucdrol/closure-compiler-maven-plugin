@@ -3,6 +3,7 @@
 ## 2.2.0 (not released yet)
 
 * Update to closure compiler `v20190215`
+* Fix issue #46 for good
 
 ## 2.1.1
 

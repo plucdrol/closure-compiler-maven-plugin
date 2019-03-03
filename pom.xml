@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
 	<artifactId>closure-compiler-maven-plugin</artifactId>
-	<version>2.2.0-SNAPSHOT</version>
+	<version>2.2.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Closure Compiler Maven Plugin</name>
@@ -290,7 +290,8 @@
 				<version>2.17</version>
 				<configuration>
 					<!-- see: https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class -->
-					<argLine>-Xmx1024m -Xms1024m -Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+					<argLine>-Xmx1024m -Xms1024m
+						-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
 				</configuration>
 			</plugin>
 
@@ -322,7 +323,7 @@
 			</plugin>
 
 
-			<!-- Release the deployment to the central repositorye -->
+			<!-- Release the deployment to the central repository -->
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
@@ -364,6 +365,22 @@
 	</build>
 
 	<profiles>
+		<profile>
+			<id>site</id>
+			<build>
+				<plugins>
+					<!-- Upllad site to github -->
+					<plugin>
+						<groupId>com.github.github</groupId>
+						<artifactId>site-maven-plugin</artifactId>
+						<version>${site.maven.plugin.version}</version>
+						<configuration>
+							<dryRun>false</dryRun>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 		<profile>
 			<id>release</id>
 			<build>

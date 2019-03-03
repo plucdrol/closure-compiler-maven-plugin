@@ -537,7 +537,7 @@ public class MinifyMojo extends AbstractMojo {
    * <p>
    * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
    * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
-   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
+   * extension of the file (without the period); and the variable {@code basename} with the basename (name without the extension) of the
    * file.
    * </p>
    * <p>
