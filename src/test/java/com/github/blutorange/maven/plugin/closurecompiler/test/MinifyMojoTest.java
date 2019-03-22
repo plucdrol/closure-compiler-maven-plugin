@@ -63,6 +63,11 @@ public class MinifyMojoTest {
     runMinify("skip");
   }
 
+  @Test
+  public void testSourceMap() throws Exception {
+    runMinify("sourcemap");
+  }
+
   private void runMinify(String projectName) throws Exception {
     File parentdir = testResources.getBasedir("parent").getCanonicalFile();
     File parentPom = new File(parentdir, "pom.xml");

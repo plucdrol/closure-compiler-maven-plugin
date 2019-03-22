@@ -1,0 +1,8 @@
+{
+"version":3,
+"file":"reference.js",
+"lineCount":1,
+"mappings":"A,aAwBA,IAAMA,KAAO,CACZ,UAAa,0BADD,CAEZ,UAAa,YAFD,CAGZ,SAAY,UAHA,CAIZ,MAAS,KAJG,CAKZ,OAAU,KALE,CAAb,CAQMC,KAKLC,QAAW,CAACC,CAAD,CAAO,CACjB,IAAAC,KAAA,CAAYD,CADK,CAOlB,KAAA,UAAA,gBAAAE,CAAAA,QAAe,EAAG,CACjB,IAAMC,EAAYC,QAAAC,cAAA,CAAuB,KAAvB,CAClBF,EAAAG,UAAA,CAAsBT,IAAAU,UAAtB,CAAuCV,IAAAM,UACvCA,EAAAK,YAAA,CAAwB,SACxBJ,SAAAK,KAAAC,YAAA,CAA0BP,CAA1B,CACA,OAAOA,EALU,CAQlB,KAAA,UAAA,SAAAQ,CAAAA,QAAQ,EAAG,CACVC,OAAAC,KAAA,CAAa,kBAAb,CADU;",
+"sources":["../../test/sample.js"],
+"names":["VARS","Html","constructor","base","Base","createContainer","container","document","createElement","className","namespace","textContent","body","appendChild","htmlTest","console","info"]
+}

@@ -26,20 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
-import org.sonatype.plexus.build.incremental.BuildContext;
-
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
@@ -57,6 +43,20 @@ import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.WarningLevel;
 import com.google.javascript.jscomp.deps.ModuleLoader.ResolutionMode;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 /**
  * Goal for combining and/or minifying JavaScript files with closure compiler.
@@ -289,16 +289,18 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT5_STRICT}: Like {@code ECMASCRIPT5} but assumes compliance with strict mode
    * ({@code 'use strict';}).</li>
    * <li>{@code ECMASCRIPT_2015}: Checks code assuming ECMAScript 2015 compliance.</li>
-   * <li>{@code ECMASCRIPT6_TYPED}: Checks code assuming a superset of ECMAScript 6 which adds Typescript-style type
+   * <li>{@code ECMASCRIPT6_TYPED}: (experimental) Checks code assuming a superset of ECMAScript 6 which adds Typescript-style type
    * declarations.</li>
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
+   * <li>{@code ECMASCRIPT_2018}: Checks code assuming ECMAScript 2018 compliance.</li>
+   * <li>{@code ECMASCRIPT_2019}: Checks code assuming ECMAScript 2019 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
    * <li>{@code STABLE} Use stable features
    * </ul>
    * @since 1.7.2
    */
-  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2016")
+  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2018")
   private LanguageMode closureLanguageIn;
 
   /**
@@ -309,7 +311,9 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT5}
    * <li>{@code ECMASCRIPT5_STRICT}
    * <li>{@code ECMASCRIPT_2015}
-   * <li>{@code STABLE}
+   * <li>{@code ECMASCRIPT6}
+   * <li>{@code ECMASCRIPT_2016}
+   * <li>{@code ECMASCRIPT_2017}
    * <li>{@code NO_TRANSPILE}</li>
    * </ul>
    * @since 1.7.5
@@ -415,9 +419,9 @@ public class MinifyMojo extends AbstractMojo {
    * minified file.</li>
    * <li>{@code file}: Just create a source map named [originalFile].map, do not add a reference in the minified file.
    * This may be useful when you want to add the {@code Source-Map} HTTP header.</li>
-   * <li>{@code file}: Do not write a separate source map file, but instead include the source file content in the
+   * <li>{@code inline}: Do not write a separate source map file, but instead include the source file content in the
    * minified file (as base64). This makes it easier for the browser to find the source map. Especially useful when used
-   * with JSF/Primefaces.</li>
+   * with JSF/Primefaces or other frameworks that do not use standard URLs.</li>
    * </ul>
    * @since 2.0.0
    */
@@ -449,7 +453,9 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * Specifies the warning level to use: <code>QUIET</code>, <code>DEFAULT</code>, or <code>VERBOSE</code>. You can
-   * override specific warnings via {@link #closureWarningLevels}.
+   * override specific warnings via {@link #closureWarningLevels}. See
+   * <a href="https://github.com/google/closure-compiler/wiki/Flags-and-Options#user-content-available-error-groups">the command line options page</a>
+   * for an overview of available warning levels. 
    * @since 2.1.0
    */
   @Parameter(property = "closureWarningLevel", defaultValue = "DEFAULT")

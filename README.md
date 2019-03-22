@@ -19,7 +19,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutornage</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.2.0</version>
+      <version>2.3.0</version>
       <executions>
         <execution>
           <id>default-minify</id>

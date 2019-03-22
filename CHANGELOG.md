@@ -1,5 +1,13 @@
 # Closure Compiler Maven Plugin
 
+See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
+
+## 2.3.0
+
+* Update to closure compiler `v20190301`
+* Default language for `closureLanguageIn` is now `ECMASCRIPT_2018`
+* Add test for `closureSourceMapOutputType`
+
 ## 2.2.0
 
 * Update to closure compiler `v20190215`

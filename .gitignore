@@ -5,3 +5,7 @@ target
 .idea
 minify-maven-plugin.iml
 .DS_Store
+.factorypath
+.vscode
+*.log
+

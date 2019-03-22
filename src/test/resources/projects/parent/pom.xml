@@ -15,7 +15,7 @@
 	<!-- </modules> -->
 
 	<properties>
-		<closure.compiler.maven.plugin.version>2.2.0</closure.compiler.maven.plugin.version>
+		<closure.compiler.maven.plugin.version>2.3.0</closure.compiler.maven.plugin.version>
 	</properties>
 
 	<dependencies>
