@@ -34,6 +34,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
           <goals>
             <goal>minify</goal>
           </goals>
+          <phase>generate-resources</phase>
         </execution>
       </executions>
     </plugin>
