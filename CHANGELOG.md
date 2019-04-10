@@ -2,6 +2,18 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.4.0
+
+* Ticket #47: Preserve relative file names when not merging the files
+* The option `outputFileName` now allows for the additional variable `#{path}`: When not
+  merging the input files, this is the relative path from the source directory to the source
+  file. The default for this options is now `#{path}/#{basename}.min.#{extension}`
+  For example: Assume the source dir is `/my/dir` and the target dir is `/my/target`. Also assume
+  that you want to minify the two files `/my/dir/a/file1.js` and `/my/dir/b/file2.js`, without merging them.
+  Then by default, the minified files are written to `/my/target/a/file1.min.js` and `/my/target/b/file1.min.js`.
+  Previously, they would have been written to `/my/target/file1.min.js` and `/my/target/file2.min.js`.
+* Update to closure compiler `v20190325`
+
 ## 2.3.0
 
 * Update to closure compiler `v20190301`

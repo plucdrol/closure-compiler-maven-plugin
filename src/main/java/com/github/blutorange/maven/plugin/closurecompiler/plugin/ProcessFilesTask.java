@@ -39,15 +39,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.collections4.list.SetUniqueList;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.CountingOutputStream;
-import org.apache.commons.io.output.NullOutputStream;
-import org.apache.maven.plugin.MojoFailureException;
-import org.codehaus.plexus.util.DirectoryScanner;
-import org.sonatype.plexus.build.incremental.BuildContext;
-
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
@@ -56,6 +47,14 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.CountingOutputStream;
+import org.apache.commons.io.output.NullOutputStream;
+import org.apache.maven.plugin.MojoFailureException;
+import org.codehaus.plexus.util.DirectoryScanner;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 /**
  * Abstract class for merging and compressing a files list.
@@ -224,17 +223,18 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @throws MojoFailureException
    */
   private void processFiles() throws IOException, MojoFailureException {
-    // Minify only
+    // Mo merge
     if (processConfig.isSkipMerge()) {
       mojoMeta.getLog().info("Skipping the merge step...");
 
       for (File sourceFile : files) {
-        // Create folders to preserve sub-directory structure when only minifying / copying
-        File minifiedFile = outputFilenameInterpolator.apply(sourceFile, targetDir);
+        File minifiedFile = outputFilenameInterpolator.interpolate(sourceFile, sourceDir, targetDir);
         assertTarget(sourceFile, minifiedFile);
+        // Neither merge nor minify
         if (processConfig.isSkipMinify()) {
           copy(sourceFile, minifiedFile);
         }
+        // Minify-only
         else {
           minify(sourceFile, minifiedFile);
         }
@@ -242,13 +242,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
     // Merge-only
     else if (processConfig.isSkipMinify()) {
-      File mergedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
+      File mergedFile = outputFilenameInterpolator.interpolate(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
       merge(mergedFile);
       mojoMeta.getLog().info("Skipping the minify step...");
     }
     // Minify + merge
     else {
-      File minifiedFile = outputFilenameInterpolator.apply(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir);
+      File minifiedFile = outputFilenameInterpolator.interpolate(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
       minify(files, minifiedFile);
     }
   }

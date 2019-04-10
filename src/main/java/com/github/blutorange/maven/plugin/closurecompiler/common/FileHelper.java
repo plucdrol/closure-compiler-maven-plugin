@@ -9,12 +9,15 @@ public class FileHelper {
   private FileHelper() {}
 
   public static String relativizePath(File base, File target) throws IOException {
-    // Resolve source map path relative to source file
-    base = base.isDirectory() ? base : base.getParentFile();
-    final Path basePath = base.getCanonicalFile().toPath();
     final Path targetPath = Paths.get(target.getCanonicalPath());
-    final String relativePath = basePath.relativize(targetPath).toString();
-    return relativePath;
+    if (base == null) {
+      return targetPath.toString();
+    }
+    else {
+      final Path basePath = base.getCanonicalFile().toPath();    
+      final String relativePath = basePath.relativize(targetPath).toString();
+      return relativePath;
+    }
   }
 
   /**

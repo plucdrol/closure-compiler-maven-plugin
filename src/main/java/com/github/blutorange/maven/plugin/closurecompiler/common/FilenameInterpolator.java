@@ -1,14 +1,14 @@
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BinaryOperator;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.StringSubstitutor;
 
-public class FilenameInterpolator implements BinaryOperator<File> {
+public class FilenameInterpolator {
   private final String pattern;
   private final String prefix;
   private final String suffix;
@@ -25,17 +25,17 @@ public class FilenameInterpolator implements BinaryOperator<File> {
     this.escapeChar = escapeChar;
   }
 
-  @Override
-  public File apply(File inputFile, File targetDirectory) {
-    return interpolate(inputFile, targetDirectory, null);
+  public File interpolate(File inputFile, File inputBaseDir, File targetDirectory) throws IOException {
+    return interpolate(inputFile, inputBaseDir, targetDirectory, null);
   }
 
-  public File interpolate(File inputFile, File targetDirectory, Map<String, String> additionalData) {
+  public File interpolate(File inputFile, File inputBaseDir, File targetDirectory, Map<String, String> additionalData) throws IOException {
     String inputFilename = inputFile.getName();
     Map<String, String> data = new HashMap<>();
     data.put("filename", inputFilename);
     data.put("extension", FilenameUtils.getExtension(inputFilename));
     data.put("basename", FilenameUtils.getBaseName(inputFilename));
+    data.put("path", FileHelper.relativizePath(inputBaseDir, inputFile.getParentFile()));
     if (additionalData != null) {
       data.putAll(additionalData);
     }

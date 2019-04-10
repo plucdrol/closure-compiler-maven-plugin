@@ -9,3 +9,5 @@ minify-maven-plugin.iml
 .vscode
 *.log
 
+/.apt_generated/
+/.apt_generated_tests/

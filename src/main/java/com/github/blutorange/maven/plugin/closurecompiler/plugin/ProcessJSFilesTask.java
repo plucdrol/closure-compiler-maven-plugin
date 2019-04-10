@@ -83,7 +83,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
   @Override
   protected void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException {
-    File sourceMapFile = closureConfig.getSourceMapInterpolator().apply(minifiedFile, minifiedFile.getParentFile());
+    File sourceMapFile = closureConfig.getSourceMapInterpolator().interpolate(minifiedFile, minifiedFile.getParentFile(), minifiedFile.getParentFile());
 
     if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMapFile() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
 

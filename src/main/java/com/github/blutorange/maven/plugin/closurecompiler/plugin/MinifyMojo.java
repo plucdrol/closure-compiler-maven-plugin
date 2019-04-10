@@ -294,7 +294,6 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
    * <li>{@code ECMASCRIPT_2018}: Checks code assuming ECMAScript 2018 compliance.</li>
-   * <li>{@code ECMASCRIPT_2019}: Checks code assuming ECMAScript 2019 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
    * <li>{@code STABLE} Use stable features
    * </ul>
@@ -311,10 +310,7 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT5}
    * <li>{@code ECMASCRIPT5_STRICT}
    * <li>{@code ECMASCRIPT_2015}
-   * <li>{@code ECMASCRIPT6}
-   * <li>{@code ECMASCRIPT_2016}
-   * <li>{@code ECMASCRIPT_2017}
-   * <li>{@code NO_TRANSPILE}</li>
+   * <li>{@code STABLE}
    * </ul>
    * @since 1.7.5
    */
@@ -402,11 +398,15 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureRewritePolyfills;
 
   /**
-   * Extension of the source map, if one is created. By default, the extension {@code .map} is added to the minified
-   * file. Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
-   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
-   * extension of the file; and the variable {@code basename} with the basename (name without the extension) of the
-   * file.
+   * Name of the source map, if one is created. This is interpreted as a relative path to where the processed JavaScript
+   * file is written to. By default, the extension {@code .map} is added to the minified file. Variables are specified
+   * via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The following variables are
+   * available:
+   * <ul>
+   * <li>The variable {@code filename} is replaced with the name of the minified file</li>
+   * <li>The variable {@code extension} is replaced with the extension of the file</li>
+   * <li>The variable {@code basename} is replaced with the basename (name without the extension) of the file.</li>
+   * </ul>
    * @since 2.0.0
    */
   @Parameter(property = "closureSourceMapName", defaultValue = "#{filename}.map")
@@ -453,9 +453,7 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * Specifies the warning level to use: <code>QUIET</code>, <code>DEFAULT</code>, or <code>VERBOSE</code>. You can
-   * override specific warnings via {@link #closureWarningLevels}. See
-   * <a href="https://github.com/google/closure-compiler/wiki/Flags-and-Options#user-content-available-error-groups">the command line options page</a>
-   * for an overview of available warning levels. 
+   * override specific warnings via {@link #closureWarningLevels}.
    * @since 2.1.0
    */
   @Parameter(property = "closureWarningLevel", defaultValue = "DEFAULT")
@@ -537,22 +535,23 @@ public class MinifyMojo extends AbstractMojo {
   private Log logWrapper;
 
   /**
-   * <p>
    * The output file name of the processed files.
-   * </p>
    * <p>
-   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
-   * variable {@code filename} is replaced with the name of the minified file; the variable {@code extension} with the
-   * extension of the file (without the period); and the variable {@code basename} with the basename (name without the extension) of the
-   * file.
-   * </p>
+   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The following
+   * variables are supported:
+   * <ul>
+   *  <li>The variable {@code filename} is replaced with the name of the minified file.</li>
+   *  <li>The variable {@code extension} is replaced with the extension of the file (without the period)</li>
+   *  <li>The variable {@code basename} is replaced with the basename (name without the extension) of the file.</li>
+   *  <li>In case the files are not merged (option {@code skipMerge} is activated): The variable {@code path}
+   * is replaced with the path of the current file, relative to the {@code sourceDir}.</li>
+   * </ul>
    * <p>
    * If merging files, by default the basename is set to {@code script} and the extension to {@code js}, so that the
    * resulting merged file is called {@code script.min.js}.
-   * </p>
    * @since 2.0.0
    */
-  @Parameter(property = "outputFileName", defaultValue = "#{basename}.min.#{extension}")
+  @Parameter(property = "outputFileName", defaultValue = "#{path}/#{basename}.min.#{extension}")
   private String outputFilename;
 
   @Parameter(defaultValue = "${project}", readonly = true, required = true)
