@@ -19,12 +19,12 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.3.0</version>
+      <version>2.4.0</version>
       <executions>
         <execution>
           <id>default-minify</id>
           <configuration>
-            <encoding>UTF-8</encoding>
+            <encoding>UTF-8</encodin4>
             <includes>
               <include>file-1.js</include>
               <!-- ... -->
