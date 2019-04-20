@@ -15,28 +15,50 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
 
 ```xml
 <build>
+  
+  <!-- Exclude the resources in the "includes" directory -->
+  <!-- Include the transpiled resources in the target directory instead -->
+	<resources>
+		<resource>
+			<directory>src/main/resources</directory>
+			<excludes>
+				<exclude>includes/**/*.js</exclude>
+			</excludes>
+		</resource>
+		<resource>
+			<directory>${project.basedir}/target/generated-resources</directory>
+		</resource>
+	</resources>
+  
+  <!-- Transpiled all sources in the "includes" directory to the target directory -->
   <plugins>
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
       <version>2.4.0</version>
-      <executions>
-        <execution>
-          <id>default-minify</id>
-          <configuration>
-            <encoding>UTF-8</encoding>
-            <includes>
-              <include>file-1.js</include>
-              <!-- ... -->
-              <include>file-n.js</include>
-            </includes>
-          </configuration>
-          <goals>
-            <goal>minify</goal>
-          </goals>
-          <phase>generate-resources</phase>
-        </execution>
-      </executions>
+				<configuration>
+					<!-- Base configuration for all executions (bundles) -->
+					<baseSourceDir>${project.basedir}/src/main/resources</baseSourceDir>
+					<baseTargetDir>${project.build.directory}/generated-resources</baseTargetDir>
+				</configuration>
+				<executions>
+					<execution>
+						<id>default-minify</id>
+						<configuration>
+							<!-- Process all files in the "includes" directory individually-->
+							<encoding>UTF-8</encoding>
+							<sourceDir>includes</sourceDir>
+							<targetDir>includes</targetDir>
+							<includes>**/*.js</includes>
+							<skipMerge>true</skipMerge>
+							<closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
+						</configuration>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+						<phase>generate-resources</phase>
+					</execution>
+				</executions>
     </plugin>
   </plugins>
 </build>
