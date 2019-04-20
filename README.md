@@ -24,7 +24,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
         <execution>
           <id>default-minify</id>
           <configuration>
-            <encoding>UTF-8</encodin4>
+            <encoding>UTF-8</encoding>
             <includes>
               <include>file-1.js</include>
               <!-- ... -->
