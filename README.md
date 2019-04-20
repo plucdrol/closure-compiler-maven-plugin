@@ -20,7 +20,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
   <!-- Include the transpiled files in "target/generated-resources/includes" -->
   <resources>
     <resource>
-      <directory>src/main/resources</directory>
+      <directory>${project.basedir}/src/main/resources</directory>
       <excludes>
         <exclude>includes/**/*.js</exclude>
       </excludes>
