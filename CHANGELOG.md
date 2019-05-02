@@ -2,6 +2,15 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.5.0
+
+* Add new option `closureJsModuleRoot` (see #48).
+* When passing source files to closure compiler, their file names are now relative to the specified source directory (`srcDir`). When the source
+directory is set to the npm directory with the `node_modules` folder, closure compiler is now able to resolve installed node modules.
+* Add a new option `closureSourceMapLocationMappings`. When not set, the references to the source files in the source map are relative
+to their locations on the file system (as in previous versions)
+* Update to closure compiler `v20190415`
+
 ## 2.4.0
 
 * Update to closure compiler `v20190325`

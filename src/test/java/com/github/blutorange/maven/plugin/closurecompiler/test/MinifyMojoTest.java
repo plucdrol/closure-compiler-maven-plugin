@@ -64,6 +64,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testNodeModules() throws Exception {
+    runMinify("nodemodules");
+  }
+
+  @Test
   public void testSourceMap() throws Exception {
     runMinify("sourcemap");
   }

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
@@ -33,6 +34,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileSystemLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
 import com.google.common.collect.ImmutableList;
 import com.google.javascript.jscomp.CommandLineRunner;
@@ -42,6 +44,7 @@ import com.google.javascript.jscomp.JSError;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.plugin.MojoFailureException;
 
 import eu.maxschuster.dataurl.DataUrl;
@@ -101,6 +104,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
     File baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
 
+    mojoMeta.getLog().debug("Setting base dir for closure source files to [" + baseDirForSourceFiles.getAbsolutePath() + "]");
+
     List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
     for (File srcFile : srcFiles) {
       try (InputStream in = new FileInputStream(srcFile)) {
@@ -110,9 +115,14 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     }
 
     // Create compiler options
-    CompilerOptions options = closureConfig.getCompilerOptions(minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
+    FileSystemLocationMapping fileSystemMapping = new FileSystemLocationMapping(mojoMeta.getLog(), baseDirForSourceFiles, minifiedFile, sourceMapFile);
+    CompilerOptions options = closureConfig.getCompilerOptions(fileSystemMapping, minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
 
-    mojoMeta.getLog().debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
+    if (mojoMeta.getLog().isDebugEnabled()) {
+      mojoMeta.getLog().debug("Transpiling with closure source files: [" + sourceFileList.stream().map(SourceFile::toString).collect(Collectors.joining(", ")) + "]");
+      mojoMeta.getLog().debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut() + "], strict=" + options.shouldEmitUseStrict());
+      mojoMeta.getLog().debug("Starting compilations with closure compiler options: " + options.toString());
+    }
 
     // Set (external) libraries to be available
     List<SourceFile> externs = new ArrayList<>();
@@ -146,6 +156,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       if (closureConfig.isCreateSourceMap()) {
         // Adjust source map for output wrapper.
         compiler.getSourceMap().setWrapperPrefix(outputInterpolator.getWrapperPrefix());
+        fileSystemMapping.setTranspilationDone(true);
         createSourceMap(writer, compiler, minifiedFile, sourceMapFile);
       }
 
@@ -164,7 +175,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
-    return (closureConfig.isCreateSourceMapFile() ? sourceMapFile : minifiedFile).getParentFile();
+    return this.sourceDir;
+    //return (closureConfig.isCreateSourceMapFile() ? sourceMapFile : minifiedFile).getParentFile();
   }
 
   private void checkForErrors(Compiler compiler, File baseDirForSourceFiles) {
@@ -181,11 +193,13 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private void createSourceMap(Writer writer, Compiler compiler, File minifiedFile, File sourceMapFile) throws IOException {
+    String pathToSource = FilenameUtils.separatorsToUnix(FileHelper.relativizePath(sourceMapFile.getParentFile(), minifiedFile));
+    mojoMeta.getLog().debug("Setting path to source in source map to [" + pathToSource + "].");
     switch (closureConfig.getSourceMapOutputType()) {
       case inline:
         mojoMeta.getLog().info("Creating the inline source map.");
         StringBuilder sb = new StringBuilder();
-        compiler.getSourceMap().appendTo(sb, minifiedFile.getName());
+        compiler.getSourceMap().appendTo(sb, pathToSource);
         DataUrl unserialized = new DataUrlBuilder() //
             .setMimeType("application/json") //
             .setEncoding(DataUrlEncoding.BASE64) //
@@ -198,12 +212,14 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         writer.append("//# sourceMappingURL=" + dataUrl);
         break;
       case file:
-        flushSourceMap(sourceMapFile, minifiedFile.getName(), compiler.getSourceMap());
+        flushSourceMap(sourceMapFile, pathToSource, compiler.getSourceMap());
         break;
       case reference:
-        flushSourceMap(sourceMapFile, minifiedFile.getName(), compiler.getSourceMap());
+        mojoMeta.getLog().info("Creating reference to source map.");
+        String pathToMap = FilenameUtils.separatorsToUnix(FileHelper.relativizePath(minifiedFile.getParentFile(), sourceMapFile));
+        flushSourceMap(sourceMapFile, pathToSource, compiler.getSourceMap());
         writer.append(processConfig.getLineSeparator());
-        writer.append("//# sourceMappingURL=" + sourceMapFile.getName());
+        writer.append("//# sourceMappingURL=" + pathToMap);
         break;
       default:
         mojoMeta.getLog().warn("Unknown source map inclusion type [" + closureConfig.getSourceMapOutputType() + "]");
@@ -211,7 +227,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     }
   }
 
-  private void flushSourceMap(File sourceMapFile, String minifyFileName, SourceMap sourceMap) throws IOException {
+  private void flushSourceMap(File sourceMapFile, String pathToSource, SourceMap sourceMap) throws IOException {
     mojoMeta.getLog().info("Creating the minified files map [" + sourceMapFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + sourceMapFile.getPath() + "].");
 
@@ -226,8 +242,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         // When new OutputStreamWriter threw an exception, writer is null
         if (writer == null && out != null) out.close();
       }
-      
-      sourceMap.appendTo(writer, minifyFileName);
+
+      sourceMap.appendTo(writer, pathToSource);
     }
     catch (IOException e) {
       mojoMeta.getLog().error("Failed to write the JavaScript Source Map file [" + sourceMapFile.getName() + "].", e);

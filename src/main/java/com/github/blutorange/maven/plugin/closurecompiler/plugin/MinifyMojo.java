@@ -13,8 +13,6 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
-import static com.google.common.collect.Lists.newArrayList;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -25,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
@@ -201,7 +200,7 @@ public class MinifyMojo extends AbstractMojo {
    * @since 2.0.0
    */
   @Parameter(property = "closureDependencyEntryPoints")
-  private List<String> closureDependencyEntryPoints;
+  private ArrayList<String> closureDependencyEntryPoints;
 
   /**
    * How compiler should prune files based on the provide-require dependency graph.
@@ -260,7 +259,7 @@ public class MinifyMojo extends AbstractMojo {
    * @since 2.1.0
    */
   @Parameter(property = "closureForceInjectLibs")
-  private List<String> closureForceInjectLibs;
+  private ArrayList<String> closureForceInjectLibs;
 
   /**
    * If {@code true}, include the content of the source file in the source map directly (via the {@code sourceContent}
@@ -270,6 +269,36 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureIncludeSourcesContent", defaultValue = "false")
   private boolean closureIncludeSourcesContent;
+
+  /**
+   * Source map location mapping. This is a prefix mapping from the file system path
+   * to the web server path. The source map contains a reference to the original source
+   * files; and this may be different on the web server.
+   * 
+   * The location of the source file is always relative to the given {@code baseDir}.
+   * This defines a list of replacements. For each source file, the first matching replacement
+   * is used. If the source file starts with the prefix as given by the name, it matches and
+   * is replaced with the value. For example:
+   * 
+   * <pre>
+   * &lt;closureSourceMapLocationMappings&gt;
+   *   &lt;property&gt;
+   *     &lt;name>js/&lt;/name&gt;
+   *     &lt;value>/web/www/js&lt;/value&gt;
+   *   &lt;/property&gt;
+   * &lt;/closureSourceMapLocationMappings&gt;
+   * </pre>
+   * 
+   * Assume the source files are {@code js/file1.js} and {@code js/file2.js}. The above
+   * replaces them with {@code /web/www/js/file1.js} and {@code /web/www/js/file2.js}.
+   * This is then path that will be used in the source map to reference the original source file.
+   * 
+   * If no location mappings are specified, the path of the source files relative to the created
+   * source map is used instead.
+   * @since 2.5.0
+   */
+  @Parameter(property = "closureSourceMapLocationMappings")
+  private Properties closureSourceMapLocationMappings;
 
   /**
    * Allow injecting runtime libraries.
@@ -332,6 +361,14 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureModuleResolution", defaultValue = "BROWSER")
   private ResolutionMode closureModuleResolution;
+
+
+  /**
+   * Path prefixes to be removed from ES6 & CommonJS modules.
+   * @since 2.5.0
+   */
+  @Parameter(property = "closureJsModuleRoots", defaultValue = "")
+  private ArrayList<String> closureJsModuleRoots;
 
   /**
    * <p>
@@ -419,7 +456,7 @@ public class MinifyMojo extends AbstractMojo {
    * minified file.</li>
    * <li>{@code file}: Just create a source map named [originalFile].map, do not add a reference in the minified file.
    * This may be useful when you want to add the {@code Source-Map} HTTP header.</li>
-   * <li>{@code inline}: Do not write a separate source map file, but instead include the source file content in the
+   * <li>{@code inline}: Do not write a separate source map file, but instead include the source map content in the
    * minified file (as base64). This makes it easier for the browser to find the source map. Especially useful when used
    * with JSF/Primefaces or other frameworks that do not use standard URLs.</li>
    * </ul>
@@ -535,7 +572,7 @@ public class MinifyMojo extends AbstractMojo {
   private Log logWrapper;
 
   /**
-   * The output file name of the processed files.
+   * The output file name of the processed files. This is interpreted as a path relative to the {@code targetDir}.
    * <p>
    * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The following
    * variables are supported:
@@ -614,7 +651,7 @@ public class MinifyMojo extends AbstractMojo {
 
   private Collection<ProcessFilesTask> createTasks(ClosureConfig closureConfig)
       throws MojoFailureException, IOException {
-    List<ProcessFilesTask> tasks = newArrayList();
+    List<ProcessFilesTask> tasks = new ArrayList<>();
 
     // If a bundleConfiguration is defined, attempt to use that
     if (StringUtils.isNotBlank(bundleConfiguration)) {
@@ -686,14 +723,11 @@ public class MinifyMojo extends AbstractMojo {
     if (includes == null) {
       includes = new ArrayList<>();
     }
-    if (closureWarningLevels == null) {
-      closureWarningLevels = new HashMap<>();
+    if (closureJsModuleRoots == null) {
+      closureJsModuleRoots = new ArrayList<>();
     }
     if (closureExtraAnnotations == null) {
       closureExtraAnnotations = new ArrayList<>();
-    }
-    if (closureDefineReplacements == null) {
-      closureDefineReplacements = new HashMap<>();
     }
     if (closureExterns == null) {
       closureExterns = new ArrayList<>();
@@ -703,6 +737,16 @@ public class MinifyMojo extends AbstractMojo {
     }
     if (closureForceInjectLibs == null) {
       closureForceInjectLibs = new ArrayList<>();
+    }
+
+    if (closureWarningLevels == null) {
+      closureWarningLevels = new HashMap<>();
+    }
+    if (closureDefineReplacements == null) {
+      closureDefineReplacements = new HashMap<>();
+    }
+    if (closureSourceMapLocationMappings == null) {
+      closureSourceMapLocationMappings = new Properties();
     }
   }
 
@@ -748,7 +792,11 @@ public class MinifyMojo extends AbstractMojo {
     return closureDefineReplacements;
   }
 
-  public List<String> getClosureDependencyEntryPoints() {
+  public Properties getClosureSourceMapLocationMappings() {
+    return closureSourceMapLocationMappings;
+  }
+
+  public ArrayList<String> getClosureDependencyEntryPoints() {
     return closureDependencyEntryPoints;
   }
 
@@ -768,8 +816,12 @@ public class MinifyMojo extends AbstractMojo {
     return closureExtraAnnotations;
   }
 
-  public List<String> getClosureForceInjectLibs() {
+  public ArrayList<String> getClosureForceInjectLibs() {
     return closureForceInjectLibs;
+  }
+
+  public ArrayList<String> getClosureJsModuleRoots() {
+    return closureJsModuleRoots;
   }
 
   public LanguageMode getClosureLanguageIn() {
@@ -996,7 +1048,11 @@ public class MinifyMojo extends AbstractMojo {
     this.closureDefineReplacements = closureDefineReplacements;
   }
 
-  public void setClosureDependencyEntryPoints(List<String> closureDependencyEntryPoints) {
+  public void setClosureSourceMapLocationMappings(Properties closureSourceMapLocationMappings) {
+    this.closureSourceMapLocationMappings = closureSourceMapLocationMappings;
+  }
+
+  public void setClosureDependencyEntryPoints(ArrayList<String> closureDependencyEntryPoints) {
     this.closureDependencyEntryPoints = closureDependencyEntryPoints;
   }
 
@@ -1020,7 +1076,7 @@ public class MinifyMojo extends AbstractMojo {
     this.closureExtraAnnotations = closureExtraAnnotations;
   }
 
-  public void setClosureForceInjectLibs(List<String> closureForceInjectLibs) {
+  public void setClosureForceInjectLibs(ArrayList<String> closureForceInjectLibs) {
     this.closureForceInjectLibs = closureForceInjectLibs;
   }
 
@@ -1030,6 +1086,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureInjectLibraries(boolean closureInjectLibraries) {
     this.closureInjectLibraries = closureInjectLibraries;
+  }
+
+  public void setClosureJsModuleRoots(ArrayList<String> closureJsModuleRoots) {
+    this.closureJsModuleRoots = closureJsModuleRoots;
   }
 
   public void setClosureLanguageIn(LanguageMode closureLanguageIn) {

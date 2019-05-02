@@ -59,6 +59,48 @@
 							<outputFilename>inline.js</outputFilename>
 						</configuration>
 					</execution>
+					<execution>
+						<id>inline-content</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+						<configuration>
+							<closureIncludeSourcesContent>true</closureIncludeSourcesContent>
+							<closureSourceMapOutputType>inline</closureSourceMapOutputType>
+							<outputFilename>inline-content.js</outputFilename>
+						</configuration>
+					</execution>
+					<execution>
+						<id>location-mapping</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+						<configuration>
+							<closureSourceMapLocationMappings>
+								<property>
+									<name>js/</name>
+									<value>localhost://foobar/</value>
+								</property>
+							</closureSourceMapLocationMappings>
+							<closureSourceMapOutputType>reference</closureSourceMapOutputType>
+							<sourceDir>test2</sourceDir>
+							<outputFilename>location-mapping.js</outputFilename>
+						</configuration>
+					</execution>
+					<execution>
+						<id>different-source-map-path</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+						<configuration>
+							<closureSourceMapOutputType>reference</closureSourceMapOutputType>
+							<closureSourceMapName>sourcemap/#{filename}.map</closureSourceMapName>
+							<outputFilename>map-path.js</outputFilename>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>

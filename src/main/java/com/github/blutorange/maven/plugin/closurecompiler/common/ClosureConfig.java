@@ -18,15 +18,12 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.maven.plugin.MojoFailureException;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
 import com.google.common.base.Strings;
@@ -42,6 +39,14 @@ import com.google.javascript.jscomp.ModuleIdentifier;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
 import com.google.javascript.jscomp.SourceMap.Format;
+import com.google.javascript.jscomp.SourceMap.LocationMapping;
+import com.google.javascript.jscomp.SourceMap.PrefixLocationMapping;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.maven.plugin.MojoFailureException;
 
 /**
  * <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a> configuration.
@@ -51,6 +56,14 @@ public class ClosureConfig {
   private static final String BINARY_PREFIX = "0b";
 
   private static final String FILE_PREFIX = "file:";
+
+  private static List<? extends LocationMapping> createLocationMappings(Properties mappings) {
+    return mappings
+      .entrySet()
+      .stream()
+      .map(e -> new PrefixLocationMapping(String.valueOf(e.getKey()), String.valueOf(e.getValue())))
+      .collect(Collectors.toList());
+  }
 
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
     CompilerOptions options = new CompilerOptions();
@@ -84,6 +97,8 @@ public class ClosureConfig {
     options.setRewritePolyfills(mojo.isClosureRewritePolyfills());
     options.setStrictModeInput(mojo.isClosureStrictModeInput());
     options.setTrustedStrings(mojo.isClosureTrustedStrings());
+
+    options.setModuleRoots(mojo.getClosureJsModuleRoots());
 
     // Apply compilation level
     mojo.getClosureCompilationLevel().setOptionsForCompilationLevel(options);
@@ -194,9 +209,8 @@ public class ClosureConfig {
 
   private static Map<DiagnosticGroup, CheckLevel> createWarningLevels(MinifyMojo mojo) throws MojoFailureException {
     Map<DiagnosticGroup, CheckLevel> warningLevels = new HashMap<>();
-    DiagnosticGroups diagnosticGroups = new DiagnosticGroups();
     for (Map.Entry<String, String> warningLevel : mojo.getClosureWarningLevels().entrySet()) {
-      DiagnosticGroup diagnosticGroup = diagnosticGroups.forName(warningLevel.getKey());
+      DiagnosticGroup diagnosticGroup = DiagnosticGroups.forName(warningLevel.getKey());
       if (diagnosticGroup == null) { throw new MojoFailureException("Failed to process closureWarningLevels: " + warningLevel.getKey() + " is an invalid DiagnosticGroup"); }
 
       try {
@@ -234,6 +248,8 @@ public class ClosureConfig {
 
   private final SourceMapOutputType sourceMapOutputType;
 
+  private final List<? extends LocationMapping> locationMappings;
+
   /**
    * Create a new closure compiler configuration from the mojo configuration.
    * @param mojo Mojo with the options.
@@ -250,6 +266,7 @@ public class ClosureConfig {
     this.sourceMapOutputType = mojo.getClosureSourceMapOutputType();
 
     this.sourceMapInterpolator = new FilenameInterpolator(mojo.getClosureSourceMapName());
+    this.locationMappings = createLocationMappings(mojo.getClosureSourceMapLocationMappings());
     this.compilerOptions = createCompilerOptions(mojo);
     this.externs = createExterns(mojo);
     this.outputInterpolator = createOutputInterpolator(mojo);
@@ -283,11 +300,21 @@ public class ClosureConfig {
     }
   }
 
+  public String applyLocationMapping(String location) {
+    for (LocationMapping m : locationMappings) {
+      String result = m.map(location);
+      if (result != null) {
+        return result;
+      }
+    }
+    return location;
+  }
+
   public CompilationLevel getCompilationLevel() {
     return compilationLevel;
   }
 
-  public CompilerOptions getCompilerOptions(File minifiedFile, File sourceMapFile, File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
+  public CompilerOptions getCompilerOptions(LocationMapping defaultMapping, File minifiedFile, File sourceMapFile, File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
     CompilerOptions compilerOptions = SerializationUtils.clone(this.compilerOptions);
 
     // Apply dependency options
@@ -298,6 +325,12 @@ public class ClosureConfig {
       compilerOptions.setSourceMapFormat(sourceMapFormat);
       compilerOptions.setSourceMapIncludeSourcesContent(includeSourcesContent);
       compilerOptions.setSourceMapOutputPath(sourceMapFile.getPath());
+      if (locationMappings.isEmpty()) {
+        compilerOptions.setSourceMapLocationMappings(Collections.singletonList(defaultMapping));
+      }
+      else {
+        compilerOptions.setSourceMapLocationMappings(locationMappings);
+      }
     }
 
     return compilerOptions;

@@ -2,11 +2,12 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.io.File;
 
-import org.sonatype.plexus.build.incremental.BuildContext;
-
 import com.google.debugging.sourcemap.proto.Mapping.OriginalMapping;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.JSError;
+
+import org.apache.commons.lang3.StringUtils;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 public class ClosureCompileFileMessage extends FileMessage {
   private ClosureCompileFileMessage(File file, int line, int column, String message, int severity, Throwable cause) {
@@ -15,7 +16,7 @@ public class ClosureCompileFileMessage extends FileMessage {
 
   private static FileMessage of(JSError error, Compiler compiler, File baseDir, int severity) {
     String message = format(compiler, error, severity, false);
-    File file = new File(baseDir, error.sourceName);
+    File file = StringUtils.isNotEmpty(error.sourceName) ? new File(baseDir, error.sourceName) : baseDir;
     return new ClosureCompileFileMessage(file, error.getLineNumber(), error.getCharno(), message, severity, null);
   }
 
