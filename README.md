@@ -105,7 +105,12 @@ Finally, we want to tell the plugin where to place the output file(s). There are
 * [skipMerge](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#skipMerge): If `true`, process each file individually. Otherwise, merge all source files.
 * [outputFileName](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#outputFilename): The location of the output file, **relative** to the `targetDir`. When we merge all files, we usually want to specify an fixed name, eg. `bundle.min.js`. When we skip the merge process, we can use variables to customize the directory and file name. The default here is `#{path}/#{basename}.min.#{extension}`, which uses the original filename with a `.min` before the extension, and preserves the directory structure of the input files. See the linked documentation for more details.
 
-As a bonus, we may sometimes want to create a source map as well. This involves several paths:
+As a bonus, we may sometimes want to create a source map as well. The easiest and quickest way to get working source maps is to:
+
+* set [closureSourceMapOutputType](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureSourceMapOutputType) to `inline` and
+* set [closureIncludeSourcesContent](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureIncludeSourcesContent) to `true`
+
+This includes the entire source map as well as the original source file content in the minified file itself. As soon as the browser loads the minfied file, it's got everything it needs and the source map feature just works. Now in case we do not like our source maps being that large, we need to keep the source map as a separate file. That involves several paths:
 
 * The path from the minified file to the source map (so the browser can find it)
 * The path from the source map to the minified file (which is part of the source map)
