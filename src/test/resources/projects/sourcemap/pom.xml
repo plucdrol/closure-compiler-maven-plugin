@@ -79,10 +79,10 @@
 						</goals>
 						<configuration>
 							<closureSourceMapLocationMappings>
-								<property>
+								<closureSourceMapLocationMapping>
 									<name>js/</name>
 									<value>localhost://foobar/</value>
-								</property>
+								</closureSourceMapLocationMapping>
 							</closureSourceMapLocationMappings>
 							<closureSourceMapOutputType>reference</closureSourceMapOutputType>
 							<sourceDir>test2</sourceDir>

@@ -29,7 +29,9 @@ Usage
   Applies when input JS files are merged and minified into a single output file:
 
     [[1]] For each include (input file) defined in <<<includes>>>, the list of matching files is created.
+
     [[2]] The matching files for each <<<include>>> are sorted alphabetically.
+    
     [[3]] Matching files from different <<<include>>>'s are added in the order as specified.
 
 See also {{{./examples/patterns.html}Using include/exclude patterns}}.

@@ -48,7 +48,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpo
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.io.output.NullOutputStream;
@@ -93,8 +93,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @return the files to copy
    */
   private static List<File> getFilesToInclude(File sourceDir, List<String> includes, List<String> excludes) {
-    if (includes == null || includes.isEmpty()) { return new ArrayList<>(); }
-
+    if (CollectionUtils.isEmpty(includes)) { return new ArrayList<>(); }
     String[] excludesArray = excludes.toArray(new String[excludes.size()]);
 
     // For each specified include, get all matching files, then
@@ -149,8 +148,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     this.processConfig = processConfig;
 
     File projectBasedir = mojoMeta.getProject().getBasedir();
-    this.sourceDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseSourceDir()), fileSpecifier.getSourceDir()).getAbsoluteFile().getCanonicalFile();
-    this.targetDir = FileUtils.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseTargetDir()), fileSpecifier.getTargetDir()).getAbsoluteFile().getCanonicalFile();
+    this.sourceDir = FileHelper.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseSourceDir()), fileSpecifier.getSourceDir()).getAbsoluteFile().getCanonicalFile();
+    this.targetDir = FileHelper.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseTargetDir()), fileSpecifier.getTargetDir()).getAbsoluteFile().getCanonicalFile();
     this.outputFilenameInterpolator = new FilenameInterpolator(fileSpecifier.getOutputFilename());
 
     for (File include : getFilesToInclude(this.sourceDir, fileSpecifier.getIncludes(), fileSpecifier.getExcludes())) {

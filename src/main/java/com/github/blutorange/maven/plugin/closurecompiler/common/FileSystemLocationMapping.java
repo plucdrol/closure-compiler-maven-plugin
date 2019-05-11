@@ -26,23 +26,23 @@ public class FileSystemLocationMapping implements LocationMapping {
     }
     @Override
     public String map(String location) {
-        try {
-          final String mapped;
-          if (transpilationDone) {
-            // This is the source file relative to the source map
-            mapped = location;
-          }
-          else {
-            final File file = new File(baseDirForSourceFiles, location);
-            mapped = FilenameUtils.separatorsToUnix(FileHelper.relativizePath(sourceMapDir, file));
-          }
-          log.debug("Mapping location [" + location + "] to [" + mapped + "]");
-          return mapped;
+      try {
+        final String mapped;
+        if (transpilationDone) {
+          // This is the source file relative to the source map
+          mapped = location;
         }
-        catch (IOException e) {
-          log.error("Could not map source location", e);
-          return null;
+        else {
+          final File file = new File(baseDirForSourceFiles, location);
+          mapped = FilenameUtils.separatorsToUnix(FileHelper.relativizePath(sourceMapDir, file));
         }
+        log.debug("Source map: mapping location [" + location + "] to [" + mapped + "]");
+        return mapped;
+      }
+      catch (IOException e) {
+        log.error("Could not map source location", e);
+        return null;
+      }
     }
 	public void setTranspilationDone(boolean transpilationDone) {
     this.transpilationDone = transpilationDone;

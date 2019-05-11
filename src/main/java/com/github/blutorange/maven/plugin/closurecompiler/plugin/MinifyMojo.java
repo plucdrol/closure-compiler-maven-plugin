@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Properties;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.Aggregation;
 import com.github.blutorange.maven.plugin.closurecompiler.common.AggregationConfiguration;
@@ -282,10 +281,10 @@ public class MinifyMojo extends AbstractMojo {
    * 
    * <pre>
    * &lt;closureSourceMapLocationMappings&gt;
-   *   &lt;property&gt;
+   *   &lt;closureSourceMapLocationMapping&gt;
    *     &lt;name>js/&lt;/name&gt;
    *     &lt;value>/web/www/js&lt;/value&gt;
-   *   &lt;/property&gt;
+   *   &lt;/closureSourceMapLocationMapping&gt;
    * &lt;/closureSourceMapLocationMappings&gt;
    * </pre>
    * 
@@ -298,7 +297,7 @@ public class MinifyMojo extends AbstractMojo {
    * @since 2.5.0
    */
   @Parameter(property = "closureSourceMapLocationMappings")
-  private Properties closureSourceMapLocationMappings;
+  private ArrayList<ClosureSourceMapLocationMapping> closureSourceMapLocationMappings;
 
   /**
    * Allow injecting runtime libraries.
@@ -746,7 +745,7 @@ public class MinifyMojo extends AbstractMojo {
       closureDefineReplacements = new HashMap<>();
     }
     if (closureSourceMapLocationMappings == null) {
-      closureSourceMapLocationMappings = new Properties();
+      closureSourceMapLocationMappings = new ArrayList<>();
     }
   }
 
@@ -792,7 +791,7 @@ public class MinifyMojo extends AbstractMojo {
     return closureDefineReplacements;
   }
 
-  public Properties getClosureSourceMapLocationMappings() {
+  public ArrayList<ClosureSourceMapLocationMapping> getClosureSourceMapLocationMappings() {
     return closureSourceMapLocationMappings;
   }
 
@@ -1048,7 +1047,7 @@ public class MinifyMojo extends AbstractMojo {
     this.closureDefineReplacements = closureDefineReplacements;
   }
 
-  public void setClosureSourceMapLocationMappings(Properties closureSourceMapLocationMappings) {
+  public void setClosureSourceMapLocationMappings(ArrayList<ClosureSourceMapLocationMapping> closureSourceMapLocationMappings) {
     this.closureSourceMapLocationMappings = closureSourceMapLocationMappings;
   }
 

@@ -22,9 +22,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
+import com.github.blutorange.maven.plugin.closurecompiler.plugin.ClosureSourceMapLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
 import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
@@ -57,11 +57,10 @@ public class ClosureConfig {
 
   private static final String FILE_PREFIX = "file:";
 
-  private static List<? extends LocationMapping> createLocationMappings(Properties mappings) {
+  private static List<? extends LocationMapping> createLocationMappings(ArrayList<ClosureSourceMapLocationMapping> mappings) {
     return mappings
-      .entrySet()
       .stream()
-      .map(e -> new PrefixLocationMapping(String.valueOf(e.getKey()), String.valueOf(e.getValue())))
+      .map(e -> new PrefixLocationMapping(String.valueOf(e.getName()), String.valueOf(e.getValue())))
       .collect(Collectors.toList());
   }
 

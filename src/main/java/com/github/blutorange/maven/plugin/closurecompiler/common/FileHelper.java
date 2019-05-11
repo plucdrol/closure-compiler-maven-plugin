@@ -4,10 +4,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class FileHelper {
   private FileHelper() {}
 
+  /**
+   * @return The path of the given {@code target}, relative to the specified {@code base} file.
+   */
   public static String relativizePath(File base, File target) throws IOException {
     final Path targetPath = Paths.get(target.getCanonicalPath());
     if (base == null) {
@@ -18,6 +25,13 @@ public class FileHelper {
       final String relativePath = basePath.relativize(targetPath).toString();
       return relativePath;
     }
+  }
+
+  /**
+   * Sames as {@link FileUtils#getFile(File, String...)}, but ignores empty names.
+   */
+  public static File getFile(final File directory, final String... names) {
+    return FileUtils.getFile(directory, Arrays.stream(names).filter(StringUtils::isNotEmpty).toArray(String[]::new));
   }
 
   /**
