@@ -2,6 +2,12 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.6.0
+
+* Update to closure compiler version `v20190528`.
+* Update some maven dependencies.
+* Add a few more examples / tests.
+
 ## 2.5.0
 
 * Add new option `closureJsModuleRoot` (see #48).

@@ -78,6 +78,16 @@ public class MinifyMojoTest {
     runMinify("subdirs");
   }
 
+  @Test
+  public void testPrettyPrint() throws Exception {
+    runMinify("prettyprint");
+  }
+
+  @Test
+  public void testEmitUseStrict() throws Exception {
+    runMinify("emitusestrict");
+  }
+
   private void runMinify(String projectName) throws Exception {
     File parentdir = testResources.getBasedir("parent").getCanonicalFile();
     File parentPom = new File(parentdir, "pom.xml");

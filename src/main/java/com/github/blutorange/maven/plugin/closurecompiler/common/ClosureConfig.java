@@ -96,10 +96,10 @@ public class ClosureConfig {
     options.setRewritePolyfills(mojo.isClosureRewritePolyfills());
     options.setStrictModeInput(mojo.isClosureStrictModeInput());
     options.setTrustedStrings(mojo.isClosureTrustedStrings());
-
     options.setModuleRoots(mojo.getClosureJsModuleRoots());
-
+    
     // Apply compilation level
+    // This overwrites some other options and should be called last.
     mojo.getClosureCompilationLevel().setOptionsForCompilationLevel(options);
     if (mojo.isClosureAssumeFunctionWrapper()) {
       mojo.getClosureCompilationLevel().setWrappedOutputOptimizations(options);

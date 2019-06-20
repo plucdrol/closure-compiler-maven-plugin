@@ -1,0 +1,1 @@
+'use strict';function createTable(c,d){var b=1,a="<table border='1' width='500' cellspacing='0'cellpadding='5'>";for(i=1;i<=c;i++){for(a+="<tr>";b<=d;)a=a+"<td>"+i*b+"</td>",b+=1;a+="</tr>";b=1}document.write(a+"</table>")}createTable(5,3);

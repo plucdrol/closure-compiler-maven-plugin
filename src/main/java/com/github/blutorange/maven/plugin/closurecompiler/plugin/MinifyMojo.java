@@ -270,14 +270,11 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureIncludeSourcesContent;
 
   /**
-   * Source map location mapping. This is a prefix mapping from the file system path
-   * to the web server path. The source map contains a reference to the original source
-   * files; and this may be different on the web server.
-   * 
-   * The location of the source file is always relative to the given {@code baseDir}.
-   * This defines a list of replacements. For each source file, the first matching replacement
-   * is used. If the source file starts with the prefix as given by the name, it matches and
-   * is replaced with the value. For example:
+   * Source map location mapping. This is a prefix mapping from the file system path to the web server path. The source
+   * map contains a reference to the original source files; and this may be different on the web server. The location of
+   * the source file is always relative to the given {@code baseDir}. This defines a list of replacements. For each
+   * source file, the first matching replacement is used. If the source file starts with the prefix as given by the
+   * name, it matches and is replaced with the value. For example:
    * 
    * <pre>
    * &lt;closureSourceMapLocationMappings&gt;
@@ -288,12 +285,10 @@ public class MinifyMojo extends AbstractMojo {
    * &lt;/closureSourceMapLocationMappings&gt;
    * </pre>
    * 
-   * Assume the source files are {@code js/file1.js} and {@code js/file2.js}. The above
-   * replaces them with {@code /web/www/js/file1.js} and {@code /web/www/js/file2.js}.
-   * This is then path that will be used in the source map to reference the original source file.
-   * 
-   * If no location mappings are specified, the path of the source files relative to the created
-   * source map is used instead.
+   * Assume the source files are {@code js/file1.js} and {@code js/file2.js}. The above replaces them with
+   * {@code /web/www/js/file1.js} and {@code /web/www/js/file2.js}. This is then path that will be used in the source
+   * map to reference the original source file. If no location mappings are specified, the path of the source files
+   * relative to the created source map is used instead.
    * @since 2.5.0
    */
   @Parameter(property = "closureSourceMapLocationMappings")
@@ -317,8 +312,8 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT5_STRICT}: Like {@code ECMASCRIPT5} but assumes compliance with strict mode
    * ({@code 'use strict';}).</li>
    * <li>{@code ECMASCRIPT_2015}: Checks code assuming ECMAScript 2015 compliance.</li>
-   * <li>{@code ECMASCRIPT6_TYPED}: (experimental) Checks code assuming a superset of ECMAScript 6 which adds Typescript-style type
-   * declarations.</li>
+   * <li>{@code ECMASCRIPT6_TYPED}: (experimental) Checks code assuming a superset of ECMAScript 6 which adds
+   * Typescript-style type declarations.</li>
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
    * <li>{@code ECMASCRIPT_2018}: Checks code assuming ECMAScript 2018 compliance.</li>
@@ -360,7 +355,6 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureModuleResolution", defaultValue = "BROWSER")
   private ResolutionMode closureModuleResolution;
-
 
   /**
    * Path prefixes to be removed from ES6 & CommonJS modules.
@@ -573,14 +567,14 @@ public class MinifyMojo extends AbstractMojo {
   /**
    * The output file name of the processed files. This is interpreted as a path relative to the {@code targetDir}.
    * <p>
-   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The following
-   * variables are supported:
+   * Variables are specified via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The
+   * following variables are supported:
    * <ul>
-   *  <li>The variable {@code filename} is replaced with the name of the minified file.</li>
-   *  <li>The variable {@code extension} is replaced with the extension of the file (without the period)</li>
-   *  <li>The variable {@code basename} is replaced with the basename (name without the extension) of the file.</li>
-   *  <li>In case the files are not merged (option {@code skipMerge} is activated): The variable {@code path}
-   * is replaced with the path of the current file, relative to the {@code sourceDir}.</li>
+   * <li>The variable {@code filename} is replaced with the name of the minified file.</li>
+   * <li>The variable {@code extension} is replaced with the extension of the file (without the period)</li>
+   * <li>The variable {@code basename} is replaced with the basename (name without the extension) of the file.</li>
+   * <li>In case the files are not merged (option {@code skipMerge} is activated): The variable {@code path} is replaced
+   * with the path of the current file, relative to the {@code sourceDir}.</li>
    * </ul>
    * <p>
    * If merging files, by default the basename is set to {@code script} and the extension to {@code js}, so that the
