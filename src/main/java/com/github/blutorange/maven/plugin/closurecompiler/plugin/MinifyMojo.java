@@ -620,6 +620,13 @@ public class MinifyMojo extends AbstractMojo {
   private boolean skipRunOnIncremental;
 
   /**
+   * When set to `true`, the plugin exits immediately without doing any work at all.
+   * @since 2.7.0
+   */
+  @Parameter(property = "skip", defaultValue = "false")
+  private boolean skip;
+
+  /**
    * JavaScript source directory. This is relative to the {@link #baseSourceDir}.
    */
   @Parameter(property = "sourceDir", defaultValue = "js")
@@ -666,10 +673,16 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+    if (skip) {
+      getLog().info("skip was to true, so skipping plugin execution.");
+      return;
+    }
+    
     if (getBuildContext().isIncremental() && skipRunOnIncremental) {
       getLog().info("skipRunOnIncremental was to true, so skipping incremental build.");
       return;
     }
+    
     if (skipMerge && skipMinify) {
       getLog().warn("Both merge and minify steps are configured to be skipped. Files will only be copied to their destination without any processing");
     }
@@ -785,10 +798,6 @@ public class MinifyMojo extends AbstractMojo {
     return closureDefineReplacements;
   }
 
-  public ArrayList<ClosureSourceMapLocationMapping> getClosureSourceMapLocationMappings() {
-    return closureSourceMapLocationMappings;
-  }
-
   public ArrayList<String> getClosureDependencyEntryPoints() {
     return closureDependencyEntryPoints;
   }
@@ -839,6 +848,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public String getClosureRenameVariablePrefix() {
     return closureRenameVariablePrefix;
+  }
+
+  public ArrayList<ClosureSourceMapLocationMapping> getClosureSourceMapLocationMappings() {
+    return closureSourceMapLocationMappings;
   }
 
   public String getClosureSourceMapName() {
@@ -977,6 +990,10 @@ public class MinifyMojo extends AbstractMojo {
     return force;
   }
 
+  public boolean isSkip() {
+    return skip;
+  }
+
   public boolean isSkipMerge() {
     return skipMerge;
   }
@@ -1039,10 +1056,6 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureDefineReplacements(HashMap<String, String> closureDefineReplacements) {
     this.closureDefineReplacements = closureDefineReplacements;
-  }
-
-  public void setClosureSourceMapLocationMappings(ArrayList<ClosureSourceMapLocationMapping> closureSourceMapLocationMappings) {
-    this.closureSourceMapLocationMappings = closureSourceMapLocationMappings;
   }
 
   public void setClosureDependencyEntryPoints(ArrayList<String> closureDependencyEntryPoints) {
@@ -1129,6 +1142,10 @@ public class MinifyMojo extends AbstractMojo {
     this.closureRewritePolyfills = closureRewritePolyfills;
   }
 
+  public void setClosureSourceMapLocationMappings(ArrayList<ClosureSourceMapLocationMapping> closureSourceMapLocationMappings) {
+    this.closureSourceMapLocationMappings = closureSourceMapLocationMappings;
+  }
+
   public void setClosureSourceMapName(String closureSourceMapName) {
     this.closureSourceMapName = closureSourceMapName;
   }
@@ -1191,6 +1208,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setProject(MavenProject project) {
     this.project = project;
+  }
+
+  public void setSkip(boolean skip) {
+    this.skip = skip;
   }
 
   public void setSkipMerge(boolean skipMerge) {

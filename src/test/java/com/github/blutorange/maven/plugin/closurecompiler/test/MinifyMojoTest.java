@@ -7,13 +7,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
-import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
@@ -25,13 +24,14 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+
 public class MinifyMojoTest {
 
   private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
 
   @Rule
   public TestResources testResources = new TestResources("src/test/resources/projects", "target/test-projects");
-
   @Before
   public void setUp() throws Exception {}
 
@@ -61,6 +61,11 @@ public class MinifyMojoTest {
   @Test
   public void testSkip() throws Exception {
     runMinify("skip");
+  }
+
+  @Test
+  public void testSkipAll() throws Exception {
+    runMinify("skipall");
   }
 
   @Test
@@ -115,24 +120,28 @@ public class MinifyMojoTest {
   private void assertDirContent(File basedir) {
     File expected = new File(basedir, "expected");
     File actual = new File(new File(basedir, "target"), "test");
-    assertTrue(expected.exists());
-    assertTrue(actual.exists());
-    Map<String, File> expectedFiles = listFiles(expected);
-    Map<String, File> actualFiles = listFiles(actual);
+    Map<String, File> expectedFiles = expected.exists() ? listFiles(expected) : new HashMap<>();
+    Map<String, File> actualFiles = actual.exists() ? listFiles(actual) : new HashMap<>();
     LOG.info("Comparing actual files [\n" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
     LOG.info("to the expected files [\n" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
     assertTrue(expectedFiles.size() > 0);
-    assertEquals(expectedFiles.size(), actualFiles.size());
-    assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));
-    expectedFiles.forEach((key, expectedFile) -> {
-      File actualFile = actualFiles.get(key);
-      try {
-        compareFiles(expectedFile, actualFile);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    if (expectedFiles.size() == 1 && "nofiles".equals(expectedFiles.values().iterator().next().getName())) {
+      // Expect there to be no output files
+      assertEquals(0, actualFiles.size());
+    }
+    else {
+      assertEquals(expectedFiles.size(), actualFiles.size());      
+      assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));
+      expectedFiles.forEach((key, expectedFile) -> {
+        File actualFile = actualFiles.get(key);
+        try {
+          compareFiles(expectedFile, actualFile);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
+    }
   }
 
   private void compareFiles(File expectedFile, File actualFile) throws IOException {
