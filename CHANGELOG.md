@@ -4,6 +4,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 
 ## 2.7.0
 
+- Update to closure compiler version `v20190618`
 - Add option `skip`, see ticket #49
 
 ## 2.6.0

@@ -317,8 +317,9 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
    * <li>{@code ECMASCRIPT_2018}: Checks code assuming ECMAScript 2018 compliance.</li>
+   * <li>{@code ECMASCRIPT_2019}: Checks code assuming ECMAScript 2019 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
-   * <li>{@code STABLE} Use stable features
+   * <li>{@code STABLE} Use stable features</li>
    * </ul>
    * @since 1.7.2
    */
@@ -329,11 +330,15 @@ public class MinifyMojo extends AbstractMojo {
    * Refers to which version of ECMAScript your code will be returned in.<br/>
    * It is used to transpile between different levels of ECMAScript. Possible values are
    * <ul>
-   * <li>{@code ECMASCRIPT3}
-   * <li>{@code ECMASCRIPT5}
-   * <li>{@code ECMASCRIPT5_STRICT}
-   * <li>{@code ECMASCRIPT_2015}
-   * <li>{@code STABLE}
+   * <li>{@code ECMASCRIPT3}: Outputs code with ECMAScript 3 compliance.</li>
+   * <li>{@code ECMASCRIPT5}: Outputs code with ECMAScript 2015.</li>
+   * <li>{@code ECMASCRIPT5_STRICT}: Like {@code ECMASCRIPT5} but assumes compliance with strict mode ({@code 'use strict';}).</li>
+   * <li>{@code ECMASCRIPT_2015}: Outputs code with ECMAScript 2015.</li>
+   * <li>{@code ECMASCRIPT_2016}: Outputs code with ECMAScript 2016.</li>
+   * <li>{@code ECMASCRIPT_2017}: Outputs code with ECMAScript 2017.</li>
+   * <li>{@code ECMASCRIPT_2018}: Outputs code with ECMAScript 2018.</li>
+   * <li>{@code ECMASCRIPT_2019}: Outputs code with ECMAScript 2019.</li>
+   * <li>{@code STABLE}: Use stable features</li>
    * </ul>
    * @since 1.7.5
    */
@@ -677,12 +682,12 @@ public class MinifyMojo extends AbstractMojo {
       getLog().info("skip was to true, so skipping plugin execution.");
       return;
     }
-    
+
     if (getBuildContext().isIncremental() && skipRunOnIncremental) {
       getLog().info("skipRunOnIncremental was to true, so skipping incremental build.");
       return;
     }
-    
+
     if (skipMerge && skipMinify) {
       getLog().warn("Both merge and minify steps are configured to be skipped. Files will only be copied to their destination without any processing");
     }
