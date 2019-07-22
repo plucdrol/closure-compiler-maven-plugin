@@ -1,0 +1,1 @@
+'use strict';const div=document.createElement("div");div.innerHTML='\n\t<form>\n\t  <label for="answer">If x &lt; 10 + 2 &gt; z, find the value of R!</label>\n\t  <input id="answer" type="number" value="42">\n\t</form>\n';document.body.appendChild(div);

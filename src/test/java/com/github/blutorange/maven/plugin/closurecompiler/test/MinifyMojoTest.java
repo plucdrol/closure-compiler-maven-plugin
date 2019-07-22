@@ -14,6 +14,8 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,8 +25,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 
 public class MinifyMojoTest {
 
@@ -81,6 +81,11 @@ public class MinifyMojoTest {
   @Test
   public void testSubdirs() throws Exception {
     runMinify("subdirs");
+  }
+
+  @Test
+  public void testTrustedStrings() throws Exception {
+    runMinify("trustedstrings");
   }
 
   @Test

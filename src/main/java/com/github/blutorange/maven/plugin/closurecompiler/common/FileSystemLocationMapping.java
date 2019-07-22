@@ -6,6 +6,7 @@ import java.io.IOException;
 import com.google.javascript.jscomp.SourceMap.LocationMapping;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.logging.Log;
 
 /**
@@ -32,6 +33,10 @@ public class FileSystemLocationMapping implements LocationMapping {
           // This is the source file relative to the source map
           mapped = location;
         }
+        else if (StringUtils.startsWith(StringUtils.trim(location), "[")) {
+          // Internal files from closure compiler, such as "[synthetic:base]"
+          mapped = location;
+        }
         else {
           final File file = new File(baseDirForSourceFiles, location);
           mapped = FilenameUtils.separatorsToUnix(FileHelper.relativizePath(sourceMapDir, file));
@@ -40,7 +45,7 @@ public class FileSystemLocationMapping implements LocationMapping {
         return mapped;
       }
       catch (IOException e) {
-        log.error("Could not map source location", e);
+        log.error("Could not map source location for: '" + location +"'", e);
         return null;
       }
     }

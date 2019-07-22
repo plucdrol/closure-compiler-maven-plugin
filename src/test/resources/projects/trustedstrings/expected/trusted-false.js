@@ -1,0 +1,1 @@
+'use strict';const div=document.createElement("div");div.innerHTML='\n\t\x3cform\x3e\n\t  \x3clabel for\x3d"answer"\x3eIf x \x26lt; 10 + 2 \x26gt; z, find the value of R!\x3c/label\x3e\n\t  \x3cinput id\x3d"answer" type\x3d"number" value\x3d"42"\x3e\n\t\x3c/form\x3e\n';document.body.appendChild(div);
