@@ -2,7 +2,7 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
-## 2.8.0 (work-in-progress)
+## 2.8.0
 
 - Update to closure compiler version `v20190709`
 - Fix #50

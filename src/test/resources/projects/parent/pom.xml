@@ -10,7 +10,7 @@
 	<packaging>pom</packaging>
 
 	<properties>
-		<closure.compiler.maven.plugin.version>2.8.0-SNAPSHOT</closure.compiler.maven.plugin.version>
+		<closure.compiler.maven.plugin.version>2.8.0</closure.compiler.maven.plugin.version>
 	</properties>
 
 	<dependencies>
