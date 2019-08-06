@@ -3,16 +3,23 @@ package com.github.blutorange.maven.plugin.closurecompiler.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 
@@ -25,6 +32,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+
 
 public class MinifyMojoTest {
 
@@ -84,6 +92,30 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testSkipIfNewer() throws Exception {
+    // Output file does not exists, minification should run
+    expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("skipIfNewer")));
+
+    // This create the newer output file, so the minification process should not run
+    runMinify("skipif", Arrays.asList("createNewerFile", "skipIfNewer"));
+
+    // Now force is enabled, minification should run
+    expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("createNewerFile", "skipIfNewer", "force")));
+  }
+
+  @Test
+  public void testSkipIfExists() throws Exception {
+    // Output file does not exists, minification should run
+    expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("skipIfExists")));
+
+    // This create the (older) output file, so the minification process should not run
+    runMinify("skipif", Arrays.asList("createOlderFile", "skipIfExists"));
+
+    // Now force is enabled, minification should run
+    expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("createOlderFile", "skipIfExists", "force")));
+  }
+
+  @Test
   public void testTrustedStrings() throws Exception {
     runMinify("trustedstrings");
   }
@@ -98,7 +130,24 @@ public class MinifyMojoTest {
     runMinify("emitusestrict");
   }
 
+  private <T extends Throwable> void expectError(Class<T> error, Action runnable) {
+    try {
+      runnable.run();
+    }
+    catch (Throwable e) {
+      if (error.isInstance(e)) {
+        return;
+      }
+      fail("Action threw an error of type " + e.getClass().getSimpleName() + ", but it is not of the expected type " + error.getSimpleName());
+    }
+    fail("Action did not throw the expected error type " + error.getSimpleName());
+  }
+
   private void runMinify(String projectName) throws Exception {
+    runMinify(projectName, new HashSet<>());
+  }
+
+  private void runMinify(String projectName, Collection<String> profiles) throws Exception {
     File parentdir = testResources.getBasedir("parent").getCanonicalFile();
     File parentPom = new File(parentdir, "pom.xml");
     File parentPomNew = new File(parentdir.getParentFile(), "pom.xml");
@@ -110,16 +159,21 @@ public class MinifyMojoTest {
     assertTrue(pom.exists());
 
     clean(basedir);
-    invokeMaven(parentPomNew, "install");
-    invokeMaven(pom, "package");
+    invokeMaven(parentPomNew, "install", Collections.emptySet());
+    invokeMaven(pom, "package", profiles);
     assertDirContent(basedir);
   }
 
-  private void invokeMaven(File pom, String goal) throws IOException {
+  private void invokeMaven(File pom, String goal, Collection<String> profiles) throws IOException {
     MavenCli cli = new MavenCli();
-    String[] args = new String[] { "clean", goal };
+    final List<String> args = new ArrayList<>();
+    args.add("clean");
+    args.add(goal);
+    args.add("-DskipTests");
+    profiles.stream().flatMap(profile -> Stream.of("-P", profile)).forEach(args::add);
     System.setProperty("maven.multiModuleProjectDirectory", pom.getParent());
-    cli.doMain(args, pom.getParent(), System.out, System.err);
+    LOG.info("Invoking maven: " + StringUtils.join(args, " "));
+    cli.doMain(args.toArray(new String[0]), pom.getParent(), System.out, System.err);
   }
 
   private void assertDirContent(File basedir) {
@@ -182,5 +236,9 @@ public class MinifyMojoTest {
       FileUtils.forceDelete(target);
     }
     assertFalse(target.exists());
+  }
+
+  protected interface Action {
+    void run() throws Throwable;
   }
 }

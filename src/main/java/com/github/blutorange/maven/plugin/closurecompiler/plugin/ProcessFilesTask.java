@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.sonatype.plexus.build.incremental.BuildContext;
@@ -433,11 +435,16 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
 
     if (processConfig.isForce()) {
-      mojoMeta.getLog().debug("Force is enabled, skipping check for changed files.");
+      mojoMeta.getLog().info("Force is enabled, skipping check for changed files.");
       changed = true;
     }
     else {
-      changed = sourceFiles.stream().anyMatch(mojoMeta.getBuildContext()::hasDelta);
+      if (mojoMeta.getBuildContext().isIncremental()) {
+        changed = sourceFiles.stream().anyMatch(mojoMeta.getBuildContext()::hasDelta);
+      }
+      else {
+        changed = checkFilesForChanges(sourceFiles, outputFiles);
+      }
     }
     if (changed) {
       removeMessages(sourceFiles);
@@ -446,7 +453,32 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       String prefix = changed ? "Changes since last build, processing bundle with output files [" : "No changes since last build, skipping bundle with output files [";
       mojoMeta.getLog().debug(prefix + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", ")) + "].");
     }
+    else if (mojoMeta.getLog().isInfoEnabled()) {
+      String message = changed ? "Changes since last build, processing bundle." : "No changes since last build, skipping bundle.";
+      mojoMeta.getLog().info(message);
+    }
     return changed;
+  }
+
+  private boolean checkFilesForChanges(Collection<File> sourceFiles, Collection<File> ouptutFiles) {    
+    final boolean ouptutFilesExist = ouptutFiles.stream().allMatch(File::exists);
+    switch (ObjectUtils.defaultIfNull(processConfig.getSkipMode(), SkipMode.NEWER)) {
+      case NEWER:
+        if (ouptutFilesExist) {
+          final long oldestOutputFile = ouptutFiles.stream().map(File::lastModified).min(Long::compare).orElse(0L).longValue();
+          final long youngestSourceFile = sourceFiles.stream().map(File::lastModified).max(Long::compare).orElse(Long.MAX_VALUE).longValue();
+          mojoMeta.getLog().debug("Date of oldest output file is" + new Date(oldestOutputFile));
+          mojoMeta.getLog().debug("Date of youngest source file is " + new Date(youngestSourceFile));
+          return !(oldestOutputFile > youngestSourceFile);
+        }
+        else {
+          return true;
+        }
+      case EXISTS:
+        return !ouptutFilesExist;
+      default:
+        throw new RuntimeException("Unhandled enum: " + processConfig.getSkipMode());
+    }
   }
 
   /**

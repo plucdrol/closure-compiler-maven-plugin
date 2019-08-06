@@ -593,6 +593,22 @@ public class MinifyMojo extends AbstractMojo {
   private MavenProject project;
 
   /**
+   * This options lets configure how this plugin checks whether it should skip
+   * an execution in case the target file exists already. Usually you do not want
+   * to spend unneccesary processing time on transpiling JavaScript files when the
+   * input files themeselves have not changed. Available options are:
+   * <ul>
+   * <li>NEWER - Skip execution if the the target file exists already and all input files are older. Whether a file is older is judged according to their modification date.</li>
+   * <li>EXISTS - Skip execution if the target file exists already, irrespective of when thee files were last modified.</li>
+   * </ul>
+   * These options only apply when {@code force} is set to {@code false}. In case you never want to skip execution,
+   * set the the option {@code force} to {@code true}.
+   * @since 2.9.0
+   */
+  @Parameter(property = "skipMode", defaultValue = "NEWER")
+  private SkipMode skipMode;
+
+  /**
    * Skip the merge step. Minification will be applied to each source file individually.
    * @since 1.5.2
    */
@@ -648,7 +664,7 @@ public class MinifyMojo extends AbstractMojo {
   private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
       List<String> includes, List<String> excludes, String outputFilename)
       throws IOException {
-    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify);
+    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify, skipMode);
     FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, sourceDir, targetDir, includes, excludes, outputFilename);
     MojoMetadata mojoMeta = new MojoMetaImpl(project, getLog(), encoding, buildContext);
     return new ProcessJSFilesTask(mojoMeta, processConfig, fileSpecifier, closureConfig);
@@ -913,6 +929,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public MavenProject getProject() {
     return project;
+  }
+
+  public SkipMode getSkipMode() {
+    return skipMode;
   }
 
   public String getSourceDir() {
@@ -1217,6 +1237,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setSkip(boolean skip) {
     this.skip = skip;
+  }
+
+  public void setSkipMode(SkipMode skipMode) {
+    this.skipMode = skipMode;
   }
 
   public void setSkipMerge(boolean skipMerge) {
