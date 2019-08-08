@@ -36,6 +36,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConf
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSystemLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
+import com.github.blutorange.maven.plugin.closurecompiler.common.ProcessingResult;
 import com.google.common.collect.ImmutableList;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
@@ -78,17 +79,19 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
    * @throws MojoFailureException
    */
   @Override
-  protected void minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException {
+  protected ProcessingResult minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException {
     List<File> srcFiles = new ArrayList<File>();
     srcFiles.add(mergedFile);
-    minify(srcFiles, minifiedFile);
+    return minify(srcFiles, minifiedFile);
   }
 
   @Override
-  protected void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException {
+  protected ProcessingResult minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException {
     File sourceMapFile = closureConfig.getSourceMapInterpolator().interpolate(minifiedFile, minifiedFile.getParentFile(), minifiedFile.getParentFile());
 
-    if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMapFile() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) { return; }
+    if (!haveFilesChanged(srcFiles, closureConfig.isCreateSourceMapFile() ? Arrays.asList(minifiedFile, sourceMapFile) : Collections.singleton(minifiedFile))) {
+      return new ProcessingResult().setWasSkipped(true);
+    }
 
     mkDir(targetDir);
     mkDir(minifiedFile.getParentFile());
@@ -172,6 +175,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     mojoMeta.getBuildContext().refresh(minifiedFile);
 
     logCompressionGains(srcFiles, compiled);
+
+    return new ProcessingResult().setWasSkipped(false);
   }
 
   private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
@@ -228,7 +233,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
   }
 
   private void flushSourceMap(File sourceMapFile, String pathToSource, SourceMap sourceMap) throws IOException {
-    mojoMeta.getLog().info("Creating the minified files map [" + sourceMapFile.getName() + "].");
+    mojoMeta.getLog().info("Creating the source map [" + sourceMapFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + sourceMapFile.getPath() + "].");
 
     OutputStream out = null;

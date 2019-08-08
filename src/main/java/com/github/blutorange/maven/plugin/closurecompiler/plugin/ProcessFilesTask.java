@@ -46,6 +46,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpolator;
+import com.github.blutorange.maven.plugin.closurecompiler.common.ProcessingResult;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
 import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
 
@@ -224,7 +225,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @throws MojoFailureException
    */
   private void processFiles() throws IOException, MojoFailureException {
-    // Mo merge
+    // No merge
+    List<ProcessingResult> results = new ArrayList<>();
     if (processConfig.isSkipMerge()) {
       mojoMeta.getLog().info("Skipping the merge step...");
 
@@ -233,25 +235,27 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         assertTarget(sourceFile, minifiedFile);
         // Neither merge nor minify
         if (processConfig.isSkipMinify()) {
-          copy(sourceFile, minifiedFile);
+          results.add(copy(sourceFile, minifiedFile));
         }
         // Minify-only
         else {
-          minify(sourceFile, minifiedFile);
+          results.add(minify(sourceFile, minifiedFile));
         }
       }
     }
     // Merge-only
     else if (processConfig.isSkipMinify()) {
       File mergedFile = outputFilenameInterpolator.interpolate(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
-      merge(mergedFile);
+      results.add(merge(mergedFile));
       mojoMeta.getLog().info("Skipping the minify step...");
     }
     // Minify + merge
     else {
       File minifiedFile = outputFilenameInterpolator.interpolate(new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
-      minify(files, minifiedFile);
+      results.add(minify(files, minifiedFile));
     }
+
+    logResults(results);
   }
 
   protected void removeMessages(Collection<File> files) {
@@ -322,8 +326,11 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * change).
    * @throws IOException
    */
-  protected boolean copy(File sourceFile, File targetFile) throws IOException {
-    if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) { return false; }
+  protected ProcessingResult copy(File sourceFile, File targetFile) throws IOException {
+    if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) {
+      return new ProcessingResult().setWasSkipped(true);
+    }
+
     mkDir(targetDir);
     mkDir(targetFile.getParentFile());
 
@@ -365,7 +372,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     mojoMeta.getLog().info("Creating the copied file [" + targetFile.getName() + "].");
     mojoMeta.getLog().debug("Full path is [" + targetFile.getPath() + "].");
 
-    return true;
+    return new ProcessingResult().setWasSkipped(false);
   }
 
   /**
@@ -373,8 +380,10 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @param mergedFile output file resulting from the merged step
    * @throws IOException when the merge step fails
    */
-  protected void merge(File mergedFile) throws IOException {
-    if (!haveFilesChanged(files, Collections.singleton(mergedFile))) { return; }
+  protected ProcessingResult merge(File mergedFile) throws IOException {
+    if (!haveFilesChanged(files, Collections.singleton(mergedFile))) {
+      return new ProcessingResult().setWasSkipped(true);
+    }
 
     mkDir(targetDir);
     mkDir(mergedFile.getParentFile());
@@ -420,6 +429,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         if (outWriter != null) outWriter.close();
       }
     }
+
+    return new ProcessingResult().setWasSkipped(false);
   }
 
   /**
@@ -453,10 +464,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       String prefix = changed ? "Changes since last build, processing bundle with output files [" : "No changes since last build, skipping bundle with output files [";
       mojoMeta.getLog().debug(prefix + outputFiles.stream().map(File::getPath).collect(Collectors.joining(", ")) + "].");
     }
-    else if (mojoMeta.getLog().isInfoEnabled()) {
-      String message = changed ? "Changes since last build, processing bundle." : "No changes since last build, skipping bundle.";
-      mojoMeta.getLog().info(message);
-    }
     return changed;
   }
 
@@ -481,6 +488,18 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
   }
 
+  private void logResults(List<ProcessingResult> results) {
+    final long skippedCount = results.stream().filter(ProcessingResult::isWasSkipped).count();
+    final long processedCount = results.size() - skippedCount;
+    mojoMeta.getLog().info("Processed " + (processedCount+skippedCount) + " output files");
+    if (processedCount > 0) {
+      mojoMeta.getLog().info("Created " + processedCount + " output files");
+    }
+    if (skippedCount > 0) {
+      mojoMeta.getLog().info("Skipped " + skippedCount + " output files (" + processConfig.getSkipMode() + ")");
+    }
+  }
+
   /**
    * Minifies a source file. Create missing parent directories if needed.
    * @param mergedFile input file resulting from the merged step
@@ -490,7 +509,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @throws IOException when the minify step fails
    * @throws MojoFailureException
    */
-  abstract void minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException;
+  abstract ProcessingResult minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException;
 
   /**
    * Minifies a list of source files into a single file. Create missing parent directories if needed.
@@ -501,5 +520,5 @@ public abstract class ProcessFilesTask implements Callable<Object> {
    * @throws IOException when the minify step fails
    * @throws MojoFailureException
    */
-  abstract void minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException;
+  abstract ProcessingResult minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException;
 }

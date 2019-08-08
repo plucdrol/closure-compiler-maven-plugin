@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -89,6 +90,11 @@ public class MinifyMojoTest {
   @Test
   public void testSubdirs() throws Exception {
     runMinify("subdirs");
+  }
+
+  @Test
+  public void testSkipSome() throws Exception {
+    runMinify("skipsome");
   }
 
   @Test
@@ -201,6 +207,14 @@ public class MinifyMojoTest {
         }
       });
     }
+  }
+
+  private void assertLogResultContains(List<String> lines, String... messages) {
+    Set<String> search = new HashSet<>(Arrays.asList(messages));
+    for (String line: lines) {
+      search = search.stream().filter(message -> line.indexOf(message) < 0).collect(Collectors.toSet());
+    }
+    assertEquals("Expected to find messages " + search.stream().collect(Collectors.joining(", ")),  search.size());
   }
 
   private void compareFiles(File expectedFile, File actualFile) throws IOException {
