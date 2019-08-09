@@ -13,7 +13,22 @@ Exclude source files from WAR package
 
   A possible scenario is when you do not want to make them publicly available via your site for security reasons, or simply only want to include only the minified file in the resulting war.
 
-  The example below illustrates how to configure Maven WAR Plugin to exclude the undesired source files from the final WAR package.
+  The method I recommend is to place your source files outside the "src/main/resources" directory so they won't get included automatically. For example, you could place them in "src/main/js". Then configure this plugin to output your files to "target/generated-resources/js" and include that in the WAR file:
+
++---+
+<build>
+  <resources>
+    <resource>
+      <directory>${project.basedir}/src/main/resources</directory>
+    </resource>
+    <resource>
+      <directory>${project.build.directory}/generated-resources</directory>
+    </resource>
+  </resources>
+</build>
++---+
+
+  In case that is not an options, the example below illustrates how to configure Maven WAR Plugin to exclude the undesired source files from the final WAR package.
   
   You should also consider creating separate directories for source files and generated files, this makes the configration clearer.
 
