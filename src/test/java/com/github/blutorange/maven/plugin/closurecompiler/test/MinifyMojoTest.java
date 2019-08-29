@@ -83,6 +83,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testOutputFilename() throws Exception {
+    runMinify("outputfilename");
+  }
+
+  @Test
   public void testSourceMap() throws Exception {
     runMinify("sourcemap");
   }
@@ -229,7 +234,7 @@ public class MinifyMojoTest {
     assertTrue(expectedLines.size() > 0);
     assertEquals(expectedLines.size(), actualLines.size());
     for (int i = 0, j = expectedLines.size(); i < j; ++i) {
-      assertEquals(expectedLines.get(i).trim(), actualLines.get(i).trim());
+      assertEquals("Actual content of file '" + expectedFile.getAbsolutePath() + "' differs from the expected content", expectedLines.get(i).trim(), actualLines.get(i).trim());
     }
   }
 

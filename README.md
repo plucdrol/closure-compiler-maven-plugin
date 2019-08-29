@@ -103,7 +103,7 @@ So if we set the `baseSourceDir` to `/home/john/git/project/src/webapp` and `sou
 Finally, we want to tell the plugin where to place the output file(s). There are two cases here, depending on whether we want to merge all input files into once large file; or just process each file separately and place these files into the target directory: 
 
 * [skipMerge](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#skipMerge): If `true`, process each file individually. Otherwise, merge all source files.
-* [outputFileName](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#outputFilename): The location of the output file, **relative** to the `targetDir`. When we merge all files, we usually want to specify an fixed name, eg. `bundle.min.js`. When we skip the merge process, we can use variables to customize the directory and file name. The default here is `#{path}/#{basename}.min.#{extension}`, which uses the original filename with a `.min` before the extension, and preserves the directory structure of the input files. See the linked documentation for more details.
+* [outputFilename](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#outputFilename): The location of the output file, **relative** to the `targetDir`. When we merge all files, we usually want to specify an fixed name, eg. `bundle.min.js`. When we skip the merge process, we can use variables to customize the directory and file name. The default here is `#{path}/#{basename}.min.#{extension}`, which uses the original filename with a `.min` before the extension, and preserves the directory structure of the input files. See the linked documentation for more details.
 
 As a bonus, we may sometimes want to create a source map as well. The easiest and quickest way to get working source maps is to:
 
@@ -118,7 +118,7 @@ This includes the entire source map as well as the original source file content 
 
 Before we can worry about that, we need to specify where to put the generated source map:
 
-* [closureSourceMapName](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureSourceMapName): Path and file name of the source map, **relative**  to the directory of the `outputFileName`. 
+* [closureSourceMapName](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureSourceMapName): Path and file name of the source map, **relative**  to the directory of the `outputFilename`. 
 
 Now we can worry about the paths mentioned above. The first two are easy: we know the location of the minified file and the source map files, so we just use the corresponding relative paths. And normally, both the minified file and the source map are put inside the same directory.
 
@@ -181,6 +181,14 @@ Now test away
 
 ```sh
 mvn clean package test
+```
+
+To run only a single test for debugging, use 
+
+```sh
+# nameOfTestMethod is one of the methods annotated with @Test in MinifyMojoTest
+# For example: testOutputFilename
+mvn test -Dtest=MinifyMojoTest#nameOfTestMethod
 ```
 
 To add a new test, go to `src/test/resources/projects/`, copy one of the test projects as a base (except `parent`). Open the pom.xml

@@ -586,7 +586,7 @@ public class MinifyMojo extends AbstractMojo {
    * resulting merged file is called {@code script.min.js}.
    * @since 2.0.0
    */
-  @Parameter(property = "outputFileName", defaultValue = "#{path}/#{basename}.min.#{extension}")
+  @Parameter(property = "outputFilename", defaultValue = "#{path}/#{basename}.min.#{extension}")
   private String outputFilename;
 
   @Parameter(defaultValue = "${project}", readonly = true, required = true)

@@ -38,7 +38,7 @@ to their locations on the file system (as in previous versions)
 
 * Update to closure compiler `v20190325`
 * Ticket #47: Preserve relative file names when not merging the files
-* The option `outputFileName` now allows for the additional variable `#{path}`: When not
+* The option `outputFilename` now allows for the additional variable `#{path}`: When not
   merging the input files, this is the relative path from the source directory to the source
   file. The default for this options is now `#{path}/#{basename}.min.#{extension}`
   For example: Assume the source dir is `/my/dir` and the target dir is `/my/target`. Also assume
@@ -66,7 +66,7 @@ to their locations on the file system (as in previous versions)
 ## 2.1.0
 
 * Update closure-compiler to latest version (v20181210)
-* Removed obsolete option `nosuffix`. Set `outputFilename` pattern to the desired value.
+* Removed obsolete option `nosuffix`. The option `outputFilename` lets you now specify a pattern for the filename.
 * Removed obsolete option `jsSourceFiles` (alias `jsFiles`). Files are now merged in 
   the order as specified by `includes`.
 * Renamed aggregation JSON option `files` to `includes`.
@@ -76,7 +76,7 @@ to their locations on the file system (as in previous versions)
   (alias `jsIncludes`) to `includes`.
 * Renamed option `closureSortDependencies` to `closureDependencySorting`.
 * Renamed option `closureDefine` to closureDefineReplacements`.
-* Replaced option `suffix` with `outputFileName`. This allows for more freedom in defining 
+* Replaced option `suffix` with `outputFilename`. This allows for more freedom in defining 
   the output file name.
 * Replaced option `verbose` with `logLevel`. This lets you override the default maven 
   log level for this plugin.

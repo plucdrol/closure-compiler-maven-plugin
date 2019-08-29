@@ -13,7 +13,7 @@ Exclude source files from WAR package
 
   A possible scenario is when you do not want to make them publicly available via your site for security reasons, or simply only want to include only the minified file in the resulting war.
 
-  The method I recommend is to place your source files outside the "src/main/resources" directory so they won't get included automatically. For example, you could place them in "src/main/js". Then configure this plugin to output your files to "target/generated-resources/js" and include that in the WAR file:
+  The method I recommend is to place your source files outside the <<<src/main/resources>>> directory so they won't get included automatically. For example, you could place them in "src/main/js". Then configure this plugin to output your files to <<<target/generated-resources/js>>> and include that in the WAR file:
 
 +---+
 <build>
