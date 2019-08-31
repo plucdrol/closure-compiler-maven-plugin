@@ -2,22 +2,26 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.10.0
+
+* Update to closure compiler version `v20190819`
+
 ## 2.9.0
 
-- Update to closure compiler version `v20190729`
-- Add a new option `skipMode` with the options `NEWER` (default) and `EXISTS`. Even outside of Eclipse incremental builds, this plugin
+* Update to closure compiler version `v20190729`
+* Add a new option `skipMode` with the options `NEWER` (default) and `EXISTS`. Even outside of Eclipse incremental builds, this plugin
   now skips an execution if the output files exist (`skipMode=EXISTS`) and are younger than the input files (`skipMode=NEWER`). In case you
   do not want to skip an execution no matter what, set the option `force` to `true`. See also #51
 
 ## 2.8.0
 
-- Update to closure compiler version `v20190709`
-- Fix #50
+* Update to closure compiler version `v20190709`
+* Fix #50
 
 ## 2.7.0
 
-- Update to closure compiler version `v20190618`
-- Add option `skip`, see ticket #49
+* Update to closure compiler version `v20190618`
+* Add option `skip`, see ticket #49
 
 ## 2.6.0
 
