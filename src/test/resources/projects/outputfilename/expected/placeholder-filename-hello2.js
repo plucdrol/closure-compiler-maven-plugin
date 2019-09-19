@@ -1,1 +1,2 @@
-'use strict';function main2(){console.log("Hello, blutorange2!")};
+'use strict';function main2(){console.log("Hello, blutorange2!")}
+;

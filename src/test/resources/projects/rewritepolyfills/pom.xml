@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
-	<artifactId>closure-compiler-maven-plugin-test-prettyprint</artifactId>
+	<artifactId>closure-compiler-maven-plugin-test-minimal</artifactId>
 	<version>1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<parent>
@@ -32,19 +31,40 @@
 							<goal>minify</goal>
 						</goals>
 						<configuration>
-							<closurePrettyPrint>false</closurePrettyPrint>
-							<outputFilename>script.min.js</outputFilename>
+							<closureRewritePolyfills>false</closureRewritePolyfills>
+							<outputFilename>polyfills-false.js</outputFilename>
+							<includes>
+								<include>map-set.js</include>
+							</includes>
 						</configuration>
 					</execution>
 					<execution>
-						<id>pretty-print</id>
+						<id>polyfill-true</id>
 						<phase>generate-resources</phase>
 						<goals>
 							<goal>minify</goal>
 						</goals>
 						<configuration>
-							<closurePrettyPrint>true</closurePrettyPrint>
-							<outputFilename>script.js</outputFilename>
+							<closureRewritePolyfills>true</closureRewritePolyfills>
+							<outputFilename>polyfills-true.js</outputFilename>
+							<includes>
+								<include>map-set.js</include>
+							</includes>
+						</configuration>
+					</execution>
+					<!-- As they is nothing to be polyfilled, no polyfills should be added event though rewritePolyfills is set to true -->
+					<execution>
+						<id>no-set-or-map</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+						<configuration>
+							<closureRewritePolyfills>true</closureRewritePolyfills>
+							<outputFilename>no-map-set.js</outputFilename>
+							<includes>
+								<include>no-map-set.js</include>
+							</includes>
 						</configuration>
 					</execution>
 				</executions>

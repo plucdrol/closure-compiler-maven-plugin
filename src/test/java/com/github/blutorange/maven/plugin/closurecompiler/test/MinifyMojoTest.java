@@ -53,7 +53,7 @@ public class MinifyMojoTest {
   }
 
   @Test
-  public void testCompilationlevel() throws Exception {
+  public void testCompilationLevel() throws Exception {
     runMinify("compilationlevel");
   }
 
@@ -141,6 +141,16 @@ public class MinifyMojoTest {
     runMinify("emitusestrict");
   }
 
+  @Test
+  public void testRewritePolyfills() throws Exception {
+    runMinify("rewritepolyfills");
+  }
+
+  @Test
+  public void testJQuery() throws Exception {
+    runMinify("jquery");
+  }
+
   private <T extends Throwable> void expectError(Class<T> error, Action runnable) {
     try {
       runnable.run();
@@ -194,14 +204,14 @@ public class MinifyMojoTest {
     Map<String, File> actualFiles = actual.exists() ? listFiles(actual) : new HashMap<>();
     LOG.info("Comparing actual files [\n" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
     LOG.info("to the expected files [\n" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
-    assertTrue(expectedFiles.size() > 0);
+    assertTrue("There must be at least one expected file. Add a file 'nofiles' if you expect there to be no files", expectedFiles.size() > 0);
     if (expectedFiles.size() == 1 && "nofiles".equals(expectedFiles.values().iterator().next().getName())) {
       // Expect there to be no output files
       assertEquals(0, actualFiles.size());
     }
     else {
-      assertEquals(expectedFiles.size(), actualFiles.size());      
-      assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));
+      assertEquals("Number of expected files must match the number of produced files", expectedFiles.size(), actualFiles.size());      
+      assertTrue("Expected file names must match the produced file names", CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));
       expectedFiles.forEach((key, expectedFile) -> {
         File actualFile = actualFiles.get(key);
         try {
@@ -225,16 +235,17 @@ public class MinifyMojoTest {
   private void compareFiles(File expectedFile, File actualFile) throws IOException {
     List<String> expectedLines = FileUtils.readLines(expectedFile, StandardCharsets.UTF_8);
     List<String> actualLines = FileUtils.readLines(actualFile, StandardCharsets.UTF_8);
-    assertTrue(expectedFile.exists());
-    assertTrue(actualFile.exists());
+    assertTrue("File with expected content does not exist: '" + actualFile.getAbsolutePath() + "'", expectedFile.exists());
+    assertTrue("File with produced content does not exist: '" + actualFile.getAbsolutePath() + "'", actualFile.exists());
     // Ignore empty lines
     expectedLines.removeIf(StringUtils::isBlank);
     actualLines.removeIf(StringUtils::isBlank);
     // Check file contents
-    assertTrue(expectedLines.size() > 0);
-    assertEquals(expectedLines.size(), actualLines.size());
+    assertTrue("Expected file must contain at least one non-empty line: '" + actualFile.getAbsolutePath() + "'", expectedLines.size() > 0);
+    assertEquals("Number of non-empty lines in expected file must match the generated number of lines: '" + actualFile.getAbsolutePath() + "'",
+      expectedLines.size(), actualLines.size());
     for (int i = 0, j = expectedLines.size(); i < j; ++i) {
-      assertEquals("Actual content of file '" + expectedFile.getAbsolutePath() + "' differs from the expected content", expectedLines.get(i).trim(), actualLines.get(i).trim());
+      assertEquals("Actual content of file '" + actualFile.getAbsolutePath() + "' differs from the expected content", expectedLines.get(i).trim(), actualLines.get(i).trim());
     }
   }
 

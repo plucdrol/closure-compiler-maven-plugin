@@ -1,1 +1,2 @@
-'use strict';function mainMjs(){console.log("Hello, blutorangeMjs!")};
+'use strict';function mainMjs(){console.log("Hello, blutorangeMjs!")}
+;
