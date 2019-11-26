@@ -1,0 +1,1 @@
+'use strict';function hello(a){alert(a)}hello("New User");hello("New User");hello("New '\"User");hello("New '\"User");

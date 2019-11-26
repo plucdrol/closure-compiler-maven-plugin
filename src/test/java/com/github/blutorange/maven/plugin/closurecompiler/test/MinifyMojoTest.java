@@ -103,6 +103,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testPreferSingleQuotes() throws Exception {
+    runMinify("prefersinglequotes");
+  }
+
+  @Test
   public void testSkipIfNewer() throws Exception {
     // Output file does not exists, minification should run
     expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("skipIfNewer")));

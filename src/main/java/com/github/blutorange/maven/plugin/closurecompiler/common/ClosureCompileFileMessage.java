@@ -16,7 +16,7 @@ public class ClosureCompileFileMessage extends FileMessage {
 
   private static FileMessage of(JSError error, Compiler compiler, File baseDir, int severity) {
     String message = format(compiler, error, severity, false);
-    File file = StringUtils.isNotEmpty(error.sourceName) ? new File(baseDir, error.sourceName) : baseDir;
+    File file = StringUtils.isNotEmpty(error.getSourceName()) ? new File(baseDir, error.getSourceName()) : baseDir;
     return new ClosureCompileFileMessage(file, error.getLineNumber(), error.getCharno(), message, severity, null);
   }
 
@@ -29,8 +29,8 @@ public class ClosureCompileFileMessage extends FileMessage {
   }
 
   private static String format(Compiler source, JSError error, int severity, boolean includeLocation) {
-    String sourceName = error.sourceName;
-    int lineNumber = error.lineNumber;
+    String sourceName = error.getSourceName();
+    int lineNumber = error.getLineNumber();
 
     // Format the non-reverse-mapped position.
     StringBuilder b = new StringBuilder();
@@ -40,7 +40,7 @@ public class ClosureCompileFileMessage extends FileMessage {
     // Check if we can reverse-map the source.
     if (includeLocation) {
       OriginalMapping mapping = source == null ? null : source.getSourceMapping(
-          error.sourceName, error.lineNumber, error.getCharno());
+          error.getSourceName(), error.getLineNumber(), error.getCharno());
       if (mapping == null) {
         boldLine.append(nonMappedPosition);
       }
@@ -57,7 +57,7 @@ public class ClosureCompileFileMessage extends FileMessage {
     boldLine.append(severity == BuildContext.SEVERITY_WARNING ? "WARNING" : "ERROR");
     boldLine.append(" - ");
 
-    boldLine.append(error.description);
+    boldLine.append(error.getDescription());
 
     b.append(boldLine.toString());
     b.append('\n');
