@@ -177,7 +177,7 @@ public class MinifyMojo extends AbstractMojo {
 
   /**
    * <p>
-   * When you use {@code closureDependencyMode} STRICT or LOOSE, you must specify to the compiler what the entry points
+   * When you use {@code closureDependencyMode} PRUNE or PRUNE_LEGACY, you must specify to the compiler what the entry points
    * of your application are. Beginning at those entry points, it will trace through the files to discover what sources
    * are actually referenced and will drop all other files.
    * </p>
@@ -212,8 +212,6 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code PRUNE_LEGACY} (deprecated) Input files that are transitive dependencies of the entry points will be
    * included in the compilation in dependency order. All other input files will be dropped. In addition to the
    * explicitly defined entry points, moochers (files not explicitly defining a module) are implicit entry points.</li>
-   * <li>{@code LOOSE} (deprecated) Same as {@code PRUNE_LEGACY}.</li>
-   * <li>{@code STRICT} (deprecated) Same as {@code PRUNE}.</li>
    * </ul>
    * @since 2.0.0
    */

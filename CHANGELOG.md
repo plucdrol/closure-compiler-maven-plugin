@@ -2,6 +2,10 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.14.0
+
+* Update to closure compuler version `v20200101`
+
 ## 2.13.0
 
 * Update to closure compuler version `v20191111`
