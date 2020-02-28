@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
 	<artifactId>closure-compiler-maven-plugin</artifactId>
-	<version>2.13.0</version>
+	<version>2.15.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Closure Compiler Maven Plugin</name>
@@ -75,8 +75,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<github.global.server>github</github.global.server>
-		<maven.version>3.6.1</maven.version>
-		<maven.embedder.version>3.6.0</maven.embedder.version>
+		<maven.version>3.6.3</maven.version>
+		<maven.embedder.version>3.6.3</maven.embedder.version>
 		<maven-resources-plugin-version>3.1.0</maven-resources-plugin-version>
 		<maven-compiler-plugin-version>3.8.0</maven-compiler-plugin-version>
 		<maven-plugin-plugin-version>3.5.2</maven-plugin-plugin-version>
@@ -86,7 +86,7 @@
 		<maven-release-plugin-version>2.5.3</maven-release-plugin-version>
 		<maven-site-plugin-version>3.7.1</maven-site-plugin-version>
 		<maven-jxr-plugin-version>2.1</maven-jxr-plugin-version>
-		<maven.plugin.api.version>3.6.1</maven.plugin.api.version>
+		<maven.plugin.api.version>3.6.3</maven.plugin.api.version>
 		<maven.plugin.annotations.version>3.6.0</maven.plugin.annotations.version>
 		<maven-source-plugin-version>3.0.1</maven-source-plugin-version>
 		<maven-project-info-reports-plugin-version>3.0.0</maven-project-info-reports-plugin-version>
@@ -94,9 +94,9 @@
 		<maven.project.version>2.2.1</maven.project.version>
 		<maven-plugin.testing.harness.version>3.3.0</maven-plugin.testing.harness.version>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<junit.version>4.12</junit.version>
+		<junit.version>4.13</junit.version>
 		<nexus.staging.version>1.6.8</nexus.staging.version>
-		<closure.compiler.version>v20200101</closure.compiler.version>
+		<closure.compiler.version>v20200224</closure.compiler.version>
 		<dataurl-version>2.0.0</dataurl-version>
 		<commons-io-version>2.6</commons-io-version>
 		<commons.collections4.version>4.4</commons.collections4.version>
@@ -404,6 +404,8 @@
 						<version>${maven-javadoc-plugin-version}</version>
 						<configuration>
 							<encoding>UTF-8</encoding>
+							<source>8</source>
+							<javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
 						</configuration>
 						<executions>
 							<execution>

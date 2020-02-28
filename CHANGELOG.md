@@ -2,6 +2,11 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.15.0
+
+* Update to closure compuler version `v20200224`
+* Add test for `assumeFunctionWrapper`
+
 ## 2.14.0
 
 * Update to closure compuler version `v20200101`

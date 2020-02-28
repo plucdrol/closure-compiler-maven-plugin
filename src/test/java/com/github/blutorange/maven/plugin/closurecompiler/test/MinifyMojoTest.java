@@ -108,6 +108,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testAssumeFunctionWrapper() throws Exception {
+    runMinify("assumeFunctionWrapper");
+  }
+
+  @Test
   public void testSkipIfNewer() throws Exception {
     // Output file does not exists, minification should run
     expectError(AssertionError.class, () -> runMinify("skipif", Arrays.asList("skipIfNewer")));
