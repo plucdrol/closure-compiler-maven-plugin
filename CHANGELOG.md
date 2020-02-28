@@ -4,7 +4,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 
 ## 2.15.0
 
-* Update to closure compuler version `v20200224`
+* Update to closure compiler version `v20200224`
 * Add test for `assumeFunctionWrapper`
 
 ## 2.14.0
