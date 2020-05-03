@@ -48,13 +48,13 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FilenameInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ProcessingResult;
 import com.github.blutorange.maven.plugin.closurecompiler.common.SourceFilesEnumeration;
-import com.github.blutorange.maven.plugin.closurecompiler.common.TwoTuple;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.sonatype.plexus.build.incremental.BuildContext;
@@ -82,44 +82,6 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     else {
       throw new FileNotFoundException("The source file [" + sourceFile.getPath() + "] does not exist.");
     }
-  }
-
-  private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
-    Set<Object> seen = new HashSet<>();
-    return t -> seen.add(keyExtractor.apply(t));
-  }
-
-  /**
-   * Returns the files to copy. Default exclusions are used when the excludes list is empty.
-   * @param includes list of source files to include
-   * @param excludes list of source files to exclude
-   * @return the files to copy
-   */
-  private static List<File> getFilesToInclude(File sourceDir, List<String> includes, List<String> excludes) {
-    if (CollectionUtils.isEmpty(includes)) { return new ArrayList<>(); }
-    String[] excludesArray = excludes.toArray(new String[excludes.size()]);
-
-    // For each specified include, get all matching files, then
-    // sort first by the specified order, then by file path. Finally,
-    // filter out duplicate files.
-    return IntStream.range(0, includes.size()) //
-        .mapToObj(i -> new TwoTuple<>(i, includes.get(i))) //
-        .flatMap(include -> {
-          DirectoryScanner scanner = new DirectoryScanner();
-          scanner.setIncludes(new String[] { include.getSecond() });
-          scanner.setExcludes(excludesArray);
-          scanner.addDefaultExcludes();
-          scanner.setBasedir(sourceDir);
-          scanner.scan();
-          return Arrays.stream(scanner.getIncludedFiles()).map(includedFilename -> {
-            File includedFile = new File(sourceDir, includedFilename);
-            return new TwoTuple<>(include.getFirst(), includedFile);
-          });
-        }) //
-        .sorted(TwoTuple.getComparator()) //
-        .map(TwoTuple::getSecond) //
-        .filter(distinctByKey(File::getAbsolutePath)) //
-        .collect(Collectors.toList());
   }
 
   protected final MojoMetadata mojoMeta;
@@ -155,7 +117,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     this.targetDir = FileHelper.getFile(FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseTargetDir()), fileSpecifier.getTargetDir()).getAbsoluteFile().getCanonicalFile();
     this.outputFilenameInterpolator = new FilenameInterpolator(fileSpecifier.getOutputFilename());
 
-    for (File include : getFilesToInclude(this.sourceDir, fileSpecifier.getIncludes(), fileSpecifier.getExcludes())) {
+    for (File include : FileHelper.getIncludedFiles(this.sourceDir, fileSpecifier.getIncludes(), fileSpecifier.getExcludes())) {
       if (!files.contains(include)) {
         addNewSourceFile(files, include, mojoMeta);
       }

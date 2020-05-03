@@ -238,8 +238,28 @@ public class MinifyMojo extends AbstractMojo {
    * to preserve symbols that are defined outside of the code you are compiling. The {@code closureExterns} parameter
    * only has an effect if you are using a {@code CompilationLevel} of {@code ADVANCED_OPTIMIZATIONS}.<br/>
    * These file names are relative to {@link #baseSourceDir} directory.
+   * <pre>
+   * &lt;closureExternDeclarations&gt;
+   *   &lt;closureExternDeclaration&gt;
+   *     &lt;includes&gt;
+   *       &lt;include&gt;externs/*.js&lt;/include&gt;
+   *     &lt;/includes&gt;
+   *     &lt;excludes&gt;
+   *       &lt;exclude&gt;externs/doNotInclude.js&lt;/exclude&gt;
+   *     &lt;/excludes&gt;
+   *   &lt;/closureExternDeclaration&gt;
+   * &lt;/closureExternDeclarations&gt;
+   * </pre>
+   * @since 2.16.0
+   */
+  @Parameter(property = "closureExternDeclarations")
+  private ArrayList<FileSet> closureExternDeclarations;
+
+  /**
+   * Deprecated, use {@link #closureExternDeclarations} instead, it lets you specify includes and excludes.
    * @since 1.7.2
    */
+  @Deprecated
   @Parameter(property = "closureExterns")
   private ArrayList<String> closureExterns;
 
@@ -757,6 +777,9 @@ public class MinifyMojo extends AbstractMojo {
     if (closureExterns == null) {
       closureExterns = new ArrayList<>();
     }
+    if (closureExternDeclarations == null) {
+      closureExternDeclarations = new ArrayList<>();
+    }
     if (closureDependencyEntryPoints == null) {
       closureDependencyEntryPoints = new ArrayList<>();
     }
@@ -827,6 +850,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public CompilerOptions.Environment getClosureEnvironment() {
     return closureEnvironment;
+  }
+
+  public ArrayList<FileSet> getClosureExternDeclarations() {
+    return closureExternDeclarations;
   }
 
   public ArrayList<String> getClosureExterns() {
@@ -1095,6 +1122,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
     this.closureEnvironment = closureEnvironment;
+  }
+
+  public void setClosureExternDeclarations(ArrayList<FileSet> closureExternDeclarations) {
+    this.closureExternDeclarations = closureExternDeclarations;
   }
 
   public void setClosureExterns(ArrayList<String> closureExterns) {

@@ -38,7 +38,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.15.0</version>
+      <version>2.16.0</version>
       <configuration>
         <!-- Base configuration for all executions (bundles) -->
         <baseSourceDir>${project.basedir}/src/main/resources</baseSourceDir>
@@ -143,11 +143,11 @@ For the example above, this means that the source file name would be `js/index.j
 
 # Build site
 
-* Edit files in /src/site
-* To upload to github, set add the profile `site`
+* Edit files in `/src/site`
 * `mvn clean plugin:report site`
-
-If rendering the site locally, you can check out the rendered site in `target/site/index.html`.
+    * You can check out the locally rendered rendered site in `target/site/index.html`.
+* To upload to github, add the profile `site`
+    * `mvn clean plugin:report site -P site`
 
 # Release
 

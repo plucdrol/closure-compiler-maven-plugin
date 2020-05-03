@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.ClosureSourceMapLocationMapping;
+import com.github.blutorange.maven.plugin.closurecompiler.plugin.FileSet;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
 import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
@@ -58,10 +59,7 @@ public class ClosureConfig {
   private static final String FILE_PREFIX = "file:";
 
   private static List<? extends LocationMapping> createLocationMappings(ArrayList<ClosureSourceMapLocationMapping> mappings) {
-    return mappings
-      .stream()
-      .map(e -> new PrefixLocationMapping(String.valueOf(e.getName()), String.valueOf(e.getValue())))
-      .collect(Collectors.toList());
+    return mappings.stream().map(e -> new PrefixLocationMapping(String.valueOf(e.getName()), String.valueOf(e.getValue()))).collect(Collectors.toList());
   }
 
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
@@ -97,7 +95,7 @@ public class ClosureConfig {
     options.setStrictModeInput(mojo.isClosureStrictModeInput());
     options.setTrustedStrings(mojo.isClosureTrustedStrings());
     options.setModuleRoots(mojo.getClosureJsModuleRoots());
-    
+
     // Apply compilation level
     // This overwrites some other options and should be called last.
     mojo.getClosureCompilationLevel().setOptionsForCompilationLevel(options);
@@ -192,6 +190,11 @@ public class ClosureConfig {
     List<SourceFile> externs = new ArrayList<>();
     for (String extern : mojo.getClosureExterns()) {
       externs.add(SourceFile.fromFile(new File(mojo.getBaseSourceDir(), extern).getAbsolutePath(), Charset.forName(mojo.getEncoding())));
+    }
+    for (FileSet externFileSet : mojo.getClosureExternDeclarations()) {
+      for (final File extern : externFileSet.getFiles(mojo.getBaseSourceDir())) {
+        externs.add(SourceFile.fromFile(extern.getAbsolutePath(), Charset.forName(mojo.getEncoding())));
+      }
     }
     return externs;
   }
@@ -302,9 +305,7 @@ public class ClosureConfig {
   public String applyLocationMapping(String location) {
     for (LocationMapping m : locationMappings) {
       String result = m.map(location);
-      if (result != null) {
-        return result;
-      }
+      if (result != null) { return result; }
     }
     return location;
   }
@@ -313,7 +314,8 @@ public class ClosureConfig {
     return compilationLevel;
   }
 
-  public CompilerOptions getCompilerOptions(LocationMapping defaultMapping, File minifiedFile, File sourceMapFile, File baseDirForSourceFiles, File sourceDir) throws MojoFailureException, IOException {
+  public CompilerOptions getCompilerOptions(LocationMapping defaultMapping, File minifiedFile, File sourceMapFile, File baseDirForSourceFiles, File sourceDir)
+      throws MojoFailureException, IOException {
     CompilerOptions compilerOptions = SerializationUtils.clone(this.compilerOptions);
 
     // Apply dependency options

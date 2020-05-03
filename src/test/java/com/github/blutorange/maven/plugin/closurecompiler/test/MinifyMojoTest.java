@@ -63,6 +63,15 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testExterns() throws Exception {
+    // No externs declared, variable cannot be found, so minification should fail
+    expectError(AssertionError.class, () -> runMinify("externs", Arrays.asList("without-externs")));
+
+    // Externs declared, variable can be found, so minification should succeed
+    runMinify("externs", Arrays.asList("createOlderFile", "with-externs"));
+  }
+
+  @Test
   public void testOutputWrapper() throws Exception {
     runMinify("outputwrapper");
   }

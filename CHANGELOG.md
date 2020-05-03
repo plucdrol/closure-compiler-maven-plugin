@@ -2,6 +2,13 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.16.0
+
+* Update to closure compiler version `v20200426`
+* Options `closureExterns` is now deprecated in favor of `closureExternDeclarations`. The latter lets you specify
+  includes and excludes. This also lets you include all extern files in a directory.
+* Add test for `externDeclarations`.
+
 ## 2.15.0
 
 * Update to closure compiler version `v20200224`
