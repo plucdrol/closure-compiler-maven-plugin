@@ -38,7 +38,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.16.0</version>
+      <version>2.17.0</version>
       <configuration>
         <!-- Base configuration for all executions (bundles) -->
         <baseSourceDir>${project.basedir}/src/main/resources</baseSourceDir>
