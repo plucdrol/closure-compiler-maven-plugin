@@ -330,18 +330,19 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT5_STRICT}: Like {@code ECMASCRIPT5} but assumes compliance with strict mode
    * ({@code 'use strict';}).</li>
    * <li>{@code ECMASCRIPT_2015}: Checks code assuming ECMAScript 2015 compliance.</li>
-   * <li>{@code ECMASCRIPT6_TYPED}: (experimental) Checks code assuming a superset of ECMAScript 6 which adds
-   * Typescript-style type declarations.</li>
    * <li>{@code ECMASCRIPT_2016}: Checks code assuming ECMAScript 2016 compliance.</li>
    * <li>{@code ECMASCRIPT_2017}: Checks code assuming ECMAScript 2017 compliance.</li>
    * <li>{@code ECMASCRIPT_2018}: Checks code assuming ECMAScript 2018 compliance.</li>
    * <li>{@code ECMASCRIPT_2019}: Checks code assuming ECMAScript 2019 compliance.</li>
+   * <li>{@code ECMASCRIPT_2020}: Checks code assuming ECMAScript 2019 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
+   * <li>{@code ECMASCRIPT_NEXT_IN}: Checks code assuming ECMAScript latest draft standard (latest features supported
+   * for input, but not output yet).</li>
    * <li>{@code STABLE} Use stable features</li>
    * </ul>
    * @since 1.7.2
    */
-  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2018")
+  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2020")
   private LanguageMode closureLanguageIn;
 
   /**

@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.ClosureSourceMapLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.FileSet;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
-import com.google.common.base.Strings;
 import com.google.javascript.jscomp.CheckLevel;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
@@ -120,9 +119,9 @@ public class ClosureConfig {
     Map<String, Object> defineReplacements = new HashMap<>();
     for (Map.Entry<String, String> defineReplacement : mojo.getClosureDefineReplacements().entrySet()) {
       String key = defineReplacement.getKey();
-      String value = Strings.nullToEmpty(defineReplacement.getValue()).trim();
+      String value = nullToEmpty(defineReplacement.getValue()).trim();
 
-      if (Strings.isNullOrEmpty(value)) { throw new RuntimeException("Define replacement " + key + " does not have a value."); }
+      if (isNullOrEmpty(value)) { throw new RuntimeException("Define replacement " + key + " does not have a value."); }
 
       if ("true".equals(value)) {
         defineReplacements.put(key, Boolean.TRUE);
@@ -184,6 +183,14 @@ public class ClosureConfig {
       defineReplacements.put(key, value);
     }
     return defineReplacements;
+  }
+
+  private static String nullToEmpty(String value) {
+    return value != null ? value : "";
+  }
+
+  private static boolean isNullOrEmpty(String value) {
+    return value == null || value.isEmpty();
   }
 
   private static List<SourceFile> createExterns(MinifyMojo mojo) {

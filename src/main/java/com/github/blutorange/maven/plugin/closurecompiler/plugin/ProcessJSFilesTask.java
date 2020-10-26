@@ -27,6 +27,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.maven.plugin.MojoFailureException;
+
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
@@ -37,16 +40,12 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSystemLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ProcessingResult;
-import com.google.common.collect.ImmutableList;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.JSError;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
-
-import org.apache.commons.io.FilenameUtils;
-import org.apache.maven.plugin.MojoFailureException;
 
 import eu.maxschuster.dataurl.DataUrl;
 import eu.maxschuster.dataurl.DataUrlBuilder;
@@ -190,7 +189,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
       ClosureCompileFileMessage.ofWarning(warning, compiler, baseDirForSourceFiles).addTo(mojoMeta.getBuildContext());
     });
 
-    ImmutableList<JSError> errors = compiler.getErrors();
+    List<JSError> errors = new ArrayList<>(compiler.getErrors());
     if (!errors.isEmpty()) {
       Iterable<FileMessage> fileErrors = errors.stream().map(error -> ClosureCompileFileMessage.ofError(error, compiler, baseDirForSourceFiles))::iterator;
       throw new FileException(fileErrors);
