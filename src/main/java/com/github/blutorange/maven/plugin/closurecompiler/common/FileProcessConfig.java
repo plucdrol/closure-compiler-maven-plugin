@@ -9,17 +9,23 @@ public class FileProcessConfig {
   private final int bufferSize;
   private final String lineSeparator;
   private final SkipMode skipMode;
+  private final boolean allowReplacingInputFiles;
 
   public FileProcessConfig(String lineSeparator, int bufferSize, boolean force,
-      boolean skipMerge, boolean skipMinify, SkipMode skipMode) {
+      boolean skipMerge, boolean skipMinify, SkipMode skipMode, boolean allowReplacingInputFiles) {
     this.lineSeparator = lineSeparator;
     this.bufferSize = bufferSize;
     this.force = force;
     this.skipMerge = skipMerge;
     this.skipMinify = skipMinify;
     this.skipMode = skipMode;
+    this.allowReplacingInputFiles = allowReplacingInputFiles;
   }
 
+  public boolean isAllowReplacingInputFiles() {
+    return allowReplacingInputFiles;
+  }
+  
   public boolean isSkipMerge() {
     return skipMerge;
   }

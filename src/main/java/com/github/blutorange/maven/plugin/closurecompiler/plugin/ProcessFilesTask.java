@@ -128,7 +128,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
   }
 
   private void assertTarget(File source, File target) throws MojoFailureException {
-    if (target.getAbsolutePath().equals(source.getAbsolutePath())) {
+    if (!processConfig.isAllowReplacingInputFiles() && target.getAbsolutePath().equals(source.getAbsolutePath())) {
       String msg;
       msg = "The source file [" + source.getName() + "] has the same name as the output file [" + target.getName() + "].";
       mojoMeta.getLog().warn(msg);

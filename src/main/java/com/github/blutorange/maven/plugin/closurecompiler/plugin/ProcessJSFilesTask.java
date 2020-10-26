@@ -131,8 +131,8 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
     externs.addAll(closureConfig.getExterns());
 
-    final Compiler compiler = new Compiler();
     // Now compile
+    final Compiler compiler = new Compiler();
     compiler.compile(externs, sourceFileList, options);
 
     // Check for errors.

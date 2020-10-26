@@ -63,6 +63,15 @@ import org.sonatype.plexus.build.incremental.BuildContext;
 public class MinifyMojo extends AbstractMojo {
 
   /**
+   * By default, when the output file is the same as the input file, compilation is terminated with an error. This is done to
+   * prevent source files from being overwritten accidentally with a bad configuration. If you are certain you want to replace
+   * the input files (such as when the input files themselves are temporary files that have been generated), set this option
+   * to {@code true}. Defaults to {@code false}.
+   */
+  @Parameter(property = "allowReplacingInputFiles", defaultValue = "false")
+  private boolean allowReplacingInputFiles;
+  
+  /**
    * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
    * directory. Use variables such as {@code basedir} to make it relative to the current directory.
    */
@@ -683,7 +692,7 @@ public class MinifyMojo extends AbstractMojo {
   private ProcessFilesTask createJSTask(ClosureConfig closureConfig,
       List<String> includes, List<String> excludes, String outputFilename)
       throws IOException {
-    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify, skipMode);
+    FileProcessConfig processConfig = new FileProcessConfig(lineSeparator, bufferSize, force, skipMerge, skipMinify, skipMode, allowReplacingInputFiles);
     FileSpecifier fileSpecifier = new FileSpecifier(baseSourceDir, baseTargetDir, sourceDir, targetDir, includes, excludes, outputFilename);
     MojoMetadata mojoMeta = new MojoMetaImpl(project, getLog(), encoding, buildContext);
     return new ProcessJSFilesTask(mojoMeta, processConfig, fileSpecifier, closureConfig);
@@ -968,6 +977,10 @@ public class MinifyMojo extends AbstractMojo {
   public String getTargetDir() {
     return targetDir;
   }
+  
+  public boolean isAllowReplacingInputFiles() {
+    return allowReplacingInputFiles;
+  }
 
   public boolean isClosureAngularPass() {
     return closureAngularPass;
@@ -1055,6 +1068,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public boolean isSkipRunOnIncremental() {
     return skipRunOnIncremental;
+  }
+  
+  public void setAllowReplacingInputFiles(boolean allowReplacingInputFiles) {
+    this.allowReplacingInputFiles = allowReplacingInputFiles;
   }
 
   public void setBaseSourceDir(File baseSourceDir) {
