@@ -67,6 +67,9 @@ public class MinifyMojo extends AbstractMojo {
    * prevent source files from being overwritten accidentally with a bad configuration. If you are certain you want to replace
    * the input files (such as when the input files themselves are temporary files that have been generated), set this option
    * to {@code true}. Defaults to {@code false}.
+   * <p>
+   * Note: When enabling this option, you might also want to set <code>skipMerge</code> to <code>true</code> and the
+   * <code>outputFilename</code> to <code>#{path}/#{basename}.#{extension}</code>.
    */
   @Parameter(property = "allowReplacingInputFiles", defaultValue = "false")
   private boolean allowReplacingInputFiles;

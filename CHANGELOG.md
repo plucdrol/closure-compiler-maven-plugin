@@ -5,6 +5,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 ## 2.19.0
 
 * Update to closure compiler version `v20201006`
+* Add new flag `allowReplacingInputFiles`, see issue #56
 
 ## 2.18.0
 
