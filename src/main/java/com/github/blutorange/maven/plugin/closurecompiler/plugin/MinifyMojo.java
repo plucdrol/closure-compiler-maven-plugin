@@ -464,6 +464,13 @@ public class MinifyMojo extends AbstractMojo {
   private boolean closureRewritePolyfills;
 
   /**
+   * Whether to enable support for dynamic import expressions.
+   * @since 2.20.0
+   */
+  // @Parameter(property = "closureAllowDynamicImport", defaultValue = "false")
+  // private boolean closureAllowDynamicImport;
+
+  /**
    * Name of the source map, if one is created. This is interpreted as a relative path to where the processed JavaScript
    * file is written to. By default, the extension {@code .map} is added to the minified file. Variables are specified
    * via <code>#{variableName}</code>. To insert a literal {@code #}, use {@code ##}. The following variables are
@@ -1041,6 +1048,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureRewritePolyfills;
   }
 
+  // public boolean isClosureAllowDynamicImport() {
+  //  return closureAllowDynamicImport;
+  // }
+
   public boolean isClosureStrictModeInput() {
     return closureStrictModeInput;
   }
@@ -1212,6 +1223,10 @@ public class MinifyMojo extends AbstractMojo {
   public void setClosureRenameVariablePrefix(String closureRenameVariablePrefix) {
     this.closureRenameVariablePrefix = closureRenameVariablePrefix;
   }
+
+  // public void setClosureAllowDynamicImport(boolean closureAllowDynamicImport) {
+  //  this.closureAllowDynamicImport = closureAllowDynamicImport;
+  // }
 
   public void setClosureRewritePolyfills(boolean closureRewritePolyfills) {
     this.closureRewritePolyfills = closureRewritePolyfills;

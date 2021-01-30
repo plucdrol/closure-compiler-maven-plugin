@@ -23,7 +23,7 @@ Eclipse m2e integration
       <plugin>
         <groupId>com.github.blutorange</groupId>
         <artifactId>closure-compiler-maven-plugin</artifactId>
-        <version>2.19.0</version>
+        <version>2.20.0</version>
         <configuration>
           <!-- ... -->
           <skipRunOnIncremental>true</skipRunOnIncremental>
@@ -76,7 +76,7 @@ Eclipse m2e integration
       <plugin>
         <groupId>com.github.blutorange</groupId>
         <artifactId>closure-compiler-maven-plugin</artifactId>
-        <version>2.19.0</version>
+        <version>2.20.0</version>
         <executions>
           <execution>
             <id>default-minify</id>
