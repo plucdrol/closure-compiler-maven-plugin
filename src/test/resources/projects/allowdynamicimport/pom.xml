@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.blutorange</groupId>
-    <artifactId>closure-compiler-maven-plugin-test-minimal</artifactId>
+    <artifactId>closure-compiler-maven-plugin-test-allow-dynamic-imports</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <parent>
@@ -32,44 +32,26 @@
                             <goal>minify</goal>
                         </goals>
                         <configuration>
-                            <closureRewritePolyfills>false</closureRewritePolyfills>
                             <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>polyfills-false.js</outputFilename>
-                            <includes>
-                                <include>map-set.js</include>
-                            </includes>
+                            <closureAllowDynamicImport>false</closureAllowDynamicImport>
+                            <sourceDir>test/false</sourceDir>
+                            <closureDependencyEntryPoints>file:dynamic-imports-true.js</closureDependencyEntryPoints>
+                            <outputFilename>dynamic-imports-false.js</outputFilename>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>polyfill-true</id>
+                        <id>dynamic-imports-true</id>
                         <phase>generate-resources</phase>
                         <goals>
                             <goal>minify</goal>
                         </goals>
                         <configuration>
-                            <closureRewritePolyfills>true</closureRewritePolyfills>
                             <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>polyfills-true.js</outputFilename>
-                            <includes>
-                                <include>map-set.js</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                    <!-- As they is nothing to be polyfilled, no polyfills 
-                        should be added event though rewritePolyfills is set to true -->
-                    <execution>
-                        <id>no-set-or-map</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>minify</goal>
-                        </goals>
-                        <configuration>
-                            <closureRewritePolyfills>true</closureRewritePolyfills>
-                            <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>no-map-set.js</outputFilename>
-                            <includes>
-                                <include>no-map-set.js</include>
-                            </includes>
+                            <closureAllowDynamicImport>true</closureAllowDynamicImport>
+                            <sourceDir>test/true</sourceDir>
+                            <closureDependencyEntryPoints>file:dynamic-imports-true.js</closureDependencyEntryPoints>
+                            <closureLanguageOut>ECMASCRIPT_2020</closureLanguageOut>
+                            <outputFilename>dynamic-imports-true.js</outputFilename>
                         </configuration>
                     </execution>
                 </executions>

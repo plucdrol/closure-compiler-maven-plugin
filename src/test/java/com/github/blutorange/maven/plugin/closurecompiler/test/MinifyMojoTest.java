@@ -38,215 +38,32 @@ import org.junit.Test;
 
 public class MinifyMojoTest {
 
+  protected interface Action {
+    void run() throws Throwable;
+  }
+
+  private static class MavenResult {
+    final String errString;
+    final String outString;
+
+    public MavenResult(String outString, String errString) {
+      this.outString = outString;
+      this.errString = errString;
+    }
+
+    public String getErrString() {
+      return errString;
+    }
+
+    public String getOutString() {
+      return outString;
+    }
+  }
+
   private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
 
   @Rule
   public TestResources testResources = new TestResources("src/test/resources/projects", "target/test-projects");
-
-  @Before
-  public void setUp() throws Exception {}
-
-  @After
-  public void tearDown() throws Exception {}
-
-  @Test
-  public void testMinimal() throws Exception {
-    runMinifyAndAssertDirContent("minimal");
-  }
-
-  @Test
-  public void testCompilationLevel() throws Exception {
-    runMinifyAndAssertDirContent("compilationlevel");
-  }
-
-  @Test
-  public void testDefine() throws Exception {
-    runMinifyAndAssertDirContent("define");
-  }
-
-  @Test
-  public void testUseTypesForOptimization() throws Exception {
-    runMinifyAndAssertDirContent("usetypesforoptimization");
-  }
-
-  @Test
-  public void testExterns() throws Exception {
-    // No externs declared, variable cannot be found, so minification should fail
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("externs", Arrays.asList("without-externs")));
-
-    // Externs declared, variable can be found, so minification should succeed
-    runMinifyAndAssertDirContent("externs", Arrays.asList("createOlderFile", "with-externs"));
-  }
-
-  @Test
-  public void testOutputWrapper() throws Exception {
-    runMinifyAndAssertDirContent("outputwrapper");
-  }
-
-  @Test
-  public void testSkip() throws Exception {
-    runMinifyAndAssertDirContent("skip");
-  }
-
-  @Test
-  public void testSkipAll() throws Exception {
-    runMinifyAndAssertDirContent("skipall");
-  }
-
-  @Test
-  public void testNodeModules() throws Exception {
-    runMinifyAndAssertDirContent("nodemodules");
-  }
-
-  @Test
-  public void testOutputFilename() throws Exception {
-    runMinifyAndAssertDirContent("outputfilename");
-  }
-
-  @Test
-  public void testSourceMap() throws Exception {
-    runMinifyAndAssertDirContent("sourcemap");
-  }
-
-  @Test
-  public void testSubdirs() throws Exception {
-    runMinifyAndAssertDirContent("subdirs");
-  }
-
-  @Test
-  public void testSkipSome() throws Exception {
-    runMinifyAndAssertDirContent("skipsome");
-  }
-
-  @Test
-  public void testOverwriteInputFilesDisabled() throws Exception {
-    MavenResult result = runMinify("overwriteInputFilesDisabled");
-    assertTrue(result.getErrString().contains("The source file [fileC.js] has the same name as the output file [fileC.js]"));
-  }
-
-  @Test
-  public void testOverwriteInputFilesEnabled() throws Exception {
-    runMinifyAndAssertDirContent("overwriteInputFilesEnabled");
-  }
-
-  @Test
-  public void testPreferSingleQuotes() throws Exception {
-    runMinifyAndAssertDirContent("prefersinglequotes");
-  }
-
-  @Test
-  public void testAssumeFunctionWrapper() throws Exception {
-    runMinifyAndAssertDirContent("assumeFunctionWrapper");
-  }
-
-  @Test
-  public void testSkipIfNewer() throws Exception {
-    // Output file does not exists, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfNewer")));
-
-    // This create the newer output file, so the minification process should not run
-    runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer"));
-
-    // Now force is enabled, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer", "force")));
-  }
-
-  @Test
-  public void testSkipIfExists() throws Exception {
-    // Output file does not exists, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfExists")));
-
-    // This create the (older) output file, so the minification process should not run
-    runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists"));
-
-    // Now force is enabled, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists", "force")));
-  }
-
-  @Test
-  public void testTrustedStrings() throws Exception {
-    runMinifyAndAssertDirContent("trustedstrings");
-  }
-
-  @Test
-  public void testPrettyPrint() throws Exception {
-    runMinifyAndAssertDirContent("prettyprint");
-  }
-
-  @Test
-  public void testEmitUseStrict() throws Exception {
-    runMinifyAndAssertDirContent("emitusestrict");
-  }
-
-  @Test
-  public void testRewritePolyfills() throws Exception {
-    runMinifyAndAssertDirContent("rewritepolyfills");
-  }
-
-  @Test
-  public void testJQuery() throws Exception {
-    runMinifyAndAssertDirContent("jquery");
-  }
-
-  private <T extends Throwable> void expectError(Class<T> error, Action runnable) {
-    try {
-      runnable.run();
-    }
-    catch (Throwable e) {
-      if (error.isInstance(e)) { return; }
-      fail("Action threw an error of type " + e.getClass().getSimpleName() + ", but it is not of the expected type " + error.getSimpleName());
-    }
-    fail("Action did not throw the expected error type " + error.getSimpleName());
-  }
-
-  private void runMinifyAndAssertDirContent(String projectName) throws Exception {
-    runMinifyAndAssertDirContent(projectName, new HashSet<>());
-  }
-
-  private MavenResult runMinify(String projectName) throws Exception {
-    return runMinify(projectName, new HashSet<>());
-  }
-
-  private MavenResult runMinify(String projectName, Collection<String> profiles) throws Exception {
-    File parentdir = testResources.getBasedir("parent").getCanonicalFile();
-    File parentPom = new File(parentdir, "pom.xml");
-    File parentPomNew = new File(parentdir.getParentFile(), "pom.xml");
-    assertTrue(parentPom.exists());
-    FileUtils.copyFile(parentPom, parentPomNew);
-
-    File basedir = testResources.getBasedir(projectName).getCanonicalFile();
-    File pom = new File(basedir, "pom.xml");
-    assertTrue(pom.exists());
-
-    clean(basedir);
-    invokeMaven(parentPomNew, "install", Collections.emptySet());
-    return invokeMaven(pom, "package", profiles);
-  }
-
-  private void runMinifyAndAssertDirContent(String projectName, Collection<String> profiles) throws Exception {
-    File basedir = testResources.getBasedir(projectName).getCanonicalFile();
-    runMinify(projectName, profiles);
-    assertDirContent(basedir);
-  }
-
-  private MavenResult invokeMaven(File pom, String goal, Collection<String> profiles) throws IOException {
-    MavenCli cli = new MavenCli();
-    final List<String> args = new ArrayList<>();
-    args.add("clean");
-    args.add(goal);
-    args.add("-DskipTests");
-    profiles.stream().flatMap(profile -> Stream.of("-P", profile)).forEach(args::add);
-    System.setProperty("maven.multiModuleProjectDirectory", pom.getParent());
-    LOG.info("Invoking maven: " + StringUtils.join(args, " "));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    ByteArrayOutputStream err = new ByteArrayOutputStream();
-    PrintStream outStream = new ChainedPrintStream(new PrintStream(out), System.out);
-    PrintStream errStream = new ChainedPrintStream(new PrintStream(err), System.err);
-    cli.doMain(args.toArray(new String[0]), pom.getParent(), outStream, errStream);
-    String outString = out.toString("utf-8");
-    String errString = err.toString("utf-8");
-    return new MavenResult(outString, errString);
-  }
 
   private void assertDirContent(File basedir) {
     File expected = new File(basedir, "expected");
@@ -283,6 +100,14 @@ public class MinifyMojoTest {
     assertEquals("Expected to find messages " + search.stream().collect(Collectors.joining(", ")), search.size());
   }
 
+  private void clean(File basedir) throws IOException {
+    File target = new File(basedir, "target");
+    if (target.exists()) {
+      FileUtils.forceDelete(target);
+    }
+    assertFalse(target.exists());
+  }
+
   private void compareFiles(File expectedFile, File actualFile) throws IOException {
     List<String> expectedLines = FileUtils.readLines(expectedFile, StandardCharsets.UTF_8);
     List<String> actualLines = FileUtils.readLines(actualFile, StandardCharsets.UTF_8);
@@ -300,6 +125,36 @@ public class MinifyMojoTest {
     }
   }
 
+  private <T extends Throwable> void expectError(Class<T> error, Action runnable) {
+    try {
+      runnable.run();
+    }
+    catch (Throwable e) {
+      if (error.isInstance(e)) { return; }
+      fail("Action threw an error of type " + e.getClass().getSimpleName() + ", but it is not of the expected type " + error.getSimpleName());
+    }
+    fail("Action did not throw the expected error type " + error.getSimpleName());
+  }
+
+  private MavenResult invokeMaven(File pom, String goal, Collection<String> profiles) throws IOException {
+    MavenCli cli = new MavenCli();
+    final List<String> args = new ArrayList<>();
+    args.add("clean");
+    args.add(goal);
+    args.add("-DskipTests");
+    profiles.stream().flatMap(profile -> Stream.of("-P", profile)).forEach(args::add);
+    System.setProperty("maven.multiModuleProjectDirectory", pom.getParent());
+    LOG.info("Invoking maven: " + StringUtils.join(args, " "));
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    PrintStream outStream = new ChainedPrintStream(new PrintStream(out), System.out);
+    PrintStream errStream = new ChainedPrintStream(new PrintStream(err), System.err);
+    cli.doMain(args.toArray(new String[0]), pom.getParent(), outStream, errStream);
+    String outString = out.toString("utf-8");
+    String errString = err.toString("utf-8");
+    return new MavenResult(outString, errString);
+  }
+
   private Map<String, File> listFiles(File basedir) {
     return FileUtils.listFiles(basedir, null, true).stream().collect(Collectors.toMap(file -> {
       try {
@@ -311,33 +166,183 @@ public class MinifyMojoTest {
     }, Function.identity()));
   }
 
-  private void clean(File basedir) throws IOException {
-    File target = new File(basedir, "target");
-    if (target.exists()) {
-      FileUtils.forceDelete(target);
-    }
-    assertFalse(target.exists());
+  private MavenResult runMinify(String projectName) throws Exception {
+    return runMinify(projectName, new HashSet<>());
   }
 
-  protected interface Action {
-    void run() throws Throwable;
+  private MavenResult runMinify(String projectName, Collection<String> profiles) throws Exception {
+    File parentdir = testResources.getBasedir("parent").getCanonicalFile();
+    File parentPom = new File(parentdir, "pom.xml");
+    File parentPomNew = new File(parentdir.getParentFile(), "pom.xml");
+    assertTrue(parentPom.exists());
+    FileUtils.copyFile(parentPom, parentPomNew);
+
+    File basedir = testResources.getBasedir(projectName).getCanonicalFile();
+    File pom = new File(basedir, "pom.xml");
+    assertTrue(pom.exists());
+
+    clean(basedir);
+    invokeMaven(parentPomNew, "install", Collections.emptySet());
+    return invokeMaven(pom, "package", profiles);
   }
 
-  private static class MavenResult {
-    final String outString;
-    final String errString;
+  private void runMinifyAndAssertDirContent(String projectName) throws Exception {
+    runMinifyAndAssertDirContent(projectName, new HashSet<>());
+  }
 
-    public MavenResult(String outString, String errString) {
-      this.outString = outString;
-      this.errString = errString;
-    }
+  private void runMinifyAndAssertDirContent(String projectName, Collection<String> profiles) throws Exception {
+    File basedir = testResources.getBasedir(projectName).getCanonicalFile();
+    runMinify(projectName, profiles);
+    assertDirContent(basedir);
+  }
 
-    public String getOutString() {
-      return outString;
-    }
+  @Before
+  public void setUp() throws Exception {}
 
-    public String getErrString() {
-      return errString;
-    }
+  @After
+  public void tearDown() throws Exception {}
+
+  @Test
+  public void testAllowDynamicImport() throws Exception {
+    runMinifyAndAssertDirContent("allowdynamicimport");
+  }
+
+  @Test
+  public void testAssumeFunctionWrapper() throws Exception {
+    runMinifyAndAssertDirContent("assumeFunctionWrapper");
+  }
+
+  @Test
+  public void testCompilationLevel() throws Exception {
+    runMinifyAndAssertDirContent("compilationlevel");
+  }
+
+  @Test
+  public void testDefine() throws Exception {
+    runMinifyAndAssertDirContent("define");
+  }
+
+  @Test
+  public void testEmitUseStrict() throws Exception {
+    runMinifyAndAssertDirContent("emitusestrict");
+  }
+
+  @Test
+  public void testExterns() throws Exception {
+    // No externs declared, variable cannot be found, so minification should fail
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("externs", Arrays.asList("without-externs")));
+
+    // Externs declared, variable can be found, so minification should succeed
+    runMinifyAndAssertDirContent("externs", Arrays.asList("createOlderFile", "with-externs"));
+  }
+
+  @Test
+  public void testJQuery() throws Exception {
+    runMinifyAndAssertDirContent("jquery");
+  }
+
+  @Test
+  public void testMinimal() throws Exception {
+    runMinifyAndAssertDirContent("minimal");
+  }
+
+  @Test
+  public void testNodeModules() throws Exception {
+    runMinifyAndAssertDirContent("nodemodules");
+  }
+
+  @Test
+  public void testOutputFilename() throws Exception {
+    runMinifyAndAssertDirContent("outputfilename");
+  }
+
+  @Test
+  public void testOutputWrapper() throws Exception {
+    runMinifyAndAssertDirContent("outputwrapper");
+  }
+
+  @Test
+  public void testOverwriteInputFilesDisabled() throws Exception {
+    MavenResult result = runMinify("overwriteInputFilesDisabled");
+    assertTrue(result.getErrString().contains("The source file [fileC.js] has the same name as the output file [fileC.js]"));
+  }
+
+  @Test
+  public void testOverwriteInputFilesEnabled() throws Exception {
+    runMinifyAndAssertDirContent("overwriteInputFilesEnabled");
+  }
+
+  @Test
+  public void testPreferSingleQuotes() throws Exception {
+    runMinifyAndAssertDirContent("prefersinglequotes");
+  }
+
+  @Test
+  public void testPrettyPrint() throws Exception {
+    runMinifyAndAssertDirContent("prettyprint");
+  }
+
+  @Test
+  public void testRewritePolyfills() throws Exception {
+    runMinifyAndAssertDirContent("rewritepolyfills");
+  }
+
+  @Test
+  public void testSkip() throws Exception {
+    runMinifyAndAssertDirContent("skip");
+  }
+
+  @Test
+  public void testSkipAll() throws Exception {
+    runMinifyAndAssertDirContent("skipall");
+  }
+
+  @Test
+  public void testSkipIfExists() throws Exception {
+    // Output file does not exists, minification should run
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfExists")));
+
+    // This create the (older) output file, so the minification process should not run
+    runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists"));
+
+    // Now force is enabled, minification should run
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists", "force")));
+  }
+
+  @Test
+  public void testSkipIfNewer() throws Exception {
+    // Output file does not exists, minification should run
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfNewer")));
+
+    // This create the newer output file, so the minification process should not run
+    runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer"));
+
+    // Now force is enabled, minification should run
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer", "force")));
+  }
+
+  @Test
+  public void testSkipSome() throws Exception {
+    runMinifyAndAssertDirContent("skipsome");
+  }
+
+  @Test
+  public void testSourceMap() throws Exception {
+    runMinifyAndAssertDirContent("sourcemap");
+  }
+
+  @Test
+  public void testSubdirs() throws Exception {
+    runMinifyAndAssertDirContent("subdirs");
+  }
+
+  @Test
+  public void testTrustedStrings() throws Exception {
+    runMinifyAndAssertDirContent("trustedstrings");
+  }
+
+  @Test
+  public void testUseTypesForOptimization() throws Exception {
+    runMinifyAndAssertDirContent("usetypesforoptimization");
   }
 }

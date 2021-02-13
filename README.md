@@ -38,7 +38,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.20.0</version>
+      <version>2.21.0</version>
       <configuration>
         <!-- Base configuration for all executions (bundles) -->
         <baseSourceDir>${project.basedir}/src/main/resources</baseSourceDir>
@@ -153,7 +153,7 @@ For the example above, this means that the source file name would be `js/index.j
 
 * `mvn versions:display-dependency-updates`
 * Update version in `pom.xml` and `src/test/resources/projects/parent/pom.xml`.
-* Update version in `site/src/*` and `README.md`.
+* Update version in `README.md`.
 * Update CHANGELOG.md
 * Generate site, check links
 * Upload site to github (see above)

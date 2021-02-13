@@ -1,2 +1,8 @@
-'use strict';function makeUnique(a){return a}function uniqueByKey(a,b){return a}
+'use strict';
+function makeUnique(a) {
+  return a;
+}
+function uniqueByKey(a, b) {
+  return a;
+}
 ;

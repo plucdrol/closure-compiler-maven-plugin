@@ -64,10 +64,10 @@ public class ClosureConfig {
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {
     CompilerOptions options = new CompilerOptions();
 
+    options.setAllowDynamicImport(mojo.isClosureAllowDynamicImport());
     options.setAngularPass(mojo.isClosureAngularPass());
     options.setClosurePass(mojo.isClosureProcessCommonJsModules() ? true : mojo.isClosureProcessClosurePrimitives());
     options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
-    options.setDartPass(mojo.isClosureDartPass());
     options.setDefineReplacements(createDefineReplacements(mojo));
     options.setEmitUseStrict(mojo.isClosureEmitUseStrict());
     options.setEnvironment(mojo.getClosureEnvironment());
