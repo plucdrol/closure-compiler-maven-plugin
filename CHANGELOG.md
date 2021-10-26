@@ -6,7 +6,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 
 * Compiled against Java 11.
 * Update to closure compiler version `v20211006`
-* Add flag for allowing dynamic import expression (`closureDynamicImportAlias`)
+* Add flag for setting the dynamic import alias (`closureDynamicImportAlias`)
 
 ## 2.21.0
 
