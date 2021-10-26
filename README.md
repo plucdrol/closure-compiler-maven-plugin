@@ -7,7 +7,7 @@ them all to be lacking - by not having a recent version of closure compile, not 
 
 This plugin combines and minimizes JavaScript files. It produces a merged and a minified version.
 
-Requires at least Java 1.8.
+Requires at least Java 11.
 
 # Usage
 

@@ -4,6 +4,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 
 ## 2.22.0
 
+* Compiled against Java 11.
 * Update to closure compiler version `v20211006`
 * Add flag for allowing dynamic import expression (`closureDynamicImportAlias`)
 
