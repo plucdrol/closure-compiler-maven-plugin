@@ -2,6 +2,11 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.22.0
+
+* Update to closure compiler version `v20211006`
+* Add flag for allowing dynamic import expression (`closureDynamicImportAlias`)
+
 ## 2.21.0
 
 * Update to closure compiler version `v20210202`
