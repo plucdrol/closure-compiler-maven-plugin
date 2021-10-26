@@ -54,6 +54,22 @@
                             <outputFilename>dynamic-imports-true.js</outputFilename>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>dynamic-imports-extern</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>minify</goal>
+                        </goals>
+                        <configuration>
+                            <closurePrettyPrint>true</closurePrettyPrint>
+                            <closureAllowDynamicImport>true</closureAllowDynamicImport>
+                            <sourceDir>test/extern</sourceDir>
+                            <closureModuleResolution></closureModuleResolution>
+                            <closureDependencyEntryPoints>file:dynamic-imports-extern.js</closureDependencyEntryPoints>
+                            <closureLanguageOut>ECMASCRIPT_2020</closureLanguageOut>
+                            <outputFilename>dynamic-imports-extern.js</outputFilename>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

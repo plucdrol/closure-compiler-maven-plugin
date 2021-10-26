@@ -26,10 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.plugin.MojoFailureException;
-
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileFileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
@@ -46,7 +44,6 @@ import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.JSError;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
-
 import eu.maxschuster.dataurl.DataUrl;
 import eu.maxschuster.dataurl.DataUrlBuilder;
 import eu.maxschuster.dataurl.DataUrlEncoding;
@@ -111,7 +108,11 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
     List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
     for (File srcFile : srcFiles) {
       try (InputStream in = new FileInputStream(srcFile)) {
-        SourceFile input = SourceFile.fromInputStream(FileHelper.relativizePath(baseDirForSourceFiles, srcFile), in, mojoMeta.getEncoding());
+        SourceFile input = SourceFile.builder() //
+            .withPath(FileHelper.relativizePath(baseDirForSourceFiles, srcFile)) //
+            .withCharset(mojoMeta.getEncoding()) //
+            .withContent(in) //
+            .build();
         sourceFileList.add(input);
       }
     }

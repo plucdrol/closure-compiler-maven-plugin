@@ -1,6 +1,6 @@
-import { enableAwesomeFeature } from "./import.js";
-
 async function onMoreClicked(event) {
+    const module = "./awesome-feature.js";
+    const { enableAwesomeFeature } = await import(module);
     enableAwesomeFeature();
 }
 

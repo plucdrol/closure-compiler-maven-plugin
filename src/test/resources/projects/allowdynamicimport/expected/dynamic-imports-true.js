@@ -1,6 +1,6 @@
 'use strict';
 async function onMoreClicked(a) {
-  ({enableAwesomeFeature:a} = await import("./import.js"));
+  ({enableAwesomeFeature:a} = await Promise.resolve(module$import));
   a();
 }
 document.getElementById("loadMore").addEventListener(a => onMoreClicked(a));
