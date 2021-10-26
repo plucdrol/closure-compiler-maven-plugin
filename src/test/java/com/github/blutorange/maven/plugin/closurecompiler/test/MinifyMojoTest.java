@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -23,9 +22,6 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +31,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
 
 public class MinifyMojoTest {
 
@@ -220,6 +217,11 @@ public class MinifyMojoTest {
   @Test
   public void testDefine() throws Exception {
     runMinifyAndAssertDirContent("define");
+  }
+
+  @Test
+  public void testDynamicImportAlias() throws Exception {
+    runMinifyAndAssertDirContent("dynamicimportalias");
   }
 
   @Test

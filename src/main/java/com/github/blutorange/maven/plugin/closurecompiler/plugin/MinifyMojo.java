@@ -264,6 +264,16 @@ public class MinifyMojo extends AbstractMojo {
   private DependencyModeFlag closureDependencyMode;
 
   /**
+   * Instructs the compiler to replace dynamic import expressions with a function call using the
+   * specified name. This allows dynamic import expressions to be externally polyfilled when the
+   * output language level does not natively support them.
+   * 
+   * @since 2.22.0
+   */
+  @Parameter(property = "closureDynamicImportAlias", defaultValue = "")
+  private String closureDynamicImportAlias;
+
+  /**
    * Start output with <code>'use strict';</code>.
    * 
    * @since 2.1.0
@@ -975,6 +985,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureDependencyMode;
   }
 
+  public String getClosureDynamicImportAlias() {
+    return closureDynamicImportAlias;
+  }
+
   public CompilerOptions.Environment getClosureEnvironment() {
     return closureEnvironment;
   }
@@ -1050,11 +1064,11 @@ public class MinifyMojo extends AbstractMojo {
   public ArrayList<String> getExcludes() {
     return excludes;
   }
-
+  
   public ArrayList<String> getIncludes() {
     return includes;
   }
-
+  
   public String getLineSeparator() {
     return lineSeparator;
   }
@@ -1159,13 +1173,13 @@ public class MinifyMojo extends AbstractMojo {
     return closureStrictModeInput;
   }
 
-  // public boolean isClosureAllowDynamicImport() {
-  // return closureAllowDynamicImport;
-  // }
-
   public boolean isClosureTrustedStrings() {
     return closureTrustedStrings;
   }
+
+  // public boolean isClosureAllowDynamicImport() {
+  // return closureAllowDynamicImport;
+  // }
 
   public boolean isClosureUseTypesForOptimization() {
     return closureUseTypesForOptimization;
@@ -1253,6 +1267,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureDependencyMode(DependencyModeFlag closureDependencyMode) {
     this.closureDependencyMode = closureDependencyMode;
+  }
+
+  public void setClosureDynamicImportAlias(String closureDynamicImportAlias) {
+    this.closureDynamicImportAlias = closureDynamicImportAlias;
   }
 
   public void setClosureEmitUseStrict(boolean closureEmitUseStrict) {

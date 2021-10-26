@@ -23,7 +23,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.maven.plugin.MojoFailureException;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.ClosureSourceMapLocationMapping;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.FileSet;
 import com.github.blutorange.maven.plugin.closurecompiler.plugin.MinifyMojo;
@@ -42,12 +46,6 @@ import com.google.javascript.jscomp.SourceMap.Format;
 import com.google.javascript.jscomp.SourceMap.LocationMapping;
 import com.google.javascript.jscomp.SourceMap.PrefixLocationMapping;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.maven.plugin.MojoFailureException;
-
 /**
  * <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a> configuration.
  */
@@ -65,6 +63,9 @@ public class ClosureConfig {
     CompilerOptions options = new CompilerOptions();
 
     options.setAllowDynamicImport(mojo.isClosureAllowDynamicImport());
+    if (mojo.getClosureDynamicImportAlias() != null && !mojo.getClosureDynamicImportAlias().isEmpty()) {
+      options.setDynamicImportAlias(mojo.getClosureDynamicImportAlias());
+    }
     options.setAngularPass(mojo.isClosureAngularPass());
     options.setClosurePass(mojo.isClosureProcessCommonJsModules() ? true : mojo.isClosureProcessClosurePrimitives());
     options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
