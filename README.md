@@ -52,7 +52,9 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
             <encoding>UTF-8</encoding>
             <sourceDir>includes</sourceDir>
             <targetDir>includes</targetDir>
-            <includes>**/*.js</includes>
+            <includes>
+              <include>**/*.js</include>
+            </includes>
             <skipMerge>true</skipMerge>
             <closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
           </configuration>
