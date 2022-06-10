@@ -370,6 +370,36 @@ public class MinifyMojo extends AbstractMojo {
   private ArrayList<String> closureJsModuleRoots;
 
   /**
+   * Whether to isolate polyfills from the global scope.
+   * <p>
+   * Polyfill isolation is an output mode that may optionally be used alongside
+   * polyfill injection.
+   * <p>
+   * Polyfill isolation was motivated by two related issues.
+   * <ul>
+   * <li>sometimes, the existence of Closure polyfills on the page would cause
+   * other non-Closure-compiled code to break, because of conflicting
+   * assumptions in a polyfill implementation used by third-party code.<li>
+   * <li>sometimes, Closure-compiled code would break, because of existing
+   * polyfills on the page that violated some assumption Closure Compiler makes.
+   * </li>
+   * </ul>
+   * These issues were generally seen by projects compiling code for inclusion
+   * as a script on third-party websites, along with arbitrary JavaScript not
+   * under their control.
+   * <p>
+   * Polyfill isolation mode attempts to solve these problems by "isolating"
+   * Closure polyfills and code from other code & polyfills. It is not intended
+   * to protect against malicious actors; it is instead intended to solve cases
+   * where other polyfill implementations are either buggy or (more likely) make
+   * conflicting assumptions.
+   * 
+   * @since 2.23.0
+   */
+  @Parameter(property = "closureIsolatePolyfills", defaultValue = "false")
+  private boolean closureIsolatePolyfills;
+
+  /**
    * Refers to which version of ECMAScript to assume when checking for errors in your code.<br/>
    * Possible values are:
    * <ul>
@@ -388,14 +418,12 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT_2020}: Checks code assuming ECMAScript 2020 compliance.</li>
    * <li>{@code ECMASCRIPT_2021}: Checks code assuming ECMAScript 2021 compliance.</li>
    * <li>{@code ECMASCRIPT_NEXT}: Checks code assuming ECMAScript latest draft standard.</li>
-   * <li>{@code ECMASCRIPT_NEXT_IN}: Checks code assuming ECMAScript latest draft standard (latest
-   * features supported for input, but not output yet).</li>
    * <li>{@code STABLE} Use stable features</li>
    * </ul>
    * 
    * @since 1.7.2
    */
-  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_2021")
+  @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_NEXT")
   private LanguageMode closureLanguageIn;
 
   /**
@@ -412,6 +440,7 @@ public class MinifyMojo extends AbstractMojo {
    * <li>{@code ECMASCRIPT_2018}: Outputs code with ECMAScript 2018.</li>
    * <li>{@code ECMASCRIPT_2019}: Outputs code with ECMAScript 2019.</li>
    * <li>{@code STABLE}: Use stable features</li>
+   * <li>{@code NO_TRANSPILE}: Do not perform any transpilation.</li>
    * </ul>
    * 
    * @since 1.7.5
@@ -424,6 +453,10 @@ public class MinifyMojo extends AbstractMojo {
    * <ul>
    * <li><code>BROWSER</code>: Requires all module imports to begin with a '.' or '/' and have a
    * file extension. Mimics the behavior of MS Edge.</li>
+   * <li><code>BROWSER_WITH_TRANSFORMED_PREFIXES</code>: A limited superset of
+   * <code>BROWSER</code> that transforms some path prefixes. For example, one
+   * could configure this so that "@root/" is replaced with
+   * "/my/path/to/project/" within import paths.</li>
    * <li><code>NODE</code>: Uses the node module rules. Modules which do not begin with a "." or "/"
    * character are looked up from the appropriate node_modules folder. Includes the ability to
    * require directories and JSON files. Exact match, then ".js", then ".json" file extensions are
@@ -1149,6 +1182,10 @@ public class MinifyMojo extends AbstractMojo {
     return closureInjectLibraries;
   }
 
+  public boolean isClosureIsolatePolyfills() {
+    return closureIsolatePolyfills;
+  }
+
   public boolean isClosurePreferSingleQuotes() {
     return closurePreferSingleQuotes;
   }
@@ -1303,6 +1340,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureInjectLibraries(boolean closureInjectLibraries) {
     this.closureInjectLibraries = closureInjectLibraries;
+  }
+
+  public void setClosureIsolatePolyfills(boolean closureIsolatePolyfills) {
+    this.closureIsolatePolyfills = closureIsolatePolyfills;
   }
 
   public void setClosureJsModuleRoots(ArrayList<String> closureJsModuleRoots) {

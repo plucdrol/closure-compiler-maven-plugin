@@ -2,6 +2,12 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.23.0
+
+* Update to closure compiler `v20220601`
+* Set default input language of JSCompiler to `ES_NEXT`
+* Add flag for isolating polyfills (`closureIsolatePolyfills`)
+
 ## 2.22.0
 
 * Compiled against Java 11.

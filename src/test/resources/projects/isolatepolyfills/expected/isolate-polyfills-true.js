@@ -14,7 +14,7 @@ $jscomp.ASSUME_ES5 = !1;
 $jscomp.ASSUME_NO_NATIVE_MAP = !1;
 $jscomp.ASSUME_NO_NATIVE_SET = !1;
 $jscomp.SIMPLE_FROUND_POLYFILL = !1;
-$jscomp.ISOLATE_POLYFILLS = !1;
+$jscomp.ISOLATE_POLYFILLS = !0;
 $jscomp.FORCE_POLYFILL_PROMISE = !1;
 $jscomp.FORCE_POLYFILL_PROMISE_WHEN_NO_UNHANDLED_REJECTION = !1;
 $jscomp.defineProperty = $jscomp.ASSUME_ES5 || "function" == typeof Object.defineProperties ? Object.defineProperty : function(a, c, b) {
@@ -120,6 +120,6 @@ function makeUnique(a) {
 }
 function uniqueByKey(a, c) {
   a = new Map(a.map(b => [c(b), b]));
-  return Array.from(a.values());
+  return Array.from($jscomp$lookupPolyfilledValue(a, "values").call(a));
 }
 ;

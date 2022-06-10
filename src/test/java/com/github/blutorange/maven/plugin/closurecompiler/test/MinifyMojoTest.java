@@ -290,6 +290,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testIsolatePolyfills() throws Exception {
+    runMinifyAndAssertDirContent("isolatepolyfills");
+  }
+
+  @Test
   public void testSkip() throws Exception {
     runMinifyAndAssertDirContent("skip");
   }

@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.blutorange</groupId>
-    <artifactId>closure-compiler-maven-plugin-test-rewrite-polyfills</artifactId>
+    <artifactId>closure-compiler-maven-plugin-test-isolate-polyfills</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <parent>
@@ -32,9 +32,10 @@
                             <goal>minify</goal>
                         </goals>
                         <configuration>
-                            <closureRewritePolyfills>false</closureRewritePolyfills>
+                            <closureRewritePolyfills>true</closureRewritePolyfills>
+                            <closureIsolatePolyfills>false</closureIsolatePolyfills>
                             <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>polyfills-false.js</outputFilename>
+                            <outputFilename>isolate-polyfills-false.js</outputFilename>
                             <includes>
                                 <include>map-set.js</include>
                             </includes>
@@ -48,27 +49,11 @@
                         </goals>
                         <configuration>
                             <closureRewritePolyfills>true</closureRewritePolyfills>
+                            <closureIsolatePolyfills>true</closureIsolatePolyfills>
                             <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>polyfills-true.js</outputFilename>
+                            <outputFilename>isolate-polyfills-true.js</outputFilename>
                             <includes>
                                 <include>map-set.js</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                    <!-- As they is nothing to be polyfilled, no polyfills 
-                        should be added event though rewritePolyfills is set to true -->
-                    <execution>
-                        <id>no-set-or-map</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>minify</goal>
-                        </goals>
-                        <configuration>
-                            <closureRewritePolyfills>true</closureRewritePolyfills>
-                            <closurePrettyPrint>true</closurePrettyPrint>
-                            <outputFilename>no-map-set.js</outputFilename>
-                            <includes>
-                                <include>no-map-set.js</include>
                             </includes>
                         </configuration>
                     </execution>

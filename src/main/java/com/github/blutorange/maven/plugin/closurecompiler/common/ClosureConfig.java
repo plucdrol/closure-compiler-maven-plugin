@@ -82,6 +82,7 @@ public class ClosureConfig {
     options.setOutputCharset(Charset.forName(mojo.getEncoding()));
     options.setPreferLineBreakAtEndOfFile(true);
     options.setPreferSingleQuotes(mojo.isClosurePreferSingleQuotes());
+    options.setIsolatePolyfills(mojo.isClosureIsolatePolyfills());
     options.setPrettyPrint(mojo.isClosurePrettyPrint());
     options.setPreventLibraryInjection(!mojo.isClosureInjectLibraries());
     options.setProcessCommonJSModules(mojo.isClosureProcessCommonJsModules());
