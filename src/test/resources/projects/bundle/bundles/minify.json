@@ -1,0 +1,12 @@
+{
+	"bundles": [
+		{
+			"type": "js",
+			"name": "app-min.js",
+			"includes": [
+				"includes/model/vector.js",
+				"app.js"
+			]
+		}
+	]
+}

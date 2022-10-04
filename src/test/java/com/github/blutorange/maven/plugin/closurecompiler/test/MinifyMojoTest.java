@@ -210,6 +210,11 @@ public class MinifyMojoTest {
   }
 
   @Test
+  public void testBundle() throws Exception {
+    runMinifyAndAssertDirContent("bundle");
+  }
+
+  @Test
   public void testCompilationLevel() throws Exception {
     runMinifyAndAssertDirContent("compilationlevel");
   }

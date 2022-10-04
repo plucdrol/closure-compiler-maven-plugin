@@ -10,6 +10,7 @@
 	<packaging>pom</packaging>
 
 	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<closure.compiler.maven.plugin.version>2.24.0</closure.compiler.maven.plugin.version>
 	</properties>
 
