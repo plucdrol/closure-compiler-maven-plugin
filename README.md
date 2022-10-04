@@ -9,6 +9,11 @@ This plugin combines and minimizes JavaScript files. It produces a merged and a 
 
 Requires at least Java 11.
 
+# Notes regarding changes and updates
+
+* Closure compiler is pretty stable right now and rarely adds completely new features. It seems to concentrate on stability and bug fixes. I'll update closure compiler every few months. If you need an update immediately for a particular bug fix, feel free to open an issue.
+* There are many low-level options in closure compiler, most of which are not exposed by this plugin, as I do not have any use case. If you are missing an option, also feel free to open an issue.
+
 # Usage
 
 Configure your project's `pom.xml` to run the plugin during the project's build cycle.
@@ -38,7 +43,7 @@ Configure your project's `pom.xml` to run the plugin during the project's build 
     <plugin>
       <groupId>com.github.blutorange</groupId>
       <artifactId>closure-compiler-maven-plugin</artifactId>
-      <version>2.23.0</version>
+      <version>2.24.0</version>
       <configuration>
         <!-- Base configuration for all executions (bundles) -->
         <baseSourceDir>${project.basedir}/src/main/resources</baseSourceDir>
