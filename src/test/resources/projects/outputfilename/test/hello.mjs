@@ -3,4 +3,4 @@ function mainMjs() {
 		console.log("Hello, " + name + "!");
 	}
 	sayHelloMjs("blutorangeMjs");	
-}
+} // comment

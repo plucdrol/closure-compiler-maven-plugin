@@ -1,4 +1,5 @@
 /*
+
  * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin Original license terms
  * below. Changes were made to this file.
  */
@@ -80,7 +81,6 @@ public class ClosureConfig {
     options.setLanguageOut(mojo.getClosureLanguageOut());
     options.setModuleResolutionMode(mojo.getClosureModuleResolution());
     options.setOutputCharset(Charset.forName(mojo.getEncoding()));
-    options.setPreferLineBreakAtEndOfFile(true);
     options.setPreferSingleQuotes(mojo.isClosurePreferSingleQuotes());
     options.setIsolatePolyfills(mojo.isClosureIsolatePolyfills());
     options.setPrettyPrint(mojo.isClosurePrettyPrint());

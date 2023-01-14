@@ -3,4 +3,4 @@ function main3() {
 		console.log("Hello, " + name + "!");
 	}
 	sayHello3("blutorange3");
-}
+} // comment 3
