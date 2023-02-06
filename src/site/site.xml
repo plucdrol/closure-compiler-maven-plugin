@@ -37,7 +37,7 @@
             <leftColumnClass>span3</leftColumnClass>
             <bodyColumnClass>span9</bodyColumnClass>            
             <gitHub>
-                <projectId>bluorange/closure-compiler-maven-plugin</projectId>
+                <projectId>blutorange/closure-compiler-maven-plugin</projectId>
                 <ribbonOrientation>right</ribbonOrientation>
                 <ribbonColor>red</ribbonColor>
             </gitHub>
