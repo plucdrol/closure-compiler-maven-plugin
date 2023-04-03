@@ -1,9 +1,9 @@
 package com.github.blutorange.maven.plugin.closurecompiler.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -26,12 +25,10 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.cli.MavenCli;
-import org.apache.maven.plugin.testing.resources.TestResources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
+import io.takari.maven.testing.TestResources5;
 
 public class MinifyMojoTest {
 
@@ -58,43 +55,39 @@ public class MinifyMojoTest {
   }
 
   private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
-
-  @Rule
-  public TestResources testResources = new TestResources("src/test/resources/projects", "target/test-projects");
+  
+  @RegisterExtension
+  final TestResources5 testResources = new TestResources5("src/test/resources/projects", "target/test-projects");
 
   private void assertDirContent(File basedir) {
     File expected = new File(basedir, "expected");
     File actual = new File(new File(basedir, "target"), "test");
     Map<String, File> expectedFiles = expected.exists() ? listFiles(expected) : new HashMap<>();
     Map<String, File> actualFiles = actual.exists() ? listFiles(actual) : new HashMap<>();
-    LOG.info("Comparing actual files [\n" + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
-    LOG.info("to the expected files [\n" + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
-    assertTrue("There must be at least one expected file. Add a file 'nofiles' if you expect there to be no files", expectedFiles.size() > 0);
-    if (expectedFiles.size() == 1 && "nofiles".equals(expectedFiles.values().iterator().next().getName())) {
+    LOG.info("Comparing actual files [\n" + actualFiles.values().stream().map(File::getAbsolutePath)
+        .collect(Collectors.joining(",\n")) + "\n]");
+    LOG.info("to the expected files [\n" + expectedFiles.values().stream()
+        .map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
+    assertTrue(expectedFiles.size() > 0,
+        "There must be at least one expected file. Add a file 'nofiles' if you expect there to be no files");
+    if (expectedFiles.size() == 1
+        && "nofiles".equals(expectedFiles.values().iterator().next().getName())) {
       // Expect there to be no output files
       assertEquals(0, actualFiles.size());
-    }
-    else {
-      assertEquals("Number of expected files must match the number of produced files", expectedFiles.size(), actualFiles.size());
-      assertTrue("Expected file names must match the produced file names", CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()));
+    } else {
+      assertEquals(expectedFiles.size(), actualFiles.size(),
+          "Number of expected files must match the number of produced files");
+      assertTrue(CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()),
+          "Expected file names must match the produced file names");
       expectedFiles.forEach((key, expectedFile) -> {
         File actualFile = actualFiles.get(key);
         try {
           compareFiles(expectedFile, actualFile);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
           throw new RuntimeException(e);
         }
       });
     }
-  }
-
-  private void assertLogResultContains(List<String> lines, String... messages) {
-    Set<String> search = new HashSet<>(Arrays.asList(messages));
-    for (String line : lines) {
-      search = search.stream().filter(message -> line.indexOf(message) < 0).collect(Collectors.toSet());
-    }
-    assertEquals("Expected to find messages " + search.stream().collect(Collectors.joining(", ")), search.size());
   }
 
   private void clean(File basedir) throws IOException {
@@ -108,32 +101,41 @@ public class MinifyMojoTest {
   private void compareFiles(File expectedFile, File actualFile) throws IOException {
     List<String> expectedLines = FileUtils.readLines(expectedFile, StandardCharsets.UTF_8);
     List<String> actualLines = FileUtils.readLines(actualFile, StandardCharsets.UTF_8);
-    assertTrue("File with expected content does not exist: '" + actualFile.getAbsolutePath() + "'", expectedFile.exists());
-    assertTrue("File with produced content does not exist: '" + actualFile.getAbsolutePath() + "'", actualFile.exists());
+    assertTrue(expectedFile.exists(),
+        "File with expected content does not exist: '" + actualFile.getAbsolutePath() + "'");
+    assertTrue(actualFile.exists(),
+        "File with produced content does not exist: '" + actualFile.getAbsolutePath() + "'");
     // Ignore empty lines
     expectedLines.removeIf(StringUtils::isBlank);
     actualLines.removeIf(StringUtils::isBlank);
     // Check file contents
-    assertTrue("Expected file must contain at least one non-empty line: '" + actualFile.getAbsolutePath() + "'", expectedLines.size() > 0);
-    assertEquals("Number of non-empty lines in expected file must match the generated number of lines: '" + actualFile.getAbsolutePath() + "'",
-        expectedLines.size(), actualLines.size());
+    assertTrue(expectedLines.size() > 0, "Expected file must contain at least one non-empty line: '"
+        + actualFile.getAbsolutePath() + "'");
+    assertEquals(expectedLines.size(), actualLines.size(),
+        "Number of non-empty lines in expected file must match the generated number of lines: '"
+            + actualFile.getAbsolutePath() + "'");
     for (int i = 0, j = expectedLines.size(); i < j; ++i) {
-      assertEquals("Actual content of file '" + actualFile.getAbsolutePath() + "' differs from the expected content", expectedLines.get(i).trim(), actualLines.get(i).trim());
+      assertEquals(expectedLines.get(i).trim(), actualLines.get(i).trim(),
+          "Actual content of file '" + actualFile.getAbsolutePath()
+              + "' differs from the expected content");
     }
   }
 
   private <T extends Throwable> void expectError(Class<T> error, Action runnable) {
     try {
       runnable.run();
-    }
-    catch (Throwable e) {
-      if (error.isInstance(e)) { return; }
-      fail("Action threw an error of type " + e.getClass().getSimpleName() + ", but it is not of the expected type " + error.getSimpleName());
+    } catch (Throwable e) {
+      if (error.isInstance(e)) {
+        return;
+      }
+      fail("Action threw an error of type " + e.getClass().getSimpleName()
+          + ", but it is not of the expected type " + error.getSimpleName());
     }
     fail("Action did not throw the expected error type " + error.getSimpleName());
   }
 
-  private MavenResult invokeMaven(File pom, String goal, Collection<String> profiles) throws IOException {
+  private MavenResult invokeMaven(File pom, String goal, Collection<String> profiles)
+      throws IOException {
     MavenCli cli = new MavenCli();
     final List<String> args = new ArrayList<>();
     args.add("clean");
@@ -156,8 +158,7 @@ public class MinifyMojoTest {
     return FileUtils.listFiles(basedir, null, true).stream().collect(Collectors.toMap(file -> {
       try {
         return FileHelper.relativizePath(basedir, file);
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }, Function.identity()));
@@ -187,17 +188,12 @@ public class MinifyMojoTest {
     runMinifyAndAssertDirContent(projectName, new HashSet<>());
   }
 
-  private void runMinifyAndAssertDirContent(String projectName, Collection<String> profiles) throws Exception {
+  private void runMinifyAndAssertDirContent(String projectName, Collection<String> profiles)
+      throws Exception {
     File basedir = testResources.getBasedir(projectName).getCanonicalFile();
     runMinify(projectName, profiles);
     assertDirContent(basedir);
   }
-
-  @Before
-  public void setUp() throws Exception {}
-
-  @After
-  public void tearDown() throws Exception {}
 
   @Test
   public void testAllowDynamicImport() throws Exception {
@@ -237,7 +233,8 @@ public class MinifyMojoTest {
   @Test
   public void testExterns() throws Exception {
     // No externs declared, variable cannot be found, so minification should fail
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("externs", Arrays.asList("without-externs")));
+    expectError(AssertionError.class,
+        () -> runMinifyAndAssertDirContent("externs", Arrays.asList("without-externs")));
 
     // Externs declared, variable can be found, so minification should succeed
     runMinifyAndAssertDirContent("externs", Arrays.asList("createOlderFile", "with-externs"));
@@ -271,7 +268,8 @@ public class MinifyMojoTest {
   @Test
   public void testOverwriteInputFilesDisabled() throws Exception {
     MavenResult result = runMinify("overwriteInputFilesDisabled");
-    assertTrue(result.getErrString().contains("The source file [fileC.js] has the same name as the output file [fileC.js]"));
+    assertTrue(result.getErrString()
+        .contains("The source file [fileC.js] has the same name as the output file [fileC.js]"));
   }
 
   @Test
@@ -312,25 +310,29 @@ public class MinifyMojoTest {
   @Test
   public void testSkipIfExists() throws Exception {
     // Output file does not exists, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfExists")));
+    expectError(AssertionError.class,
+        () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfExists")));
 
     // This create the (older) output file, so the minification process should not run
     runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists"));
 
     // Now force is enabled, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists", "force")));
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif",
+        Arrays.asList("createOlderFile", "skipIfExists", "force")));
   }
 
   @Test
   public void testSkipIfNewer() throws Exception {
     // Output file does not exists, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfNewer")));
+    expectError(AssertionError.class,
+        () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfNewer")));
 
     // This create the newer output file, so the minification process should not run
     runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer"));
 
     // Now force is enabled, minification should run
-    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer", "force")));
+    expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif",
+        Arrays.asList("createNewerFile", "skipIfNewer", "force")));
   }
 
   @Test
