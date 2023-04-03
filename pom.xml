@@ -108,6 +108,7 @@
 		<maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
 		<nexus-staging.version>1.6.13</nexus-staging.version>
 		<plexus-build-api.version>0.0.7</plexus-build-api.version>
+		<maven-plugin-report-plugin.version>3.8.1</maven-plugin-report-plugin.version>
 		<site-maven-plugin.version>0.12</site-maven-plugin.version>
 
 		<!-- Testing -->
@@ -137,13 +138,6 @@
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-compat</artifactId>
-			<version>${maven.version}</version>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.maven</groupId>
-			<artifactId>maven-core</artifactId>
 			<version>${maven.version}</version>
 			<scope>test</scope>
 		</dependency>
@@ -279,12 +273,21 @@
 				<version>${maven-plugin-plugin.version}</version>
 				<executions>
 					<execution>
-						<id>mojo-descriptor</id>
+						<?m2e ignore?>
+						<id>default-descriptor</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>descriptor</goal>
 						</goals>
 					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-plugin-report-plugin</artifactId>
+				<version>${maven-plugin-report-plugin.version}</version>
+				<executions>
 					<execution>
 						<id>mojo-report</id>
 						<goals>
@@ -293,6 +296,7 @@
 					</execution>
 				</executions>
 			</plugin>
+
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -314,29 +318,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-project-info-reports-plugin</artifactId>
 				<version>${maven-project-info-reports-plugin.version}</version>
-				<configuration>
-					<version>${project.version}</version>
-					<reportSets>
-						<reportSet>
-							<reports>
-								<report>cim</report>
-								<report>dependencies</report>
-								<report>dependency-convergence</report>
-								<report>dependency-info</report>
-								<report>dependency-management</report>
-								<report>issue-tracking</report>
-								<report>license</report>
-								<report>plugin-management</report>
-								<report>plugins</report>
-								<report>project-team</report>
-								<report>scm</report>
-								<report>summary</report>
-							</reports>
-						</reportSet>
-					</reportSets>
-				</configuration>
 			</plugin>
-
 
 			<!-- Release the deployment to the central repository -->
 			<plugin>
@@ -355,6 +337,9 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-site-plugin</artifactId>
 				<version>${maven-site-plugin.version}</version>
+				<configuration>
+					<locales>en</locales>
+				</configuration>
 			</plugin>
 
 			<!-- Generate a new version of the Maven site -->
@@ -366,7 +351,6 @@
 					<message>Creating site for ${project.version}</message>
 					<dryRun>true</dryRun>
 					<noJekyll>true</noJekyll>
-					<locales>en</locales>
 				</configuration>
 				<executions>
 					<execution>
@@ -378,37 +362,34 @@
 				</executions>
 			</plugin>
 		</plugins>
-		<pluginManagement>
-			<plugins>
-				<!--This plugin's configuration is used to store Eclipse 
-                    m2e settings only. It has no influence on the Maven build itself. -->
-				<plugin>
-					<groupId>org.eclipse.m2e</groupId>
-					<artifactId>lifecycle-mapping</artifactId>
-					<version>1.0.0</version>
-					<configuration>
-						<lifecycleMappingMetadata>
-							<pluginExecutions>
-								<pluginExecution>
-									<pluginExecutionFilter>
-										<groupId>org.apache.maven.plugins</groupId>
-										<artifactId>maven-plugin-plugin</artifactId>
-										<versionRange>[3.5.2,)</versionRange>
-										<goals>
-											<goal>descriptor</goal>
-										</goals>
-									</pluginExecutionFilter>
-									<action>
-										<ignore />
-									</action>
-								</pluginExecution>
-							</pluginExecutions>
-						</lifecycleMappingMetadata>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 	</build>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-project-info-reports-plugin</artifactId>
+				<version>${maven-project-info-reports-plugin.version}</version>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>dependencies</report>
+							<report>dependency-convergence</report>
+							<report>dependency-info</report>
+							<report>dependency-management</report>
+							<report>issue-management</report>
+							<report>licenses</report>
+							<report>plugin-management</report>
+							<report>plugins</report>
+							<report>team</report>
+							<report>scm</report>
+							<report>summary</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+		</plugins>
+	</reporting>
 
 	<profiles>
 		<profile>
