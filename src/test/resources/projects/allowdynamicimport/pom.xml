@@ -35,7 +35,7 @@
                             <closurePrettyPrint>true</closurePrettyPrint>
                             <closureAllowDynamicImport>false</closureAllowDynamicImport>
                             <sourceDir>test/false</sourceDir>
-                            <closureDependencyEntryPoints>file:dynamic-imports-true.js</closureDependencyEntryPoints>
+                            <closureDependencyEntryPoints>file:dynamic-imports-false.js</closureDependencyEntryPoints>
                             <outputFilename>dynamic-imports-false.js</outputFilename>
                         </configuration>
                     </execution>
