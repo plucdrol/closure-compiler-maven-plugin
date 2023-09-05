@@ -65,6 +65,7 @@
                             <closureAllowDynamicImport>true</closureAllowDynamicImport>
                             <sourceDir>test/extern</sourceDir>
                             <closureModuleResolution></closureModuleResolution>
+                            <closureChunkOutputType>ES_MODULES</closureChunkOutputType>
                             <closureDependencyEntryPoints>file:dynamic-imports-extern.js</closureDependencyEntryPoints>
                             <closureLanguageOut>ECMASCRIPT_2020</closureLanguageOut>
                             <outputFilename>dynamic-imports-extern.js</outputFilename>

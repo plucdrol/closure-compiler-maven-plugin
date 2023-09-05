@@ -69,6 +69,7 @@ public class ClosureConfig {
     }
     options.setAngularPass(mojo.isClosureAngularPass());
     options.setClosurePass(mojo.isClosureProcessCommonJsModules() ? true : mojo.isClosureProcessClosurePrimitives());
+    options.setChunkOutputType(mojo.getClosureChunkOutputType());
     options.setColorizeErrorOutput(mojo.isClosureColorizeErrorOutput());
     options.setDefineReplacements(createDefineReplacements(mojo));
     options.setEmitUseStrict(mojo.isClosureEmitUseStrict());

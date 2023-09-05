@@ -51,6 +51,7 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.SourceMapOutput
 import com.google.gson.Gson;
 import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.CompilerOptions.ChunkOutputType;
 import com.google.javascript.jscomp.CompilerOptions.LanguageMode;
 import com.google.javascript.jscomp.WarningLevel;
 import com.google.javascript.jscomp.deps.ModuleLoader.ResolutionMode;
@@ -141,6 +142,35 @@ public class MinifyMojo extends AbstractMojo {
    */
   @Parameter(property = "closureAssumeFunctionWrapper", defaultValue = "false")
   private boolean closureAssumeFunctionWrapper;
+  
+  	/**
+	 * Regardless of input type, the compiler will normalize all files and bundle
+	 * them together. By default, a single output file is produced. However, this
+	 * may not work for you if your application is really big. In that case, you may
+	 * want to have the compiler break your code up into multiple chunks that can be
+	 * loaded separately. You will design your application so that the code you
+	 * always need gets loaded in an initial chunk, probably from a &lt;script&gt;
+	 * tag, then that chunk will load others (which may load still others) as needed
+	 * in order to support the user's actions. (e.g. The user may request a new
+	 * display view, which requires you to load the code for showing that view.)
+	 * 
+	 * <ul>
+	 * <li>GLOBAL_NAMESPACE (Chunks as Scripts using a Global Namespace): This is
+	 * the default option and the compiler will produce standard scripts. This mode
+	 * is normally paired with the <code>closureOutputWrapper</code> flag for script
+	 * isolation and the <code>closureRenamePrefixNamespace</code> flag so that
+	 * symbols can be referenced across chunks.</li>
+	 * <li>ES_MODULES (Chunks as Ecmacript modules): The compiler will output es
+	 * modules and cross chunk references will utilize the <code>import</code> and
+	 * <code>export</code> statements. Since modules have built in isolation and
+	 * modern browsers know how to load them, this option is by far the easiest.
+	 * </li>
+	 * </ul>
+	 * 
+	 * @since 2.27.0
+	 */
+  @Parameter(property = "closureChunkOutputType", defaultValue = "GLOBAL_NAMESPACE")
+  private ChunkOutputType closureChunkOutputType;
 
   /**
    * Whether the error output from the closure compiler is colorized. Color codes may not be
@@ -1001,6 +1031,10 @@ public class MinifyMojo extends AbstractMojo {
   public String getBundleConfiguration() {
     return bundleConfiguration;
   }
+  
+  public ChunkOutputType getClosureChunkOutputType() {
+    return closureChunkOutputType;
+  }
 
   public CompilationLevel getClosureCompilationLevel() {
     return closureCompilationLevel;
@@ -1276,6 +1310,10 @@ public class MinifyMojo extends AbstractMojo {
 
   public void setClosureAssumeFunctionWrapper(boolean closureAssumeFunctionWrapper) {
     this.closureAssumeFunctionWrapper = closureAssumeFunctionWrapper;
+  }
+  
+  public void setClosureChunkOutputType(ChunkOutputType closureChunkOutputType) {
+    this.closureChunkOutputType = closureChunkOutputType;
   }
 
   public void setClosureColorizeErrorOutput(boolean closureColorizeErrorOutput) {

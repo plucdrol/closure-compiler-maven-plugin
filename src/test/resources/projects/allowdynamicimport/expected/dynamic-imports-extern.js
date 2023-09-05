@@ -4,4 +4,4 @@ async function onMoreClicked(a) {
   a();
 }
 document.getElementById("loadMore").addEventListener(a => onMoreClicked(a));
-
+export{};

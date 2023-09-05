@@ -6,6 +6,8 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 
 * Update to closure compiler `v20230802`.
 * Update dependencies
+* Add option `closureChunkOutputType`, see (the wiki for Chunk output for dynamic loading)[https://github.com/google/closure-compiler/wiki/Chunk-output-for-dynamic-loading]. For `closureAllowDynamicImport` to work, this needs to be
+  set to `ES_MODULES`.
 
 ## 2.26.0
 
