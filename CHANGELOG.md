@@ -2,6 +2,11 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.27.0
+
+* Update to closure compiler `v20230802`.
+* Update dependencies
+
 ## 2.26.0
 
 * Update to closure compiler `v20230228`.
