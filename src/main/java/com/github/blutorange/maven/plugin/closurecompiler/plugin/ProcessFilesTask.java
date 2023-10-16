@@ -164,7 +164,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
       }
       else if (!includesEmpty) {
         // 'files' list will be empty if source file paths or names added to the project's POM are invalid.
-        mojoMeta.getLog().error("No valid JavaScript source files found to process.");
+        mojoMeta.getLog().warn("No valid JavaScript source files found to process.");
       }
     }
 

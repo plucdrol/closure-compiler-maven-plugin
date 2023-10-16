@@ -72,6 +72,9 @@ public class FileHelper {
     if (CollectionUtils.isEmpty(includes)) {
       return new ArrayList<>(); 
     }
+    if (!baseDir.exists()) {
+      return new ArrayList<>(); 
+    }
     String[] excludesArray = excludes.toArray(new String[excludes.size()]);
 
     return IntStream.range(0, includes.size()) //

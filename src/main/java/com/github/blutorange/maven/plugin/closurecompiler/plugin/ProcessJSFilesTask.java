@@ -181,7 +181,6 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
 
   private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
     return this.sourceDir;
-    //return (closureConfig.isCreateSourceMapFile() ? sourceMapFile : minifiedFile).getParentFile();
   }
 
   private void checkForErrors(Compiler compiler, File baseDirForSourceFiles) {
