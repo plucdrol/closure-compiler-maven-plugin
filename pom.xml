@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
 	<artifactId>closure-compiler-maven-plugin</artifactId>
-	<version>2.27.0</version>
+	<version>2.28.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Closure Compiler Maven Plugin</name>
@@ -79,11 +79,11 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<github.global.server>github</github.global.server>
-		<maven.version>3.9.4</maven.version>
+		<maven.version>3.9.5</maven.version>
 
 		<!-- Dependencies -->
-		<closure.compiler.version>v20230802</closure.compiler.version>
-		<commons-io.version>2.13.0</commons-io.version>
+		<closure-compiler.version>v20230802</closure-compiler.version>
+		<commons-io.version>2.14.0</commons-io.version>
 		<commons-collections4.version>4.4</commons-collections4.version>
 		<commons-lang3.version>3.13.0</commons-lang3.version>
 		<commons-text.version>1.10.0</commons-text.version>
@@ -93,18 +93,17 @@
 		<!-- Plugins -->
 		<maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
 		<maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-		<maven-plugin-plugin.version>3.8.1</maven-plugin-plugin.version>
+		<maven-plugin-plugin.version>3.9.0</maven-plugin-plugin.version>
 		<maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-		<maven-javadoc-plugin.version>3.5.0</maven-javadoc-plugin.version>
-		<maven-release-plugin-version>3.0.1</maven-release-plugin-version>
+		<maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
 		<maven-site-plugin.version>3.12.1</maven-site-plugin.version>
 		<maven-jxr-plugin.version>2.1</maven-jxr-plugin.version>
-		<maven-plugin-api.version>3.9.4</maven-plugin-api.version>
+		<maven-plugin-api.version>3.9.5</maven-plugin-api.version>
 		<maven-plugin-annotations.version>3.9.0</maven-plugin-annotations.version>
 		<maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-		<maven-project-info-reports-plugin.version>3.4.2</maven-project-info-reports-plugin.version>
-		<maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
-		<maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
+		<maven-project-info-reports-plugin.version>3.4.5</maven-project-info-reports-plugin.version>
+		<maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
+		<maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
 		<nexus-staging.version>1.6.13</nexus-staging.version>
 		<plexus-build-api.version>0.0.7</plexus-build-api.version>
 		<maven-plugin-report-plugin.version>3.8.1</maven-plugin-report-plugin.version>
@@ -225,7 +224,7 @@
 		<dependency>
 			<groupId>com.google.javascript</groupId>
 			<artifactId>closure-compiler</artifactId>
-			<version>${closure.compiler.version}</version>
+			<version>${closure-compiler.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
