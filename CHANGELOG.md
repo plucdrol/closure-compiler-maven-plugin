@@ -2,6 +2,10 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.29.0
+
+* Update to closure compiler `v20231112`
+
 ## 2.28.0
 
 * Fixes #64 - do not fail when input directory does not exist and reduce log level to `warn` when no input files were found.

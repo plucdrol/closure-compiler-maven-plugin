@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.blutorange</groupId>
 	<artifactId>closure-compiler-maven-plugin</artifactId>
-	<version>2.29.0-SNAPSHOT</version>
+	<version>2.29.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Closure Compiler Maven Plugin</name>
@@ -79,14 +79,14 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<github.global.server>github</github.global.server>
-		<maven.version>3.9.5</maven.version>
+		<maven.version>3.9.6</maven.version>
 
 		<!-- Dependencies -->
-		<closure-compiler.version>v20230802</closure-compiler.version>
-		<commons-io.version>2.14.0</commons-io.version>
+		<closure-compiler.version>v20231112</closure-compiler.version>
+		<commons-io.version>2.15.1</commons-io.version>
 		<commons-collections4.version>4.4</commons-collections4.version>
-		<commons-lang3.version>3.13.0</commons-lang3.version>
-		<commons-text.version>1.10.0</commons-text.version>
+		<commons-lang3.version>3.14.0</commons-lang3.version>
+		<commons-text.version>1.11.0</commons-text.version>
 		<dataurl.version>2.0.0</dataurl.version>
 		<gson.version>2.10.1</gson.version>
 
@@ -99,7 +99,7 @@
 		<maven-site-plugin.version>3.12.1</maven-site-plugin.version>
 		<maven-jxr-plugin.version>2.1</maven-jxr-plugin.version>
 		<maven-plugin-api.version>3.9.5</maven-plugin-api.version>
-		<maven-plugin-annotations.version>3.9.0</maven-plugin-annotations.version>
+		<maven-plugin-annotations.version>3.11.0</maven-plugin-annotations.version>
 		<maven-source-plugin.version>3.3.0</maven-source-plugin.version>
 		<maven-project-info-reports-plugin.version>3.4.5</maven-project-info-reports-plugin.version>
 		<maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
@@ -110,9 +110,9 @@
 		<site-maven-plugin.version>0.12</site-maven-plugin.version>
 
 		<!-- Testing -->
-		<junit.version>5.10.0</junit.version>
+		<junit.version>5.10.2</junit.version>
 		<slf4j.version>2.0.9</slf4j.version>
-		<takari-plugin-testing.version>3.0.1</takari-plugin-testing.version>
+		<takari-plugin-testing.version>3.0.2</takari-plugin-testing.version>
 		<maven-embedder.version>3.9.4</maven-embedder.version>
 	</properties>
 
