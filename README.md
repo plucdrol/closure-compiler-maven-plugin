@@ -151,10 +151,10 @@ For the example above, this means that the source file name would be `js/index.j
 # Build site
 
 * Edit files in `/src/site`
-* `mvn clean plugin:report site`
+* `mvn clean report:report site`
     * You can check out the locally rendered rendered site in `target/site/index.html`.
 * To upload to github, add the profile `site`
-    * `mvn clean plugin:report site -P site`
+    * `mvn clean report:report site -P site`
 
 # Release
 
