@@ -47,6 +47,8 @@ import com.google.javascript.jscomp.SourceMap.Format;
 import com.google.javascript.jscomp.SourceMap.LocationMapping;
 import com.google.javascript.jscomp.SourceMap.PrefixLocationMapping;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
 /**
  * <a href="https://developers.google.com/closure/compiler/">Google Closure Compiler</a> configuration.
  */
@@ -57,7 +59,7 @@ public class ClosureConfig {
   private static final String FILE_PREFIX = "file:";
 
   private static List<? extends LocationMapping> createLocationMappings(ArrayList<ClosureSourceMapLocationMapping> mappings) {
-    return mappings.stream().map(e -> new PrefixLocationMapping(String.valueOf(e.getName()), String.valueOf(e.getValue()))).collect(Collectors.toList());
+    return mappings.stream().map(e -> new PrefixLocationMapping(defaultString(e.getName()), defaultString(e.getValue()))).collect(Collectors.toList());
   }
 
   private static CompilerOptions createCompilerOptions(MinifyMojo mojo) throws MojoFailureException {

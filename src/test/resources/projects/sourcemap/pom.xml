@@ -89,6 +89,24 @@
 							<outputFilename>location-mapping.js</outputFilename>
 						</configuration>
 					</execution>
+                                        <execution>
+                                                <id>location-mapping-empty</id>
+                                                <phase>generate-resources</phase>
+                                                <goals>
+                                                        <goal>minify</goal>
+                                                </goals>
+                                                <configuration>
+                                                        <closureSourceMapLocationMappings>
+                                                                <closureSourceMapLocationMapping>
+                                                                        <name></name>
+                                                                        <value>localhost://bazbar/</value>
+                                                                </closureSourceMapLocationMapping>
+                                                        </closureSourceMapLocationMappings>
+                                                        <closureSourceMapOutputType>reference</closureSourceMapOutputType>
+                                                        <sourceDir>test2/js</sourceDir>
+                                                        <outputFilename>location-mapping-empty.js</outputFilename>
+                                                </configuration>
+                                        </execution>
 					<execution>
 						<id>different-source-map-path</id>
 						<phase>generate-resources</phase>

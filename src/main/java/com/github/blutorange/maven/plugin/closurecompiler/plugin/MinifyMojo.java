@@ -585,7 +585,7 @@ public class MinifyMojo extends AbstractMojo {
    * Source map location mapping. This is a prefix mapping from the file system path to the web
    * server path. The source map contains a reference to the original source files; and this may be
    * different on the web server. The location of the source file is always relative to the given
-   * {@code baseDir}. This defines a list of replacements. For each source file, the first matching
+   * {@code sourceDir}. This defines a list of replacements. For each source file, the first matching
    * replacement is used. If the source file starts with the prefix as given by the name, it matches
    * and is replaced with the value. For example:
    * 
@@ -602,7 +602,8 @@ public class MinifyMojo extends AbstractMojo {
    * them with {@code /web/www/js/file1.js} and {@code /web/www/js/file2.js}. This is then path that
    * will be used in the source map to reference the original source file. If no location mappings
    * are specified, the path of the source files relative to the created source map is used instead.
-   * 
+   *
+   * If you set the name to an empty string, it matches all paths.
    * @since 2.5.0
    */
   @Parameter(property = "closureSourceMapLocationMappings")

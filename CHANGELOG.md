@@ -2,6 +2,10 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
+## 2.30.0
+
+* Support an empty prefix location mapping name, relates to #65. An empty name matches all paths.
+
 ## 2.29.0
 
 * Update to closure compiler `v20231112`

@@ -144,7 +144,7 @@ Then we get the two output files
 
 The source map `bundle.min.map.js` now references the source files as `../../src/webapp/js/index.js`. When your project directory structure resembles your directory structure on the server, then by default, every will just work. If the directory structure is diffrent, [closure compiler offers the option source_map_location_mapping](https://github.com/google/closure-compiler/wiki/Flags-and-Options). For this plugin, this is set with the option:
 
-* [closureSourceMapLocationMappings](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureSourceMapLocationMappings): When the file name of a source file contains the given prefix, it is replaced with the specified replacement. Here the file name is as it was passed to closure compiler, ie. **relative** to the `sourceDir`
+* [closureSourceMapLocationMappings](https://blutorange.github.io/closure-compiler-maven-plugin/minify-mojo.html#closureSourceMapLocationMappings): When the file name of a source file contains the given prefix, it is replaced with the specified replacement. Here the file name is as it was passed to closure compiler, i.e. **relative** to the `sourceDir`
 
 For the example above, this means that the source file name would be `js/index.js`. We could now set this option to replace `js/` with `https://example.com/sources/`. Now the source map contains a reference to the source file as `https://example.com/sources/index.js`.
 
