@@ -11,7 +11,7 @@
 		<groupId>com.github.blutorange</groupId>
 		<artifactId>closure-compiler-maven-plugin-test</artifactId>
 		<version>1.0-SNAPSHOT</version>
-		<relativePath>..</relativePath>
+		<relativePath>../parent/pom.xml</relativePath>
 	</parent>
 
 	<build>
