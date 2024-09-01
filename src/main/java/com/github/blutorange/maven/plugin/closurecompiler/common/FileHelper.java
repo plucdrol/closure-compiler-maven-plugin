@@ -28,14 +28,18 @@ public class FileHelper {
    * @return The path of the given {@code target}, relative to the specified {@code base} file.
    */
   public static String relativizePath(File base, File target) throws IOException {
-    final Path targetPath = Paths.get(target.getCanonicalPath());
-    if (base == null) {
-      return targetPath.toString();
+    try {
+      final var targetPath = Paths.get(target.getCanonicalPath());
+      if (base == null) {
+        return targetPath.toString();
+      } else {
+        final var basePath = base.getCanonicalFile().toPath();
+        final var relativePath = basePath.relativize(targetPath).toString();
+        return relativePath;
+      }
     }
-    else {
-      final Path basePath = base.getCanonicalFile().toPath();
-      final String relativePath = basePath.relativize(targetPath).toString();
-      return relativePath;
+    catch (final IOException e) {
+      throw new IOException("Failed to relativize path <" + target + "> against base directory <" + base +">");
     }
   }
 

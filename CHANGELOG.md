@@ -5,6 +5,7 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 ## 2.31.0
 
 * Update to closure compiler `v20240317`
+* Improve error message when path relativization fails #68
 
 ## 2.30.0
 
