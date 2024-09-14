@@ -15,26 +15,26 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.util.List;
 
-/**
- * Maps aggregations from an external JSON formatted config file defined in the option {@code bundleConfiguration}.
- */
+/** Maps aggregations from an external JSON formatted config file defined in the option {@code bundleConfiguration}. */
 public class AggregationConfiguration {
 
-  private List<Aggregation> bundles;
+    private List<Aggregation> bundles;
 
-  /**
-   * Gets the bundles.
-   * @return the bundles
-   */
-  public List<Aggregation> getBundles() {
-    return bundles;
-  }
+    /**
+     * Gets the bundles.
+     *
+     * @return the bundles
+     */
+    public List<Aggregation> getBundles() {
+        return bundles;
+    }
 
-  /**
-   * Sets the bundles.
-   * @param bundles the bundles to set
-   */
-  public void setBundles(List<Aggregation> bundles) {
-    this.bundles = bundles;
-  }
+    /**
+     * Sets the bundles.
+     *
+     * @param bundles the bundles to set
+     */
+    public void setBundles(List<Aggregation> bundles) {
+        this.bundles = bundles;
+    }
 }

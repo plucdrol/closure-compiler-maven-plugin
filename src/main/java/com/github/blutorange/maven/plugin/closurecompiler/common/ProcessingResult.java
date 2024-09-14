@@ -2,7 +2,7 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 public class ProcessingResult {
     private boolean wasSkipped;
-    
+
     public ProcessingResult() {}
 
     public ProcessingResult setWasSkipped(boolean wasSkipped) {
