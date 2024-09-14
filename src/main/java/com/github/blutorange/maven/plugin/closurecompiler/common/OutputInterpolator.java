@@ -1,10 +1,9 @@
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.UnaryOperator;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -22,10 +21,10 @@ import org.apache.commons.text.StringEscapeUtils;
  *
  * @author madgaksha
  */
-public class OutputInterpolator implements UnaryOperator<String> {
+public final class OutputInterpolator implements UnaryOperator<String> {
 
     private static final Pattern PATTERN = Pattern.compile("%output%|%output\\|jsstring%");
-    ;
+
     private static final String TYPE_OUTPUT = "%output%";
     private static final String TYPE_OUTPUT_JSSTRING = "%output|jsstring%";
 
@@ -35,13 +34,9 @@ public class OutputInterpolator implements UnaryOperator<String> {
     private final String pattern;
     private final List<Token> tokens;
 
-    private OutputInterpolator(String pattern, List<Token> tokens) {
+    private OutputInterpolator(String pattern) {
         this.pattern = pattern;
         this.tokens = parse(pattern);
-    }
-
-    public String getPattern() {
-        return pattern;
     }
 
     @Override
@@ -50,27 +45,30 @@ public class OutputInterpolator implements UnaryOperator<String> {
     }
 
     public static OutputInterpolator forIdentity() {
-        List<Token> tokens = Collections.singletonList(TOKEN_OUTPUT);
-        return new OutputInterpolator(TYPE_OUTPUT, tokens);
+        return new OutputInterpolator(TYPE_OUTPUT);
     }
 
     public static OutputInterpolator forPattern(String pattern) {
-        List<Token> tokens = parse(pattern);
-        return new OutputInterpolator(pattern, tokens);
+        return new OutputInterpolator(pattern);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("OutputInterpolator[%s]", pattern);
     }
 
     private static List<Token> parse(String pattern) {
-        List<Token> tokens = new ArrayList<>();
-        int pos = 0;
-        int outputCount = 0;
-        Matcher m = PATTERN.matcher(pattern);
+        final var tokens = new ArrayList<Token>();
+        var pos = 0;
+        var outputCount = 0;
+        final var m = PATTERN.matcher(pattern);
         while (m.find()) {
             // Add literal text before match
             if (pos < m.start()) {
                 tokens.add(new TokenLiteral(pattern.substring(pos, m.start())));
             }
             // Add matches token
-            String type = pattern.substring(m.start(), m.end());
+            final var type = pattern.substring(m.start(), m.end());
             if (type.equals(TYPE_OUTPUT)) {
                 outputCount += 1;
                 tokens.add(TOKEN_OUTPUT);
@@ -83,7 +81,7 @@ public class OutputInterpolator implements UnaryOperator<String> {
             pos = m.end();
         }
         if (pos < pattern.length()) {
-            tokens.add(new TokenLiteral(pattern.substring(pos, pattern.length())));
+            tokens.add(new TokenLiteral(pattern.substring(pos)));
         }
         if (outputCount > 1) {
             throw new IllegalArgumentException(
@@ -92,7 +90,7 @@ public class OutputInterpolator implements UnaryOperator<String> {
         return tokens;
     }
 
-    private static interface Token extends UnaryOperator<String> {
+    private interface Token extends UnaryOperator<String> {
         String toSource();
     }
 
@@ -110,22 +108,19 @@ public class OutputInterpolator implements UnaryOperator<String> {
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((text == null) ? 0 : text.hashCode());
-            return result;
+            return Objects.hashCode(text);
         }
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-            TokenLiteral other = (TokenLiteral) obj;
-            if (text == null) {
-                if (other.text != null) return false;
-            } else if (!text.equals(other.text)) return false;
-            return true;
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof TokenLiteral)) {
+                return false;
+            }
+            final var other = (TokenLiteral) obj;
+            return Objects.equals(text, other.text);
         }
 
         @Override
@@ -134,7 +129,7 @@ public class OutputInterpolator implements UnaryOperator<String> {
         }
     }
 
-    private static class TokenOutput implements Token {
+    private static final class TokenOutput implements Token {
         public TokenOutput() {}
 
         @Override
@@ -143,11 +138,13 @@ public class OutputInterpolator implements UnaryOperator<String> {
         }
 
         @Override
+        public int hashCode() {
+            return 0;
+        }
+
+        @Override
         public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-            return true;
+            return obj instanceof TokenOutput;
         }
 
         @Override
@@ -156,7 +153,7 @@ public class OutputInterpolator implements UnaryOperator<String> {
         }
     }
 
-    private static class TokenOutputJsstring implements Token {
+    private static final class TokenOutputJsstring implements Token {
         public TokenOutputJsstring() {}
 
         @Override
@@ -165,11 +162,13 @@ public class OutputInterpolator implements UnaryOperator<String> {
         }
 
         @Override
+        public int hashCode() {
+            return 0;
+        }
+
+        @Override
         public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-            return true;
+            return obj instanceof TokenOutputJsstring;
         }
 
         @Override
@@ -182,7 +181,7 @@ public class OutputInterpolator implements UnaryOperator<String> {
         if (tokens.isEmpty()) {
             return StringUtils.EMPTY;
         }
-        int index = -1;
+        var index = -1;
         for (int i = 0, j = tokens.size(); i < j; ++i) {
             if (TOKEN_OUTPUT.equals(tokens.get(i)) || TOKEN_OUTPUT_JSSTRING.equals(tokens.get(i))) {
                 index = i;
@@ -195,9 +194,8 @@ public class OutputInterpolator implements UnaryOperator<String> {
         if (index == 0) {
             return StringUtils.EMPTY;
         }
-        StringBuilder sb = new StringBuilder();
+        final var sb = new StringBuilder();
         tokens.stream().limit(index).map(Token::toSource).forEach(sb::append);
-        ;
         return sb.toString();
     }
 }

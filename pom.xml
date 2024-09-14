@@ -108,6 +108,7 @@
     <plexus-build-api.version>1.2.0</plexus-build-api.version>
     <plexus-classworlds.version>2.8.0</plexus-classworlds.version>
     <plexus-utils.version>4.0.0</plexus-utils.version>
+    <sisu-maven-plugin.version>0.3.5</sisu-maven-plugin.version>
     <site-maven-plugin.version>0.12</site-maven-plugin.version>
     <spotless.version>2.43.0</spotless.version>
 
@@ -505,7 +506,6 @@
         <version>${maven-plugin-plugin.version}</version>
         <executions>
           <execution>
-            <?m2e ignore?>
             <id>default-descriptor</id>
             <goals>
               <goal>descriptor</goal>
@@ -560,6 +560,20 @@
           <!-- see: https://stackoverflow.com/questions/53010200/maven-surefire-could-not-find-forkedbooter-class -->
           <argLine>-Xmx1024m -Xms1024m -Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.sisu</groupId>
+        <artifactId>sisu-maven-plugin</artifactId>
+        <version>${sisu-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>generate-index</id>
+            <goals>
+              <goal>main-index</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- Release the deployment to the central repository -->

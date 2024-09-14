@@ -5,6 +5,8 @@ See also the [closure compiler changelog](https://github.com/google/closure-comp
 ## 2.32.0 (unreleased)
 
 * #4
+* chore: Add spotless code formatter.
+* chore: Minor code cleanup.
 
 ## 2.31.0
 
@@ -315,7 +317,7 @@ to their locations on the file system (as in previous versions)
   > For many plugin parameters it is occasionally convenient to specify their values from the command line via system properties. In the past, this was limited to parameters of simple types like `String` or `Boolean`. The latest Maven release finally allows plugin users to configure collections or arrays from the command line via comma-separated strings. Take for example a plugin parameter like this:
   >
   > ```java
-  > /** @parameter expression="${includes}" */
+  > /** @Parameter(expression="${includes}") */
   > String[] includes;
   > ```
   >

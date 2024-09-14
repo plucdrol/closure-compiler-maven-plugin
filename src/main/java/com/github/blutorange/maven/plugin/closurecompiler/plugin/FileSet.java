@@ -6,7 +6,10 @@ import java.util.List;
 import org.apache.commons.collections4.ListUtils;
 
 public class FileSet {
+    @SuppressWarnings("unused")
     private List<String> includes;
+
+    @SuppressWarnings("unused")
     private List<String> excludes;
 
     public List<String> getIncludes() {
@@ -15,14 +18,6 @@ public class FileSet {
 
     public List<String> getExcludes() {
         return ListUtils.emptyIfNull(excludes);
-    }
-
-    public void setIncludes(List<String> includes) {
-        this.includes = includes;
-    }
-
-    public void setExcludes(List<String> excludes) {
-        this.excludes = excludes;
     }
 
     public List<File> getFiles(File baseDir) {

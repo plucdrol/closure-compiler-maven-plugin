@@ -33,7 +33,7 @@ import org.apache.maven.plugin.logging.Log;
  */
 public class SourceFilesEnumeration implements Enumeration<InputStream> {
 
-    private List<InputStreamSupplier> suppliers;
+    private final List<InputStreamSupplier> suppliers;
 
     private int current = 0;
 
@@ -48,7 +48,7 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
     public SourceFilesEnumeration(Log log, List<File> files, Charset charset, String lineSeparator) {
         this.suppliers = new ArrayList<>();
         for (int i = 0, j = files.size(); i < j; ++i) {
-            File file = files.get(i);
+            final var file = files.get(i);
             log.info("Processing source file [" + file.getName() + "].");
             log.debug("Full path is [" + file.getPath() + "].");
             this.suppliers.add(new FileInputStreamSupplier(file));
@@ -80,12 +80,12 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
         if (!hasMoreElements()) {
             throw new NoSuchElementException("No more files!");
         }
-        InputStreamSupplier nextElement = suppliers.get(current);
+        final var nextElement = suppliers.get(current);
         current += 1;
         return nextElement.get();
     }
 
-    private static interface InputStreamSupplier extends Supplier<InputStream> {}
+    private interface InputStreamSupplier extends Supplier<InputStream> {}
 
     /**
      * Supplies an input stream with the content of a newline separator.
@@ -121,13 +121,11 @@ public class SourceFilesEnumeration implements Enumeration<InputStream> {
 
         @Override
         public InputStream get() {
-            InputStream is;
             try {
-                is = new FileInputStream(file);
-            } catch (FileNotFoundException e) {
+                return new FileInputStream(file);
+            } catch (final FileNotFoundException e) {
                 throw new NoSuchElementException("The path [" + file.getPath() + "] cannot be found.");
             }
-            return is;
         }
     }
 }

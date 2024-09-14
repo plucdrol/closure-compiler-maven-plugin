@@ -30,8 +30,8 @@ public class FilenameInterpolator {
 
     public File interpolate(File inputFile, File inputBaseDir, File targetDirectory, Map<String, String> additionalData)
             throws IOException {
-        String inputFilename = inputFile.getName();
-        Map<String, String> data = new HashMap<>();
+        final var inputFilename = inputFile.getName();
+        final var data = new HashMap<String, String>();
         data.put("filename", inputFilename);
         data.put("extension", FilenameUtils.getExtension(inputFilename));
         data.put("basename", FilenameUtils.getBaseName(inputFilename));
@@ -39,9 +39,8 @@ public class FilenameInterpolator {
         if (additionalData != null) {
             data.putAll(additionalData);
         }
-        StringSubstitutor substitutor = new StringSubstitutor(data, prefix, suffix, escapeChar);
-        String interpolatedFilename = substitutor.replace(pattern);
-        File interpolatedFile = new File(targetDirectory, interpolatedFilename);
-        return interpolatedFile;
+        final var stringSubstitutor = new StringSubstitutor(data, prefix, suffix, escapeChar);
+        final var interpolatedFilename = stringSubstitutor.replace(pattern);
+        return new File(targetDirectory, interpolatedFilename);
     }
 }

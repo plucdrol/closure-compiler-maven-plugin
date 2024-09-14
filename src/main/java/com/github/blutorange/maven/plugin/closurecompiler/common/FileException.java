@@ -2,7 +2,6 @@ package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.util.ArrayList;
 
-@SuppressWarnings("serial")
 public class FileException extends RuntimeException {
     private final Iterable<FileMessage> fileErrors;
 

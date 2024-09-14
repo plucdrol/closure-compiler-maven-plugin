@@ -9,7 +9,7 @@ public enum LogLevel {
     none(5);
     private final int order;
 
-    private LogLevel(int order) {
+    LogLevel(int order) {
         this.order = order;
     }
 

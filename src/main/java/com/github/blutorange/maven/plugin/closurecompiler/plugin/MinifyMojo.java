@@ -1,10 +1,8 @@
 /*
  * Closure Compiler Maven Plugin https://github.com/blutorange/closure-compiler-maven-plugin
  * Original license terms below. Changes were made to this file.
- */
-
-/*
- * Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com
+ *
+ * <p>Minify Maven Plugin https://github.com/samaxes/minify-maven-plugin Copyright (c) 2009 samaxes.com
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in
@@ -42,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import javax.inject.Inject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
@@ -49,7 +48,6 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -57,7 +55,7 @@ import org.apache.maven.project.MavenProject;
 import org.sonatype.plexus.build.incremental.BuildContext;
 
 /** Goal for combining and/or minifying JavaScript files with closure compiler. */
-@Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES, threadSafe = false)
+@Mojo(name = "minify", defaultPhase = LifecyclePhase.PROCESS_RESOURCES)
 public class MinifyMojo extends AbstractMojo {
 
     /**
@@ -69,6 +67,7 @@ public class MinifyMojo extends AbstractMojo {
      * <p>Note: When enabling this option, you might also want to set <code>skipMerge</code> to <code>true</code> and
      * the <code>outputFilename</code> to <code>#{path}/#{basename}.#{extension}</code>.
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "allowReplacingInputFiles", defaultValue = "false")
     private boolean allowReplacingInputFiles;
 
@@ -76,6 +75,7 @@ public class MinifyMojo extends AbstractMojo {
      * Base directory for source files. This should be an absolute path; if not, it must be relative to the project base
      * directory. Use variables such as {@code basedir} to make it relative to the current directory.
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "baseSourceDir", defaultValue = "${basedir}/src/main/webapp")
     private File baseSourceDir;
 
@@ -83,15 +83,16 @@ public class MinifyMojo extends AbstractMojo {
      * Base directory for output files. This should be an absolute path; if not, it must be relative to the project base
      * directory. Use variables such as {@code project.build.directory} to make it relative to the current directory.
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "baseTargetDir", defaultValue = "${project.build.directory}/${project.build.finalName}")
     private File baseTargetDir;
 
     /** Size of the buffer used to read source files. */
+    @SuppressWarnings("unused")
     @Parameter(property = "bufferSize", defaultValue = "4096")
     private int bufferSize;
 
-    @Component
-    private BuildContext buildContext;
+    private final BuildContext buildContext;
 
     /**
      * Specify aggregations in an external JSON formatted config file. If not an absolute path, it must be relative to
@@ -99,7 +100,8 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.5
      */
-    @Parameter(property = "bundleConfiguration", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "bundleConfiguration")
     private String bundleConfiguration;
 
     /**
@@ -109,6 +111,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.21.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureAllowDynamicImport", defaultValue = "false")
     private boolean closureAllowDynamicImport;
 
@@ -117,6 +120,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.3
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureAngularPass", defaultValue = "false")
     private boolean closureAngularPass;
 
@@ -127,30 +131,32 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureAssumeFunctionWrapper", defaultValue = "false")
     private boolean closureAssumeFunctionWrapper;
 
     /**
      * Regardless of input type, the compiler will normalize all files and bundle them together. By default, a single
-     * output file is produced. However, this may not work for you if your application is really big. In that case, you
-     * may want to have the compiler break your code up into multiple chunks that can be loaded separately. You will
-     * design your application so that the code you always need gets loaded in an initial chunk, probably from a
-     * &lt;script&gt; tag, then that chunk will load others (which may load still others) as needed in order to support
-     * the user's actions. (e.g. The user may request a new display view, which requires you to load the code for
-     * showing that view.)
+     * output file is produced. However, this may not work for you if your application is big. In that case, you may
+     * want to have the compiler break your code up into multiple chunks that can be loaded separately. You will design
+     * your application so that the code you always need gets loaded in an initial chunk, probably from a &lt;script&gt;
+     * tag, then that chunk will load others (which may load still others) as needed in order to support the user's
+     * actions. (e.g. The user may request a new display view, which requires you to load the code for showing that
+     * view.)
      *
      * <ul>
      *   <li>GLOBAL_NAMESPACE (Chunks as Scripts using a Global Namespace): This is the default option and the compiler
      *       will produce standard scripts. This mode is normally paired with the <code>closureOutputWrapper</code> flag
      *       for script isolation and the <code>closureRenamePrefixNamespace</code> flag so that symbols can be
      *       referenced across chunks.
-     *   <li>ES_MODULES (Chunks as Ecmacript modules): The compiler will output es modules and cross chunk references
+     *   <li>ES_MODULES (Chunks as EcmaScript modules): The compiler will output es modules and cross chunk references
      *       will utilize the <code>import</code> and <code>export</code> statements. Since modules have built in
      *       isolation and modern browsers know how to load them, this option is by far the easiest.
      * </ul>
      *
      * @since 2.27.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureChunkOutputType", defaultValue = "GLOBAL_NAMESPACE")
     private ChunkOutputType closureChunkOutputType;
 
@@ -160,6 +166,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureColorizeErrorOutput", defaultValue = "true")
     private boolean closureColorizeErrorOutput;
 
@@ -175,12 +182,13 @@ public class MinifyMojo extends AbstractMojo {
      *       JavaScript. When using {@code ADVANCED_OPTIMIZATIONS} compilation you must perform extra steps to preserve
      *       references to external symbols. See <a href="/closure/compiler/docs/api-tutorial3">Advanced Compilation and
      *       Externs</a> for more information about {@code ADVANCED_OPTIMIZATIONS}.
-     *   <li>{@code BUNDLE}: Leaves all compiler options unchanged. For advanced usage if you want to seet the releavant
+     *   <li>{@code BUNDLE}: Leaves all compiler options unchanged. For advanced usage if you want to set the relevant
      *       options yourself.
      * </ul>
      *
      * @since 1.7.2
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureCompilationLevel", defaultValue = "SIMPLE_OPTIMIZATIONS")
     private CompilationLevel closureCompilationLevel;
 
@@ -189,6 +197,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureCreateSourceMap", defaultValue = "false")
     private boolean closureCreateSourceMap;
 
@@ -198,6 +207,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureDebug", defaultValue = "false")
     private boolean closureDebug;
 
@@ -264,6 +274,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureDependencyMode", defaultValue = "NONE")
     private DependencyModeFlag closureDependencyMode;
 
@@ -274,7 +285,8 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.22.0
      */
-    @Parameter(property = "closureDynamicImportAlias", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "closureDynamicImportAlias")
     private String closureDynamicImportAlias;
 
     /**
@@ -282,6 +294,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureEmitUseStrict", defaultValue = "true")
     private boolean closureEmitUseStrict;
 
@@ -291,12 +304,13 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.5
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureEnvironment", defaultValue = "BROWSER")
     private CompilerOptions.Environment closureEnvironment;
 
     /**
      * List of JavaScript files containing code that declares function names or other symbols. Use
-     * {@code closureExterns} to preserve symbols that are defined outside of the code you are compiling. The
+     * {@code closureExterns} to preserve symbols that are defined outside the code you are compiling. The
      * {@code closureExterns} parameter only has an effect if you are using a {@code CompilationLevel} of
      * {@code ADVANCED_OPTIMIZATIONS}.<br>
      * These file names are relative to {@link #baseSourceDir} directory.
@@ -322,6 +336,8 @@ public class MinifyMojo extends AbstractMojo {
     /**
      * Deprecated, use {@link #closureExternDeclarations} instead, it lets you specify includes and excludes.
      *
+     * @deprecated Deprecated, use {@link #closureExternDeclarations} instead, it lets you specify includes and
+     *     excludes.
      * @since 1.7.2
      */
     @Deprecated
@@ -329,7 +345,7 @@ public class MinifyMojo extends AbstractMojo {
     private ArrayList<String> closureExterns;
 
     /**
-     * A whitelist of tag names in JSDoc. Needed to support JSDoc extensions like ngdoc.
+     * A whitelist of tag names in JSDoc. Needed to support JSDoc extensions like <code>ngdoc</code>.
      *
      * @since 1.7.5
      */
@@ -353,6 +369,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureIncludeSourcesContent", defaultValue = "false")
     private boolean closureIncludeSourcesContent;
 
@@ -361,6 +378,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureInjectLibraries", defaultValue = "true")
     private boolean closureInjectLibraries;
 
@@ -369,7 +387,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.5.0
      */
-    @Parameter(property = "closureJsModuleRoots", defaultValue = "")
+    @Parameter(property = "closureJsModuleRoots")
     private ArrayList<String> closureJsModuleRoots;
 
     /**
@@ -396,6 +414,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.23.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureIsolatePolyfills", defaultValue = "false")
     private boolean closureIsolatePolyfills;
 
@@ -423,6 +442,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.2
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureLanguageIn", defaultValue = "ECMASCRIPT_NEXT")
     private LanguageMode closureLanguageIn;
 
@@ -446,6 +466,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.7.5
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureLanguageOut", defaultValue = "ECMASCRIPT_2015")
     private LanguageMode closureLanguageOut;
 
@@ -467,18 +488,20 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureModuleResolution", defaultValue = "BROWSER")
     private ResolutionMode closureModuleResolution;
 
     /**
      * If not an empty or blank string, interpolate output into this string at the place denoted by the marker token
-     * {@code %output%}. Use marker token {@code %output|jsstring%} to do js string escaping on the output.
+     * {@code %output%}. Use marker token {@code %output|jsstring%} to perform JavaScript string escaping on the output.
      *
      * <p>When using this options with a source map, the map is adjusted appropriately to match the code.
      *
      * @since 2.0.0
      */
-    @Parameter(property = "closureOutputWrapper", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "closureOutputWrapper")
     private String closureOutputWrapper;
 
     /**
@@ -487,6 +510,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closurePreferSingleQuotes", defaultValue = "false")
     private boolean closurePreferSingleQuotes;
 
@@ -495,6 +519,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closurePrettyPrint", defaultValue = "false")
     private boolean closurePrettyPrint;
 
@@ -504,6 +529,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureProcessClosurePrimitives", defaultValue = "true")
     private boolean closureProcessClosurePrimitives;
 
@@ -512,6 +538,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureProcessCommonJsModules", defaultValue = "false")
     private boolean closureProcessCommonJsModules;
 
@@ -520,7 +547,8 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
-    @Parameter(property = "closureRenamePrefixNamespace", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "closureRenamePrefixNamespace")
     private String closureRenamePrefixNamespace;
 
     /**
@@ -528,7 +556,8 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
-    @Parameter(property = "closureRenameVariablePrefix", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "closureRenameVariablePrefix")
     private String closureRenameVariablePrefix;
 
     /**
@@ -536,16 +565,9 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureRewritePolyfills", defaultValue = "true")
     private boolean closureRewritePolyfills;
-
-    /**
-     * Whether to enable support for dynamic import expressions.
-     *
-     * @since 2.20.0
-     */
-    // @Parameter(property = "closureAllowDynamicImport", defaultValue = "false")
-    // private boolean closureAllowDynamicImport;
 
     /**
      * Source map location mapping. This is a prefix mapping from the file system path to the web server path. The
@@ -589,6 +611,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureSourceMapName", defaultValue = "#{filename}.map")
     private String closureSourceMapName;
 
@@ -607,6 +630,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureSourceMapOutputType", defaultValue = "reference")
     private SourceMapOutputType closureSourceMapOutputType;
 
@@ -615,6 +639,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureStrictModeInput", defaultValue = "true")
     private boolean closureStrictModeInput;
 
@@ -624,6 +649,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureTrustedStrings", defaultValue = "true")
     private boolean closureTrustedStrings;
 
@@ -633,6 +659,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureUseTypesForOptimization", defaultValue = "false")
     private boolean closureUseTypesForOptimization;
 
@@ -642,6 +669,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.1.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "closureWarningLevel", defaultValue = "DEFAULT")
     private WarningLevel closureWarningLevel;
 
@@ -697,6 +725,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "force", defaultValue = "false")
     private boolean force;
 
@@ -715,7 +744,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
-    @Parameter(property = "lineSeparator", defaultValue = "")
+    @Parameter(property = "lineSeparator")
     private String lineSeparator;
 
     /**
@@ -723,7 +752,8 @@ public class MinifyMojo extends AbstractMojo {
      * Valid options are {@code all}, {@code debug}, {@code info}, {@code warn}, {@code error}, {@code none}. Leave
      * empty to use the default log level. Please note that you can only decrease, not increase, the log level.
      */
-    @Parameter(property = "logLevel", defaultValue = "")
+    @SuppressWarnings("unused")
+    @Parameter(property = "logLevel")
     private LogLevel logLevel;
 
     private Log logWrapper;
@@ -747,9 +777,11 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "outputFilename", defaultValue = "#{path}/#{basename}.min.#{extension}")
     private String outputFilename;
 
+    @SuppressWarnings("unused")
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
@@ -758,6 +790,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 2.7.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "skip", defaultValue = "false")
     private boolean skip;
 
@@ -766,6 +799,7 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.5.2
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "skipMerge", defaultValue = "false")
     private boolean skipMerge;
 
@@ -774,13 +808,14 @@ public class MinifyMojo extends AbstractMojo {
      *
      * @since 1.5.2
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "skipMinify", defaultValue = "false")
     private boolean skipMinify;
 
     /**
      * This options lets configure how this plugin checks whether it should skip an execution in case the target file
-     * exists already. Usually you do not want to spend unneccesary processing time on transpiling JavaScript files when
-     * the input files themeselves have not changed. Available options are:
+     * exists already. Usually you do not want to spend unnecessary processing time on transpiling JavaScript files when
+     * the input files themselves have not changed. Available options are:
      *
      * <ul>
      *   <li>NEWER - Skip execution if the the target file exists already and all input files are older. Whether a file
@@ -790,28 +825,38 @@ public class MinifyMojo extends AbstractMojo {
      * </ul>
      *
      * These options only apply when {@code force} is set to {@code false}. In case you never want to skip execution,
-     * set the the option {@code force} to {@code true}.
+     * set the option {@code force} to {@code true}.
      *
      * @since 2.9.0
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "skipMode", defaultValue = "NEWER")
     private SkipMode skipMode;
 
     /**
-     * When this plugin is executed as part of an m2e incremental build and this option is set to <code>true</code>,
-     * skip the execution of this plugin.
+     * Deprecated. For Eclipse with m2e, you can now use <code>&lt;?m2e ignore?&gt;</code> etc. on an execution tag to
+     * configure the m2e lifecycle.
+     *
+     * <p>When this plugin is executed as part of an incremental build (such as me2) and this option is set to <code>
+     * true</code>, skip the execution of this plugin.
      *
      * <p>For the m2e integration, this plugin is configured by default to run on incremental builds. When having a
      * project opened in Eclipse, this recreates the minified files every time a source file is changed.
      *
-     * <p>You can disable this behavior via the org.eclipse.m2e/lifefycle-mapping plugin. As this is rather verbose,
+     * <p>You can disable this behavior via the org.eclipse.m2e/lifecycle-mapping plugin. As this is rather verbose,
      * this option offers a convenient way of disabling incremental builds. Please note that tecnically this plugin is
      * still executed on every incremental build cycle, but exits immediately without doing any work.
+     *
+     * @deprecated For Eclipse with m2e, you can now use <code>&lt;?m2e ignore?&gt;</code> etc. on an execution tag to
+     *     configure the m2e lifecycle.
      */
+    @SuppressWarnings("unused")
     @Parameter(property = "skipRunOnIncremental", defaultValue = "false")
+    @Deprecated
     private boolean skipRunOnIncremental;
 
     /** JavaScript source directory. This is relative to the {@link #baseSourceDir}. */
+    @SuppressWarnings("unused")
     @Parameter(property = "sourceDir", defaultValue = "js")
     private String sourceDir;
 
@@ -823,6 +868,11 @@ public class MinifyMojo extends AbstractMojo {
      */
     @Parameter(property = "targetDir", defaultValue = "js")
     private String targetDir;
+
+    @Inject
+    public MinifyMojo(BuildContext buildContext) {
+        this.buildContext = buildContext;
+    }
 
     private ProcessFilesTask createJSTask(
             ClosureConfig closureConfig, List<String> includes, List<String> excludes, String outputFilename)
@@ -862,7 +912,7 @@ public class MinifyMojo extends AbstractMojo {
             return;
         }
 
-        if (getBuildContext().isIncremental() && skipRunOnIncremental) {
+        if (buildContext.isIncremental() && skipRunOnIncremental) {
             getLog().info("skipRunOnIncremental was to true, so skipping incremental build.");
             return;
         }
@@ -964,22 +1014,6 @@ public class MinifyMojo extends AbstractMojo {
         return baseSourceDir;
     }
 
-    public File getBaseTargetDir() {
-        return baseTargetDir;
-    }
-
-    public int getBufferSize() {
-        return bufferSize;
-    }
-
-    public BuildContext getBuildContext() {
-        return buildContext;
-    }
-
-    public String getBundleConfiguration() {
-        return bundleConfiguration;
-    }
-
     public ChunkOutputType getClosureChunkOutputType() {
         return closureChunkOutputType;
     }
@@ -1076,56 +1110,12 @@ public class MinifyMojo extends AbstractMojo {
         return encoding;
     }
 
-    public ArrayList<String> getExcludes() {
-        return excludes;
-    }
-
-    public ArrayList<String> getIncludes() {
-        return includes;
-    }
-
-    public String getLineSeparator() {
-        return lineSeparator;
-    }
-
     @Override
     public Log getLog() {
         if (logWrapper == null) {
             logWrapper = new LogWrapper(super.getLog(), logLevel);
         }
         return logWrapper;
-    }
-
-    public LogLevel getLogLevel() {
-        return logLevel;
-    }
-
-    public Log getLogWrapper() {
-        return logWrapper;
-    }
-
-    public String getOutputFilename() {
-        return outputFilename;
-    }
-
-    public MavenProject getProject() {
-        return project;
-    }
-
-    public SkipMode getSkipMode() {
-        return skipMode;
-    }
-
-    public String getSourceDir() {
-        return sourceDir;
-    }
-
-    public String getTargetDir() {
-        return targetDir;
-    }
-
-    public boolean isAllowReplacingInputFiles() {
-        return allowReplacingInputFiles;
     }
 
     public boolean isClosureAllowDynamicImport() {
@@ -1196,288 +1186,7 @@ public class MinifyMojo extends AbstractMojo {
         return closureTrustedStrings;
     }
 
-    // public boolean isClosureAllowDynamicImport() {
-    // return closureAllowDynamicImport;
-    // }
-
     public boolean isClosureUseTypesForOptimization() {
         return closureUseTypesForOptimization;
-    }
-
-    public boolean isForce() {
-        return force;
-    }
-
-    public boolean isSkip() {
-        return skip;
-    }
-
-    public boolean isSkipMerge() {
-        return skipMerge;
-    }
-
-    public boolean isSkipMinify() {
-        return skipMinify;
-    }
-
-    public boolean isSkipRunOnIncremental() {
-        return skipRunOnIncremental;
-    }
-
-    public void setAllowReplacingInputFiles(boolean allowReplacingInputFiles) {
-        this.allowReplacingInputFiles = allowReplacingInputFiles;
-    }
-
-    public void setBaseSourceDir(File baseSourceDir) {
-        this.baseSourceDir = baseSourceDir;
-    }
-
-    public void setBaseTargetDir(File baseTargetDir) {
-        this.baseTargetDir = baseTargetDir;
-    }
-
-    public void setBufferSize(int bufferSize) {
-        this.bufferSize = bufferSize;
-    }
-
-    public void setBuildContext(BuildContext buildContext) {
-        this.buildContext = buildContext;
-    }
-
-    public void setBundleConfiguration(String bundleConfiguration) {
-        this.bundleConfiguration = bundleConfiguration;
-    }
-
-    public void setClosureAllowDynamicImport(boolean closureAllowDynamicImport) {
-        this.closureAllowDynamicImport = closureAllowDynamicImport;
-    }
-
-    public void setClosureAngularPass(boolean closureAngularPass) {
-        this.closureAngularPass = closureAngularPass;
-    }
-
-    public void setClosureAssumeFunctionWrapper(boolean closureAssumeFunctionWrapper) {
-        this.closureAssumeFunctionWrapper = closureAssumeFunctionWrapper;
-    }
-
-    public void setClosureChunkOutputType(ChunkOutputType closureChunkOutputType) {
-        this.closureChunkOutputType = closureChunkOutputType;
-    }
-
-    public void setClosureColorizeErrorOutput(boolean closureColorizeErrorOutput) {
-        this.closureColorizeErrorOutput = closureColorizeErrorOutput;
-    }
-
-    public void setClosureCompilationLevel(CompilationLevel closureCompilationLevel) {
-        this.closureCompilationLevel = closureCompilationLevel;
-    }
-
-    public void setClosureCreateSourceMap(boolean closureCreateSourceMap) {
-        this.closureCreateSourceMap = closureCreateSourceMap;
-    }
-
-    public void setClosureDebug(boolean closureDebug) {
-        this.closureDebug = closureDebug;
-    }
-
-    public void setClosureDefineReplacements(HashMap<String, String> closureDefineReplacements) {
-        this.closureDefineReplacements = closureDefineReplacements;
-    }
-
-    public void setClosureDependencyEntryPoints(ArrayList<String> closureDependencyEntryPoints) {
-        this.closureDependencyEntryPoints = closureDependencyEntryPoints;
-    }
-
-    public void setClosureDependencyMode(DependencyModeFlag closureDependencyMode) {
-        this.closureDependencyMode = closureDependencyMode;
-    }
-
-    public void setClosureDynamicImportAlias(String closureDynamicImportAlias) {
-        this.closureDynamicImportAlias = closureDynamicImportAlias;
-    }
-
-    public void setClosureEmitUseStrict(boolean closureEmitUseStrict) {
-        this.closureEmitUseStrict = closureEmitUseStrict;
-    }
-
-    public void setClosureEnvironment(CompilerOptions.Environment closureEnvironment) {
-        this.closureEnvironment = closureEnvironment;
-    }
-
-    public void setClosureExternDeclarations(ArrayList<FileSet> closureExternDeclarations) {
-        this.closureExternDeclarations = closureExternDeclarations;
-    }
-
-    public void setClosureExterns(ArrayList<String> closureExterns) {
-        this.closureExterns = closureExterns;
-    }
-
-    public void setClosureExtraAnnotations(ArrayList<String> closureExtraAnnotations) {
-        this.closureExtraAnnotations = closureExtraAnnotations;
-    }
-
-    public void setClosureForceInjectLibs(ArrayList<String> closureForceInjectLibs) {
-        this.closureForceInjectLibs = closureForceInjectLibs;
-    }
-
-    public void setClosureIncludeSourcesContent(boolean closureIncludeSourcesContent) {
-        this.closureIncludeSourcesContent = closureIncludeSourcesContent;
-    }
-
-    public void setClosureInjectLibraries(boolean closureInjectLibraries) {
-        this.closureInjectLibraries = closureInjectLibraries;
-    }
-
-    public void setClosureIsolatePolyfills(boolean closureIsolatePolyfills) {
-        this.closureIsolatePolyfills = closureIsolatePolyfills;
-    }
-
-    public void setClosureJsModuleRoots(ArrayList<String> closureJsModuleRoots) {
-        this.closureJsModuleRoots = closureJsModuleRoots;
-    }
-
-    public void setClosureLanguageIn(LanguageMode closureLanguageIn) {
-        this.closureLanguageIn = closureLanguageIn;
-    }
-
-    public void setClosureLanguageOut(LanguageMode closureLanguageOut) {
-        this.closureLanguageOut = closureLanguageOut;
-    }
-
-    public void setClosureModuleResolution(ResolutionMode closureModuleResolution) {
-        this.closureModuleResolution = closureModuleResolution;
-    }
-
-    public void setClosureOutputWrapper(String closureOutputWrapper) {
-        this.closureOutputWrapper = closureOutputWrapper;
-    }
-
-    public void setClosurePreferSingleQuotes(boolean closurePreferSingleQuotes) {
-        this.closurePreferSingleQuotes = closurePreferSingleQuotes;
-    }
-
-    public void setClosurePrettyPrint(boolean closurePrettyPrint) {
-        this.closurePrettyPrint = closurePrettyPrint;
-    }
-
-    public void setClosureProcessClosurePrimitives(boolean closureProcessClosurePrimitives) {
-        this.closureProcessClosurePrimitives = closureProcessClosurePrimitives;
-    }
-
-    public void setClosureProcessCommonJsModules(boolean closureProcessCommonJsModules) {
-        this.closureProcessCommonJsModules = closureProcessCommonJsModules;
-    }
-
-    public void setClosureRenamePrefixNamespace(String closureRenamePrefixNamespace) {
-        this.closureRenamePrefixNamespace = closureRenamePrefixNamespace;
-    }
-
-    public void setClosureRenameVariablePrefix(String closureRenameVariablePrefix) {
-        this.closureRenameVariablePrefix = closureRenameVariablePrefix;
-    }
-
-    // public void setClosureAllowDynamicImport(boolean closureAllowDynamicImport) {
-    // this.closureAllowDynamicImport = closureAllowDynamicImport;
-    // }
-
-    public void setClosureRewritePolyfills(boolean closureRewritePolyfills) {
-        this.closureRewritePolyfills = closureRewritePolyfills;
-    }
-
-    public void setClosureSourceMapLocationMappings(
-            ArrayList<ClosureSourceMapLocationMapping> closureSourceMapLocationMappings) {
-        this.closureSourceMapLocationMappings = closureSourceMapLocationMappings;
-    }
-
-    public void setClosureSourceMapName(String closureSourceMapName) {
-        this.closureSourceMapName = closureSourceMapName;
-    }
-
-    public void setClosureSourceMapOutputType(SourceMapOutputType closureSourceMapOutputType) {
-        this.closureSourceMapOutputType = closureSourceMapOutputType;
-    }
-
-    public void setClosureStrictModeInput(boolean closureStrictModeInput) {
-        this.closureStrictModeInput = closureStrictModeInput;
-    }
-
-    public void setClosureTrustedStrings(boolean closureTrustedStrings) {
-        this.closureTrustedStrings = closureTrustedStrings;
-    }
-
-    public void setClosureUseTypesForOptimization(boolean closureUseTypesForOptimization) {
-        this.closureUseTypesForOptimization = closureUseTypesForOptimization;
-    }
-
-    public void setClosureWarningLevel(WarningLevel closureWarningLevel) {
-        this.closureWarningLevel = closureWarningLevel;
-    }
-
-    public void setClosureWarningLevels(HashMap<String, String> closureWarningLevels) {
-        this.closureWarningLevels = closureWarningLevels;
-    }
-
-    public void setEncoding(String encoding) {
-        this.encoding = encoding;
-    }
-
-    public void setExcludes(ArrayList<String> excludes) {
-        this.excludes = excludes;
-    }
-
-    public void setForce(boolean force) {
-        this.force = force;
-    }
-
-    public void setIncludes(ArrayList<String> includes) {
-        this.includes = includes;
-    }
-
-    public void setLineSeparator(String lineSeparator) {
-        this.lineSeparator = lineSeparator;
-    }
-
-    public void setLogLevel(LogLevel logLevel) {
-        this.logLevel = logLevel;
-    }
-
-    public void setLogWrapper(Log logWrapper) {
-        this.logWrapper = logWrapper;
-    }
-
-    public void setOutputFilename(String outputFilename) {
-        this.outputFilename = outputFilename;
-    }
-
-    public void setProject(MavenProject project) {
-        this.project = project;
-    }
-
-    public void setSkip(boolean skip) {
-        this.skip = skip;
-    }
-
-    public void setSkipMerge(boolean skipMerge) {
-        this.skipMerge = skipMerge;
-    }
-
-    public void setSkipMinify(boolean skipMinify) {
-        this.skipMinify = skipMinify;
-    }
-
-    public void setSkipMode(SkipMode skipMode) {
-        this.skipMode = skipMode;
-    }
-
-    public void setSkipRunOnIncremental(boolean skipRunOnIncremental) {
-        this.skipRunOnIncremental = skipRunOnIncremental;
-    }
-
-    public void setSourceDir(String sourceDir) {
-        this.sourceDir = sourceDir;
-    }
-
-    public void setTargetDir(String targetDir) {
-        this.targetDir = targetDir;
     }
 }

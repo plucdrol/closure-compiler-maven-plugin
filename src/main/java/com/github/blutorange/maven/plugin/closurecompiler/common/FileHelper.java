@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -29,8 +28,7 @@ public class FileHelper {
                 return targetPath.toString();
             } else {
                 final var basePath = base.getCanonicalFile().toPath();
-                final var relativePath = basePath.relativize(targetPath).toString();
-                return relativePath;
+                return basePath.relativize(targetPath).toString();
             }
         } catch (final IOException e) {
             throw new IOException("Failed to relativize path <" + target + "> against base directory <" + base + ">");
@@ -76,12 +74,12 @@ public class FileHelper {
         if (!baseDir.exists()) {
             return new ArrayList<>();
         }
-        String[] excludesArray = excludes.toArray(new String[excludes.size()]);
+        final var excludesArray = excludes.toArray(new String[0]);
 
-        return IntStream.range(0, includes.size()) //
-                .mapToObj(i -> Pair.of(i, includes.get(i))) //
+        return IntStream.range(0, includes.size())
+                .mapToObj(i -> Pair.of(i, includes.get(i)))
                 .flatMap(include -> {
-                    DirectoryScanner scanner = new DirectoryScanner();
+                    final var scanner = new DirectoryScanner();
                     scanner.setIncludes(new String[] {include.getRight()});
                     scanner.setExcludes(excludesArray);
                     scanner.addDefaultExcludes();
@@ -91,15 +89,15 @@ public class FileHelper {
                         File includedFile = new File(baseDir, includedFilename);
                         return Pair.of(include.getLeft(), includedFile);
                     });
-                }) //
-                .sorted() //
-                .map(Pair::getRight) //
-                .filter(distinctByKey(File::getAbsolutePath)) //
+                })
+                .sorted()
+                .map(Pair::getRight)
+                .filter(distinctByKey(File::getAbsolutePath))
                 .collect(Collectors.toList());
     }
 
     private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
-        Set<Object> seen = new HashSet<>();
+        final var seen = new HashSet<>();
         return t -> seen.add(keyExtractor.apply(t));
     }
 }

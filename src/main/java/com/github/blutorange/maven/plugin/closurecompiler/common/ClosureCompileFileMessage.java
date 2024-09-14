@@ -57,7 +57,7 @@ public class ClosureCompileFileMessage extends FileMessage {
 
         boldLine.append(error.getDescription());
 
-        b.append(boldLine.toString());
+        b.append(boldLine);
         b.append('\n');
         return b.toString();
     }

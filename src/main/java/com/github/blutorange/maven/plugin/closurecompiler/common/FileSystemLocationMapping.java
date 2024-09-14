@@ -10,14 +10,12 @@ import org.apache.maven.plugin.logging.Log;
 /** Makes the source file relative to the location of the source map. The paths are taken from the file system. */
 public class FileSystemLocationMapping implements LocationMapping {
     private final File baseDirForSourceFiles;
-    private final File minifiedFile;
     private final File sourceMapDir;
     private final Log log;
     private boolean transpilationDone;
 
-    public FileSystemLocationMapping(Log log, File baseDirForSourceFiles, File minifiedFile, File sourceMapFile) {
+    public FileSystemLocationMapping(Log log, File baseDirForSourceFiles, File sourceMapFile) {
         this.log = log;
-        this.minifiedFile = minifiedFile;
         this.baseDirForSourceFiles = baseDirForSourceFiles;
         this.sourceMapDir = sourceMapFile.getParentFile();
     }

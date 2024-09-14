@@ -13,6 +13,8 @@
  */
 package com.github.blutorange.maven.plugin.closurecompiler.plugin;
 
+import static java.io.OutputStream.nullOutputStream;
+
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
@@ -43,24 +45,21 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
-import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.maven.plugin.MojoFailureException;
 import org.sonatype.plexus.build.incremental.BuildContext;
 
 /** Abstract class for merging and compressing a files list. */
 public abstract class ProcessFilesTask implements Callable<Object> {
-
     private static final String DEFAULT_MERGED_FILENAME = "script.js";
-
-    public static final String TEMP_SUFFIX = ".tmp";
 
     /**
      * Logs an addition of a new source file.
      *
-     * @param finalFilename the final file name
-     * @param sourceFile the source file
-     * @throws IOException
+     * @param files A list of files required for compilation, such as files imported by other files.
+     * @param sourceFile The source file to process, i.e. the main entry point.
+     * @param mojoMeta Mojo data with e.g. the logger.
+     * @throws IOException When an input file could not be read or an output file could not be written.
      */
     private static void addNewSourceFile(Collection<File> files, File sourceFile, MojoMetadata mojoMeta)
             throws IOException {
@@ -95,7 +94,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
      * @param processConfig Configuration for this file task.
      * @param fileSpecifier Details about the input / output files.
      * @param closureConfig Google closure configuration
-     * @throws IOException
+     * @throws IOException When an input file could not be read or an output file could not be written.
      */
     public ProcessFilesTask(
             MojoMetadata mojoMeta,
@@ -106,7 +105,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         this.mojoMeta = mojoMeta;
         this.processConfig = processConfig;
 
-        File projectBasedir = mojoMeta.getProject().getBasedir();
+        final var projectBasedir = mojoMeta.getProject().getBasedir();
         this.sourceDir = FileHelper.getFile(
                         FileHelper.getAbsoluteFile(projectBasedir, fileSpecifier.getBaseSourceDir()),
                         fileSpecifier.getSourceDir())
@@ -119,7 +118,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
                 .getCanonicalFile();
         this.outputFilenameInterpolator = new FilenameInterpolator(fileSpecifier.getOutputFilename());
 
-        for (File include :
+        for (final var include :
                 FileHelper.getIncludedFiles(this.sourceDir, fileSpecifier.getIncludes(), fileSpecifier.getExcludes())) {
             if (!files.contains(include)) {
                 addNewSourceFile(files, include, mojoMeta);
@@ -147,8 +146,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     /**
      * Method executed by the thread.
      *
-     * @throws IOException when the merge or minify steps fail
-     * @throws MojoFailureException
+     * @throws IOException When an input file could not be read or an output file could not be written.
+     * @throws MojoFailureException When the merge or minify steps fail
      */
     @Override
     public Object call() throws IOException, MojoFailureException {
@@ -162,10 +161,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
                     throw new MojoFailureException("Closure compilation failure", e);
                 } catch (Exception e) {
                     logFailure(e);
-                    files.forEach(file -> {
-                        mojoMeta.getBuildContext()
-                                .addMessage(file, 1, 1, e.getMessage(), BuildContext.SEVERITY_ERROR, e);
-                    });
+                    files.forEach(file -> mojoMeta.getBuildContext()
+                            .addMessage(file, 1, 1, e.getMessage(), BuildContext.SEVERITY_ERROR, e));
                     throw e;
                 }
             } else if (!includesEmpty) {
@@ -178,7 +175,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
 
     private void logFailure(Exception e) {
-        if (e != null && e instanceof FileException) {
+        if (e instanceof FileException) {
             ((FileException) e).getFileErrors().forEach(fileError -> fileError.addTo(mojoMeta.getBuildContext()));
         }
         mojoMeta.getLog()
@@ -193,19 +190,18 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     /**
      * Copy, merge and / or minify the input files.
      *
-     * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
-     *     change).
-     * @throws IOException
-     * @throws MojoFailureException
+     * @throws IOException When an input file could not be read or an output file could not be written.
+     * @throws MojoFailureException When the file could not be processed, such as when the output file is the same as
+     *     the input file.
      */
     private void processFiles() throws IOException, MojoFailureException {
         // No merge
-        List<ProcessingResult> results = new ArrayList<>();
+        final var results = new ArrayList<ProcessingResult>();
         if (processConfig.isSkipMerge()) {
             mojoMeta.getLog().info("Skipping the merge step...");
 
-            for (File sourceFile : files) {
-                File minifiedFile = outputFilenameInterpolator.interpolate(sourceFile, sourceDir, targetDir);
+            for (final var sourceFile : files) {
+                final var minifiedFile = outputFilenameInterpolator.interpolate(sourceFile, sourceDir, targetDir);
                 assertTarget(sourceFile, minifiedFile);
                 // Neither merge nor minify
                 if (processConfig.isSkipMinify()) {
@@ -219,14 +215,14 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         }
         // Merge-only
         else if (processConfig.isSkipMinify()) {
-            File mergedFile = outputFilenameInterpolator.interpolate(
+            final var mergedFile = outputFilenameInterpolator.interpolate(
                     new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
             results.add(merge(mergedFile));
             mojoMeta.getLog().info("Skipping the minify step...");
         }
         // Minify + merge
         else {
-            File minifiedFile = outputFilenameInterpolator.interpolate(
+            final var minifiedFile = outputFilenameInterpolator.interpolate(
                     new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
             results.add(minify(files, minifiedFile));
         }
@@ -234,7 +230,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         logResults(results);
     }
 
-    protected void removeMessages(Collection<File> files) {
+    protected final void removeMessages(Collection<File> files) {
         files.forEach(file -> mojoMeta.getBuildContext().removeMessages(file));
     }
 
@@ -244,24 +240,24 @@ public abstract class ProcessFilesTask implements Callable<Object> {
      * @param srcFiles list of input files to compress
      * @param minified output file resulting from the minify step
      */
-    protected void logCompressionGains(List<File> srcFiles, String minified) {
+    protected final void logCompressionGains(List<File> srcFiles, String minified) {
         if (!mojoMeta.getLog().isInfoEnabled() || mojoMeta.getBuildContext().isIncremental()) {
             return;
         }
         try {
-            byte[] minifiedData = minified.getBytes(mojoMeta.getEncoding());
-            long compressedSize = minifiedData.length;
-            long compressedSizeGzip;
+            final var minifiedData = minified.getBytes(mojoMeta.getEncoding());
+            final var compressedSize = minifiedData.length;
 
-            try (InputStream in = new ByteArrayInputStream(minifiedData);
-                    CountingOutputStream out = new CountingOutputStream(new NullOutputStream());
-                    GZIPOutputStream outGZIP = new GZIPOutputStream(out)) {
-                IOUtils.copy(in, outGZIP, processConfig.getBufferSize());
-                outGZIP.finish();
-                compressedSizeGzip = out.getByteCount();
+            long compressedSizeGzip;
+            try (final var input = new ByteArrayInputStream(minifiedData);
+                    final var countingOutputStream = new CountingOutputStream(nullOutputStream());
+                    final var gzipOutputStream = new GZIPOutputStream(countingOutputStream)) {
+                IOUtils.copy(input, gzipOutputStream, processConfig.getBufferSize());
+                gzipOutputStream.finish();
+                compressedSizeGzip = countingOutputStream.getByteCount();
             }
 
-            long uncompressedSize = 0;
+            var uncompressedSize = 0L;
             if (srcFiles != null) {
                 for (File srcFile : srcFiles) {
                     uncompressedSize += srcFile.length();
@@ -280,13 +276,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     /**
      * Creates the given directory (and parents) and informs the build context.
      *
-     * @param directory
+     * @param directory Path of the directory to create.
      */
-    protected void mkDir(File directory) {
+    protected final void mkDir(File directory) {
         if (directory.exists()) {
             return;
         }
-        File firstThatExists = directory;
+        var firstThatExists = directory;
         do {
             firstThatExists = firstThatExists.getParentFile();
         } while (firstThatExists != null && !firstThatExists.exists());
@@ -304,13 +300,13 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     /**
      * Copies sourceFile to targetFile, making sure to inform the build context of the change.
      *
-     * @param sourceFile
-     * @param targetFile
+     * @param sourceFile The source file to copy.
+     * @param targetFile The target file to which to copy the source file.
      * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
      *     change).
-     * @throws IOException
+     * @throws IOException When an input file could not be read or an output file could not be written.
      */
-    protected ProcessingResult copy(File sourceFile, File targetFile) throws IOException {
+    protected final ProcessingResult copy(File sourceFile, File targetFile) throws IOException {
         if (!haveFilesChanged(Collections.singleton(sourceFile), Collections.singleton(targetFile))) {
             return new ProcessingResult().setWasSkipped(true);
         }
@@ -318,34 +314,36 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         mkDir(targetDir);
         mkDir(targetFile.getParentFile());
 
-        InputStream in = null;
-        OutputStream out = null;
-        Reader reader = null;
-        Writer writer = null;
+        InputStream input;
+        OutputStream output;
+        Reader inputReader = null;
+        Writer outputWriter = null;
         try {
-            in = new FileInputStream(sourceFile);
-            out = mojoMeta.getBuildContext().newFileOutputStream(targetFile);
+            input = new FileInputStream(sourceFile);
+            output = mojoMeta.getBuildContext().newFileOutputStream(targetFile);
             try {
-                reader = new InputStreamReader(in, mojoMeta.getEncoding());
+                inputReader = new InputStreamReader(input, mojoMeta.getEncoding());
             } finally {
                 // When new InputStreamReader threw an exception, reader is null
-                if (reader == null && in != null) in.close();
+                if (inputReader == null && input != null) {
+                    input.close();
+                }
             }
             try {
-                writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+                outputWriter = new OutputStreamWriter(output, mojoMeta.getEncoding());
             } finally {
                 // When new OutputStreamWriter threw an exception, writer is null
-                if (writer == null && out != null) out.close();
+                if (outputWriter == null && output != null) output.close();
             }
 
-            IOUtils.copy(reader, writer);
+            IOUtils.copy(inputReader, outputWriter);
         } finally {
             // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
             // So we cannot use a try-with-resource
             try {
-                if (reader != null) reader.close();
+                if (inputReader != null) inputReader.close();
             } finally {
-                if (writer != null) writer.close();
+                if (outputWriter != null) outputWriter.close();
             }
         }
 
@@ -361,7 +359,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
      * @param mergedFile output file resulting from the merged step
      * @throws IOException when the merge step fails
      */
-    protected ProcessingResult merge(File mergedFile) throws IOException {
+    protected final ProcessingResult merge(File mergedFile) throws IOException {
         if (!haveFilesChanged(files, Collections.singleton(mergedFile))) {
             return new ProcessingResult().setWasSkipped(true);
         }
@@ -372,39 +370,43 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         mojoMeta.getLog().info("Creating the merged file [" + mergedFile.getName() + "].");
         mojoMeta.getLog().debug("Full path is [" + mergedFile.getPath() + "].");
 
-        InputStream sequence = null;
-        OutputStream out = null;
-        InputStreamReader sequenceReader = null;
-        OutputStreamWriter outWriter = null;
+        InputStream input;
+        OutputStream output;
+        InputStreamReader inputStreamReader = null;
+        OutputStreamWriter outputWriter = null;
         try {
-            sequence = new SequenceInputStream(new SourceFilesEnumeration(
+            input = new SequenceInputStream(new SourceFilesEnumeration(
                     mojoMeta.getLog(), files, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
-            out = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
+            output = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
 
             try {
-                sequenceReader = new InputStreamReader(sequence, mojoMeta.getEncoding());
+                inputStreamReader = new InputStreamReader(input, mojoMeta.getEncoding());
             } finally {
                 // When new InputStreamReader threw an exception, sequenceReader is null
-                if (sequenceReader == null && sequence != null) sequence.close();
+                if (inputStreamReader == null && input != null) {
+                    input.close();
+                }
             }
             try {
-                outWriter = new OutputStreamWriter(out, mojoMeta.getEncoding());
+                outputWriter = new OutputStreamWriter(output, mojoMeta.getEncoding());
             } finally {
                 // When new OutputStreamWriter threw an exception, outWriter is null
-                if (outWriter == null && out != null) out.close();
+                if (outputWriter == null && output != null) {
+                    output.close();
+                }
             }
 
-            IOUtils.copyLarge(sequenceReader, outWriter, new char[processConfig.getBufferSize()]);
+            IOUtils.copyLarge(inputStreamReader, outputWriter, new char[processConfig.getBufferSize()]);
 
             // Make sure we end with a new line
-            outWriter.append(processConfig.getLineSeparator());
+            outputWriter.append(processConfig.getLineSeparator());
         } finally {
             // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
             // So we cannot use a try-with-resource
             try {
-                if (sequenceReader != null) sequenceReader.close();
+                if (inputStreamReader != null) inputStreamReader.close();
             } finally {
-                if (outWriter != null) outWriter.close();
+                if (outputWriter != null) outputWriter.close();
             }
         }
 
@@ -412,12 +414,15 @@ public abstract class ProcessFilesTask implements Callable<Object> {
     }
 
     /**
-     * @param sourceFiles
-     * @param outputFiles
-     * @return Whether any change was made to the source / output files. If not, then we can skip the execution of the
-     *     current bundle.
+     * Checks whether any change was made to the source / output file pairs. If not, then we can skip the execution of
+     * the current bundle.
+     *
+     * @param sourceFiles Source files to check.
+     * @param outputFiles Output files corresponding to the source files, in that order. Must have the same size as the
+     *     source files list.
+     * @return Whether any change was made to the source / output file pairs
      */
-    protected boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
+    protected final boolean haveFilesChanged(Collection<File> sourceFiles, Collection<File> outputFiles) {
         boolean changed;
         if (processConfig.isForce() && mojoMeta.getBuildContext().isIncremental()) {
             mojoMeta.getLog()
@@ -448,21 +453,19 @@ public abstract class ProcessFilesTask implements Callable<Object> {
         return changed;
     }
 
-    private boolean checkFilesForChanges(Collection<File> sourceFiles, Collection<File> ouptutFiles) {
-        final boolean ouptutFilesExist = ouptutFiles.stream().allMatch(File::exists);
+    private boolean checkFilesForChanges(Collection<File> sourceFiles, Collection<File> outputFiles) {
+        final var outputFilesExist = outputFiles.stream().allMatch(File::exists);
         switch (ObjectUtils.defaultIfNull(processConfig.getSkipMode(), SkipMode.NEWER)) {
             case NEWER:
-                if (ouptutFilesExist) {
-                    final long oldestOutputFile = ouptutFiles.stream()
+                if (outputFilesExist) {
+                    final var oldestOutputFile = outputFiles.stream()
                             .map(File::lastModified)
                             .min(Long::compare)
-                            .orElse(0L)
-                            .longValue();
-                    final long youngestSourceFile = sourceFiles.stream()
+                            .orElse(0L);
+                    final var youngestSourceFile = sourceFiles.stream()
                             .map(File::lastModified)
                             .max(Long::compare)
-                            .orElse(Long.MAX_VALUE)
-                            .longValue();
+                            .orElse(Long.MAX_VALUE);
                     mojoMeta.getLog().debug("Date of oldest output file is" + new Date(oldestOutputFile));
                     mojoMeta.getLog().debug("Date of youngest source file is " + new Date(youngestSourceFile));
                     return !(oldestOutputFile > youngestSourceFile);
@@ -470,7 +473,7 @@ public abstract class ProcessFilesTask implements Callable<Object> {
                     return true;
                 }
             case EXISTS:
-                return !ouptutFilesExist;
+                return !outputFilesExist;
             default:
                 throw new RuntimeException("Unhandled enum: " + processConfig.getSkipMode());
         }
@@ -496,8 +499,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
      * @param minifiedFile output file resulting from the minify step
      * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
      *     change).
-     * @throws IOException when the minify step fails
-     * @throws MojoFailureException
+     * @throws IOException When an input file could not be read or an output file could not be written.
+     * @throws MojoFailureException When the minify step fails
      */
     abstract ProcessingResult minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException;
 
@@ -508,8 +511,8 @@ public abstract class ProcessFilesTask implements Callable<Object> {
      * @param minifiedFile output file resulting from the minify step
      * @return <code>true</code> if execution was performed, <code>false</code> if it was skipped (because files did not
      *     change).
-     * @throws IOException when the minify step fails
-     * @throws MojoFailureException
+     * @throws IOException When an input file could not be read or an output file could not be written.
+     * @throws MojoFailureException When the minify step fails
      */
     abstract ProcessingResult minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException;
 }

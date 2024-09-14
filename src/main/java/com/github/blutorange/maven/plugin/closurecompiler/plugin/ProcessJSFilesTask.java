@@ -17,23 +17,17 @@ import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureCompileF
 import com.github.blutorange.maven.plugin.closurecompiler.common.ClosureConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileException;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper;
-import com.github.blutorange.maven.plugin.closurecompiler.common.FileMessage;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileProcessConfig;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSpecifier;
 import com.github.blutorange.maven.plugin.closurecompiler.common.FileSystemLocationMapping;
-import com.github.blutorange.maven.plugin.closurecompiler.common.OutputInterpolator;
 import com.github.blutorange.maven.plugin.closurecompiler.common.ProcessingResult;
 import com.google.javascript.jscomp.CommandLineRunner;
 import com.google.javascript.jscomp.Compiler;
-import com.google.javascript.jscomp.CompilerOptions;
-import com.google.javascript.jscomp.JSError;
 import com.google.javascript.jscomp.SourceFile;
 import com.google.javascript.jscomp.SourceMap;
-import eu.maxschuster.dataurl.DataUrl;
 import eu.maxschuster.dataurl.DataUrlBuilder;
 import eu.maxschuster.dataurl.DataUrlEncoding;
 import eu.maxschuster.dataurl.DataUrlSerializer;
-import eu.maxschuster.dataurl.IDataUrlSerializer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -60,7 +54,7 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
      * @param processConfig Details about the process files task.
      * @param fileSpecifier Details about the input / output files.
      * @param closureConfig Google Closure Compiler configuration
-     * @throws IOException
+     * @throws IOException When an input file could not be read of an output file could not be written.
      */
     public ProcessJSFilesTask(
             MojoMetadata mojoMeta,
@@ -77,18 +71,19 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
      * @param mergedFile input file resulting from the merged step
      * @param minifiedFile output file resulting from the minify step
      * @throws IOException when the minify step fails
-     * @throws MojoFailureException
+     * @throws MojoFailureException When the file could not be minified, either due to an I/O error or due to a closure
+     *     compiler failure.
      */
     @Override
     protected ProcessingResult minify(File mergedFile, File minifiedFile) throws IOException, MojoFailureException {
-        List<File> srcFiles = new ArrayList<File>();
+        final var srcFiles = new ArrayList<File>();
         srcFiles.add(mergedFile);
         return minify(srcFiles, minifiedFile);
     }
 
     @Override
     protected ProcessingResult minify(List<File> srcFiles, File minifiedFile) throws IOException, MojoFailureException {
-        File sourceMapFile = closureConfig
+        final var sourceMapFile = closureConfig
                 .getSourceMapInterpolator()
                 .interpolate(minifiedFile, minifiedFile.getParentFile(), minifiedFile.getParentFile());
 
@@ -107,33 +102,33 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
             mkDir(sourceMapFile.getParentFile());
         }
 
-        OutputInterpolator outputInterpolator = closureConfig.getOutputInterpolator();
+        final var outputInterpolator = closureConfig.getOutputInterpolator();
 
         mojoMeta.getLog().info("Creating the minified file [" + minifiedFile.getName() + "].");
         mojoMeta.getLog().debug("Full path is [" + minifiedFile.getPath() + "].");
 
-        File baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
+        final var baseDirForSourceFiles = getBaseDirForSourceFiles(minifiedFile, sourceMapFile);
 
         mojoMeta.getLog()
                 .debug("Setting base dir for closure source files to [" + baseDirForSourceFiles.getAbsolutePath()
                         + "]");
 
-        List<SourceFile> sourceFileList = new ArrayList<SourceFile>();
-        for (File srcFile : srcFiles) {
+        final var sourceFileList = new ArrayList<SourceFile>();
+        for (final var srcFile : srcFiles) {
             try (InputStream in = new FileInputStream(srcFile)) {
-                SourceFile input = SourceFile.builder() //
-                        .withPath(FileHelper.relativizePath(baseDirForSourceFiles, srcFile)) //
-                        .withCharset(mojoMeta.getEncoding()) //
-                        .withContent(in) //
+                SourceFile input = SourceFile.builder()
+                        .withPath(FileHelper.relativizePath(baseDirForSourceFiles, srcFile))
+                        .withCharset(mojoMeta.getEncoding())
+                        .withContent(in)
                         .build();
                 sourceFileList.add(input);
             }
         }
 
         // Create compiler options
-        FileSystemLocationMapping fileSystemMapping =
-                new FileSystemLocationMapping(mojoMeta.getLog(), baseDirForSourceFiles, minifiedFile, sourceMapFile);
-        CompilerOptions options = closureConfig.getCompilerOptions(
+        final var fileSystemMapping =
+                new FileSystemLocationMapping(mojoMeta.getLog(), baseDirForSourceFiles, sourceMapFile);
+        final var options = closureConfig.getCompilerOptions(
                 fileSystemMapping, minifiedFile, sourceMapFile, baseDirForSourceFiles, sourceDir);
 
         if (mojoMeta.getLog().isDebugEnabled()) {
@@ -144,50 +139,54 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
             mojoMeta.getLog()
                     .debug("Transpiling from [" + options.getLanguageIn() + "] to [" + closureConfig.getLanguageOut()
                             + "], strict=" + options.shouldEmitUseStrict());
-            mojoMeta.getLog().debug("Starting compilations with closure compiler options: " + options.toString());
+            mojoMeta.getLog().debug("Starting compilations with closure compiler options: " + options);
         }
 
         // Set (external) libraries to be available
-        List<SourceFile> externs = new ArrayList<>();
+        final var externs = new ArrayList<SourceFile>();
         externs.addAll(CommandLineRunner.getBuiltinExterns(closureConfig.getEnvironment()));
         externs.addAll(closureConfig.getExterns());
 
         // Now compile
-        final Compiler compiler = new Compiler();
+        final var compiler = new Compiler();
         compiler.compile(externs, sourceFileList, options);
 
         // Check for errors.
         checkForErrors(compiler, baseDirForSourceFiles);
 
         // Write compiled file to output file
-        String compiled = compiler.toSource();
+        final var compiled = compiler.toSource();
 
-        OutputStream out = null;
-        Writer writer = null;
+        OutputStream output;
+        Writer outputWriter = null;
         try {
-            out = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile);
+            output = mojoMeta.getBuildContext().newFileOutputStream(minifiedFile);
             try {
-                writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+                outputWriter = new OutputStreamWriter(output, mojoMeta.getEncoding());
             } finally {
                 // When new OutputStreamWriter threw an exception, writer is null
-                if (writer == null && out != null) out.close();
+                if (outputWriter == null && output != null) {
+                    output.close();
+                }
             }
-            writer.append(outputInterpolator.apply(compiled));
+            outputWriter.append(outputInterpolator.apply(compiled));
 
             // Create source map if configured.
             if (closureConfig.isCreateSourceMap()) {
                 // Adjust source map for output wrapper.
                 compiler.getSourceMap().setWrapperPrefix(outputInterpolator.getWrapperPrefix());
                 fileSystemMapping.setTranspilationDone(true);
-                createSourceMap(writer, compiler, minifiedFile, sourceMapFile);
+                createSourceMap(outputWriter, compiler, minifiedFile, sourceMapFile);
             }
 
             // Make sure we end with a new line
-            writer.append(processConfig.getLineSeparator());
+            outputWriter.append(processConfig.getLineSeparator());
         } finally {
             // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
             // So we cannot use a try-with-resource
-            if (writer != null) writer.close();
+            if (outputWriter != null) {
+                outputWriter.close();
+            }
         }
 
         mojoMeta.getBuildContext().refresh(minifiedFile);
@@ -197,57 +196,59 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         return new ProcessingResult().setWasSkipped(false);
     }
 
-    private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) throws IOException {
+    private File getBaseDirForSourceFiles(File minifiedFile, File sourceMapFile) {
         return this.sourceDir;
     }
 
     private void checkForErrors(Compiler compiler, File baseDirForSourceFiles) {
-        // Add file warnings
-        compiler.getWarnings().stream().forEach(warning -> {
+        // Add warning to build context, so it shows up in IDEs etc.
+        for (final var warning : compiler.getWarnings()) {
             ClosureCompileFileMessage.ofWarning(warning, compiler, baseDirForSourceFiles)
                     .addTo(mojoMeta.getBuildContext());
-        });
+        }
 
-        List<JSError> errors = new ArrayList<>(compiler.getErrors());
+        final var errors = new ArrayList<>(compiler.getErrors());
         if (!errors.isEmpty()) {
-            Iterable<FileMessage> fileErrors = errors.stream()
-                    .map(error -> ClosureCompileFileMessage.ofError(error, compiler, baseDirForSourceFiles))::iterator;
-            throw new FileException(fileErrors);
+            final var fileErrors = errors.stream()
+                    .map(error -> ClosureCompileFileMessage.ofError(error, compiler, baseDirForSourceFiles));
+            throw new FileException(fileErrors::iterator);
         }
     }
 
     private void createSourceMap(Writer writer, Compiler compiler, File minifiedFile, File sourceMapFile)
             throws IOException {
-        String pathToSource =
+        final var pathToSource =
                 FilenameUtils.separatorsToUnix(FileHelper.relativizePath(sourceMapFile.getParentFile(), minifiedFile));
         mojoMeta.getLog().debug("Setting path to source in source map to [" + pathToSource + "].");
         switch (closureConfig.getSourceMapOutputType()) {
-            case inline:
+            case inline: {
                 mojoMeta.getLog().info("Creating the inline source map.");
-                StringBuilder sb = new StringBuilder();
+                final var sb = new StringBuilder();
                 compiler.getSourceMap().appendTo(sb, pathToSource);
-                DataUrl unserialized = new DataUrlBuilder() //
-                        .setMimeType("application/json") //
-                        .setEncoding(DataUrlEncoding.BASE64) //
-                        .setData(sb.toString().getBytes(StandardCharsets.UTF_8)) //
-                        .setHeader("charset", "utf-8") //
+                final var dataUrl = new DataUrlBuilder()
+                        .setMimeType("application/json")
+                        .setEncoding(DataUrlEncoding.BASE64)
+                        .setData(sb.toString().getBytes(StandardCharsets.UTF_8))
+                        .setHeader("charset", "utf-8")
                         .build();
-                IDataUrlSerializer serializer = new DataUrlSerializer();
-                String dataUrl = serializer.serialize(unserialized);
+                final var serializer = new DataUrlSerializer();
+                final var serializedDataUrl = serializer.serialize(dataUrl);
                 writer.append(processConfig.getLineSeparator());
-                writer.append("//# sourceMappingURL=" + dataUrl);
+                writer.append("//# sourceMappingURL=").append(serializedDataUrl);
                 break;
+            }
             case file:
                 flushSourceMap(sourceMapFile, pathToSource, compiler.getSourceMap());
                 break;
-            case reference:
+            case reference: {
                 mojoMeta.getLog().info("Creating reference to source map.");
-                String pathToMap = FilenameUtils.separatorsToUnix(
+                final var pathToMap = FilenameUtils.separatorsToUnix(
                         FileHelper.relativizePath(minifiedFile.getParentFile(), sourceMapFile));
                 flushSourceMap(sourceMapFile, pathToSource, compiler.getSourceMap());
                 writer.append(processConfig.getLineSeparator());
-                writer.append("//# sourceMappingURL=" + pathToMap);
+                writer.append("//# sourceMappingURL=").append(pathToMap);
                 break;
+            }
             default:
                 mojoMeta.getLog()
                         .warn("Unknown source map inclusion type [" + closureConfig.getSourceMapOutputType() + "]");
@@ -260,18 +261,18 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         mojoMeta.getLog().info("Creating the source map [" + sourceMapFile.getName() + "].");
         mojoMeta.getLog().debug("Full path is [" + sourceMapFile.getPath() + "].");
 
-        OutputStream out = null;
-        Writer writer = null;
+        OutputStream output;
+        Writer outputWriter = null;
         try {
-            out = mojoMeta.getBuildContext().newFileOutputStream(sourceMapFile);
+            output = mojoMeta.getBuildContext().newFileOutputStream(sourceMapFile);
             try {
-                writer = new OutputStreamWriter(out, mojoMeta.getEncoding());
+                outputWriter = new OutputStreamWriter(output, mojoMeta.getEncoding());
             } finally {
                 // When new OutputStreamWriter threw an exception, writer is null
-                if (writer == null && out != null) out.close();
+                if (outputWriter == null && output != null) output.close();
             }
 
-            sourceMap.appendTo(writer, pathToSource);
+            sourceMap.appendTo(outputWriter, pathToSource);
         } catch (IOException e) {
             mojoMeta.getLog()
                     .error("Failed to write the JavaScript Source Map file [" + sourceMapFile.getName() + "].", e);
@@ -279,7 +280,9 @@ public class ProcessJSFilesTask extends ProcessFilesTask {
         } finally {
             // Closing the OutputStream from m2e as well causes a StreamClosed exception in m2e
             // So we cannot use a try-with-resource
-            if (writer != null) writer.close();
+            if (outputWriter != null) {
+                outputWriter.close();
+            }
         }
     }
 }
