@@ -1,6 +1,9 @@
 package com.github.blutorange.maven.plugin.closurecompiler.test;
 
+import static com.github.blutorange.maven.plugin.closurecompiler.common.FileHelper.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,11 +24,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.cli.MavenCli;
@@ -35,6 +39,32 @@ public class MinifyMojoTest {
 
     protected interface Action {
         void run() throws Throwable;
+    }
+
+    private static class EncodingProvider {
+        private final File basedir;
+        private final Map<String, Charset> encodingMap = new HashMap<>();
+
+        EncodingProvider(File basedir) throws IOException {
+            this.basedir = basedir;
+            var encodingData = new File(basedir, "encoding.txt");
+            if (encodingData.exists()) {
+                var encodingLines = FileUtils.readLines(encodingData, UTF_8);
+                for (var encodingLine : encodingLines) {
+                    var parts = encodingLine.split("=");
+                    if (parts.length == 2) {
+                        var relativePath = parts[0];
+                        var encoding = Charset.forName(parts[1]);
+                        encodingMap.put(relativePath, encoding);
+                    }
+                }
+            }
+        }
+
+        public Charset determineEncoding(File file) {
+            var relativePath = relativizePath(basedir, file);
+            return encodingMap.getOrDefault(relativePath, UTF_8);
+        }
     }
 
     private static class MavenResult {
@@ -55,24 +85,25 @@ public class MinifyMojoTest {
         }
     }
 
-    private Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
+    private final Logger LOG = Logger.getLogger(MinifyMojoTest.class.getCanonicalName());
 
     @RegisterExtension
     final TestResources5 testResources = new TestResources5("src/test/resources/projects", "target/test-projects");
 
-    private void assertDirContent(File basedir) {
-        File expected = new File(basedir, "expected");
-        File actual = new File(new File(basedir, "target"), "test");
-        Map<String, File> expectedFiles = expected.exists() ? listFiles(expected) : new HashMap<>();
-        Map<String, File> actualFiles = actual.exists() ? listFiles(actual) : new HashMap<>();
+    private void assertDirContent(File basedir) throws IOException {
+        var expected = new File(basedir, "expected");
+        var actual = new File(new File(basedir, "target"), "test");
+        var expectedFiles = expected.exists() ? listFiles(expected) : new HashMap<String, File>();
+        var actualFiles = actual.exists() ? listFiles(actual) : new HashMap<String, File>();
         LOG.info("Comparing actual files [\n"
                 + actualFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n")) + "\n]");
         LOG.info("to the expected files [\n"
                 + expectedFiles.values().stream().map(File::getAbsolutePath).collect(Collectors.joining(",\n"))
                 + "\n]");
-        assertTrue(
-                expectedFiles.size() > 0,
+        assertFalse(
+                expectedFiles.isEmpty(),
                 "There must be at least one expected file. Add a file 'nofiles' if you expect there to be no files");
+        var encodingProvider = new EncodingProvider(basedir);
         if (expectedFiles.size() == 1
                 && "nofiles".equals(expectedFiles.values().iterator().next().getName())) {
             // Expect there to be no output files
@@ -81,14 +112,16 @@ public class MinifyMojoTest {
             assertEquals(
                     expectedFiles.size(),
                     actualFiles.size(),
-                    "Number of expected files must match the number of produced files");
+                    "Number of expected files must match the number of produced files. "
+                            + diffFiles(basedir, expectedFiles, actualFiles));
             assertTrue(
                     CollectionUtils.isEqualCollection(expectedFiles.keySet(), actualFiles.keySet()),
-                    "Expected file names must match the produced file names");
+                    "Expected file names must match the produced file names. "
+                            + diffFiles(basedir, expectedFiles, actualFiles));
             expectedFiles.forEach((key, expectedFile) -> {
-                File actualFile = actualFiles.get(key);
+                var actualFile = actualFiles.get(key);
                 try {
-                    compareFiles(expectedFile, actualFile);
+                    compareFiles(expectedFile, actualFile, encodingProvider);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -96,17 +129,38 @@ public class MinifyMojoTest {
         }
     }
 
+    private static String diffFiles(File basedir, Map<String, File> expectedFiles, Map<String, File> actualFiles) {
+        final var testDir = new File(basedir, "target/test");
+        final var expectedButNotPresent = SetUtils.difference(expectedFiles.keySet(), actualFiles.keySet()).stream()
+                .map(x -> new File(testDir, x))
+                .map(FileHelper::absoluteFileToCanonicalFile)
+                .collect(toList());
+        final var presentButNotExpected = SetUtils.difference(actualFiles.keySet(), expectedFiles.keySet()).stream()
+                .map(actualFiles::get)
+                .collect(toList());
+        final var messages = new ArrayList<String>();
+        if (!expectedButNotPresent.isEmpty()) {
+            messages.add("Expected files that are not present: <" + expectedButNotPresent + ">.");
+        }
+        if (!presentButNotExpected.isEmpty()) {
+            messages.add("Present files that were not expected to be present: <" + presentButNotExpected + ">");
+        }
+        return String.join(" ", messages);
+    }
+
     private void clean(File basedir) throws IOException {
-        File target = new File(basedir, "target");
+        var target = new File(basedir, "target");
         if (target.exists()) {
             FileUtils.forceDelete(target);
         }
         assertFalse(target.exists());
     }
 
-    private void compareFiles(File expectedFile, File actualFile) throws IOException {
-        List<String> expectedLines = FileUtils.readLines(expectedFile, UTF_8);
-        List<String> actualLines = FileUtils.readLines(actualFile, UTF_8);
+    private void compareFiles(File expectedFile, File actualFile, EncodingProvider encodingProvider)
+            throws IOException {
+        var encoding = encodingProvider.determineEncoding(expectedFile);
+        var expectedLines = FileUtils.readLines(expectedFile, encoding);
+        var actualLines = FileUtils.readLines(actualFile, encoding);
         assertTrue(
                 expectedFile.exists(),
                 "File with expected content does not exist: '" + actualFile.getAbsolutePath() + "'");
@@ -117,8 +171,8 @@ public class MinifyMojoTest {
         expectedLines.removeIf(StringUtils::isBlank);
         actualLines.removeIf(StringUtils::isBlank);
         // Check file contents
-        assertTrue(
-                expectedLines.size() > 0,
+        assertFalse(
+                expectedLines.isEmpty(),
                 "Expected file must contain at least one non-empty line: '" + actualFile.getAbsolutePath() + "'");
         assertEquals(
                 expectedLines.size(),
@@ -167,15 +221,7 @@ public class MinifyMojoTest {
 
     private Map<String, File> listFiles(File basedir) {
         return FileUtils.listFiles(basedir, null, true).stream()
-                .collect(Collectors.toMap(
-                        file -> {
-                            try {
-                                return FileHelper.relativizePath(basedir, file);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        },
-                        Function.identity()));
+                .collect(Collectors.toMap(file -> relativizePath(basedir, file), identity()));
     }
 
     private MavenResult runMinify(String projectName) throws Exception {
@@ -203,7 +249,7 @@ public class MinifyMojoTest {
     }
 
     private void runMinifyAndAssertDirContent(String projectName, Collection<String> profiles) throws Exception {
-        File basedir = testResources.getBasedir(projectName).getCanonicalFile();
+        var basedir = testResources.getBasedir(projectName).getCanonicalFile();
         runMinify(projectName, profiles);
         assertDirContent(basedir);
     }
@@ -246,11 +292,15 @@ public class MinifyMojoTest {
     @Test
     public void testExterns() throws Exception {
         // No externs declared, variable cannot be found, so minification should fail
-        expectError(
-                AssertionError.class, () -> runMinifyAndAssertDirContent("externs", Arrays.asList("without-externs")));
+        expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("externs", List.of("without-externs")));
 
         // Externs declared, variable can be found, so minification should succeed
-        runMinifyAndAssertDirContent("externs", Arrays.asList("createOlderFile", "with-externs"));
+        runMinifyAndAssertDirContent("externs", List.of("createOlderFile", "with-externs"));
+    }
+
+    @Test
+    public void testHtmlUpdate() throws Exception {
+        runMinifyAndAssertDirContent("htmlUpdate");
     }
 
     @Test
@@ -322,11 +372,11 @@ public class MinifyMojoTest {
 
     @Test
     public void testSkipIfExists() throws Exception {
-        // Output file does not exists, minification should run
-        expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfExists")));
+        // Output file does not exist, minification should run
+        expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", List.of("skipIfExists")));
 
-        // This create the (older) output file, so the minification process should not run
-        runMinifyAndAssertDirContent("skipif", Arrays.asList("createOlderFile", "skipIfExists"));
+        // This creates the (older) output file, so the minification process should not run
+        runMinifyAndAssertDirContent("skipif", List.of("createOlderFile", "skipIfExists"));
 
         // Now force is enabled, minification should run
         expectError(
@@ -337,10 +387,10 @@ public class MinifyMojoTest {
 
     @Test
     public void testSkipIfNewer() throws Exception {
-        // Output file does not exists, minification should run
-        expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", Arrays.asList("skipIfNewer")));
+        // Output file does not exist, minification should run
+        expectError(AssertionError.class, () -> runMinifyAndAssertDirContent("skipif", List.of("skipIfNewer")));
 
-        // This create the newer output file, so the minification process should not run
+        // This creates the newer output file, so the minification process should not run
         runMinifyAndAssertDirContent("skipif", Arrays.asList("createNewerFile", "skipIfNewer"));
 
         // Now force is enabled, minification should run

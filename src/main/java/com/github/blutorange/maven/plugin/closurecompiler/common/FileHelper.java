@@ -1,8 +1,10 @@
 package com.github.blutorange.maven.plugin.closurecompiler.common;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -17,21 +19,35 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.plexus.util.DirectoryScanner;
 
+/** Helper methods for working with files. */
 public class FileHelper {
     private FileHelper() {}
 
     /** @return The path of the given {@code target}, relative to the specified {@code base} file. */
-    public static String relativizePath(File base, File target) throws IOException {
-        try {
-            final var targetPath = Paths.get(target.getCanonicalPath());
-            if (base == null) {
-                return targetPath.toString();
-            } else {
-                final var basePath = base.getCanonicalFile().toPath();
-                return basePath.relativize(targetPath).toString();
-            }
-        } catch (final IOException e) {
-            throw new IOException("Failed to relativize path <" + target + "> against base directory <" + base + ">");
+    public static String relativizePath(File base, File target) {
+        final var targetPath =
+                absoluteFileToCanonicalFile(target.getAbsoluteFile()).toPath();
+        if (base == null) {
+            return targetPath.toString();
+        } else {
+            final var basePath =
+                    absoluteFileToCanonicalFile(base.getAbsoluteFile()).toPath();
+            return basePath.relativize(targetPath).toString();
+        }
+    }
+
+    /**
+     * Makes target relative to base. Allows base and target to be relative paths.
+     *
+     * @return The path of the given {@code target}, relative to the specified {@code base} file.
+     */
+    public static String relativizeRelativePath(File base, File target) {
+        final var targetPath = target.toPath();
+        if (base == null) {
+            return targetPath.toString();
+        } else {
+            final var basePath = base.toPath();
+            return basePath.relativize(targetPath).toString();
         }
     }
 
@@ -42,21 +58,46 @@ public class FileHelper {
     }
 
     /**
-     * If the file does not refer to an absolute path, return the file relative to the given basedir. If the file
-     * already refers to an absolute path, return the file.
+     * If the last file does not refer to an absolute path, return the file relative to the given base directories. If
+     * the last file already refers to an absolute path, return the last file.
      *
-     * @param basedir Directory to which the file is relative.
-     * @param file File to make absolute.
+     * @param basedir Directory relative to which to resolve relative files.
+     * @param files Files to make absolute.
      */
-    public static File getAbsoluteFile(File basedir, File file) {
-        if (file.isAbsolute()) {
-            return file;
+    public static File getAbsoluteFile(File basedir, File... files) {
+        if (files == null) {
+            return basedir;
         }
-        return new File(basedir, file.getPath());
+        var result = basedir;
+        for (final var file : files) {
+            if (file == null) {
+                continue;
+            }
+            if (file.isAbsolute()) {
+                result = file;
+            } else {
+                result = new File(result, file.getPath());
+            }
+        }
+        return result;
     }
 
-    public static File getAbsoluteFile(File basedir, String file) {
-        return getAbsoluteFile(basedir, new File(file));
+    /**
+     * If the last file does not refer to an absolute path, return the file relative to the given base directories. If
+     * the last file already refers to an absolute path, return the last file.
+     *
+     * @param basedir Directory relative to which to resolve relative files.
+     * @param files Files to make absolute.
+     */
+    public static File getAbsoluteFile(File basedir, String... files) {
+        if (files == null) {
+            return basedir;
+        }
+        final var fileObjects = new File[files.length];
+        for (var i = 0; i < files.length; i += 1) {
+            fileObjects[i] = files[i] != null ? new File(files[i]) : null;
+        }
+        return getAbsoluteFile(basedir, fileObjects);
     }
 
     /**
@@ -86,8 +127,8 @@ public class FileHelper {
                     scanner.setBasedir(baseDir);
                     scanner.scan();
                     return Arrays.stream(scanner.getIncludedFiles()).map(includedFilename -> {
-                        File includedFile = new File(baseDir, includedFilename);
-                        return Pair.of(include.getLeft(), includedFile);
+                        final var includedFile = new File(baseDir, includedFilename);
+                        return Pair.of(include.getLeft(), absoluteFileToCanonicalFile(includedFile));
                     });
                 })
                 .sorted()
@@ -96,8 +137,31 @@ public class FileHelper {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * When the file is an absolute path, return its canonical representation, if possible.
+     *
+     * @param file The file to process.
+     * @return The canonical path of the file, if absolute, or the file itself otherwise.
+     */
+    public static File absoluteFileToCanonicalFile(File file) {
+        try {
+            return file != null && file.isAbsolute() ? file.getCanonicalFile() : file;
+        } catch (final IOException e) {
+            return file;
+        }
+    }
+
     private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
         final var seen = new HashSet<>();
         return t -> seen.add(keyExtractor.apply(t));
+    }
+
+    public static boolean startsWithBom(File file, Charset encoding) throws IOException {
+        try (final var input = new FileInputStream(file)) {
+            try (final var reader = new InputStreamReader(input, encoding)) {
+                final var firstChar = reader.read();
+                return firstChar == '\ufeff';
+            }
+        }
     }
 }
