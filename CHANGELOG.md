@@ -2,7 +2,7 @@
 
 See also the [closure compiler changelog](https://github.com/google/closure-compiler/wiki/Releases).
 
-## 2.32.0 (unreleased)
+## 2.32.0
 
 * feat: Add new option `htmlUpdates` for updating HTML files with the generated files, #4
 * feat: Add new option `gzip` to create gzip files next to each ouptut file, #5
