@@ -68,6 +68,10 @@
       <id>ossrh</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </snapshotRepository>
+    <site>
+      <id>github</id>
+      <url>scm:git:git@github.com:blutorange/closure-compiler-maven-plugin.git</url>
+    </site>
   </distributionManagement>
 
   <properties>
@@ -101,6 +105,7 @@
     <maven-plugin-report-plugin.version>3.15.1</maven-plugin-report-plugin.version>
     <maven-project-info-reports-plugin.version>3.9.0</maven-project-info-reports-plugin.version>
     <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+    <maven-scm-publish-plugin.version>3.3.0</maven-scm-publish-plugin.version>
     <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
@@ -510,26 +515,6 @@
         </configuration>
       </plugin>
 
-      <!-- Generate a new version of the Maven site -->
-      <plugin>
-        <groupId>com.github.github</groupId>
-        <artifactId>site-maven-plugin</artifactId>
-        <version>${site-maven-plugin.version}</version>
-        <configuration>
-          <message>Creating site for ${project.version}</message>
-          <dryRun>true</dryRun>
-          <noJekyll>true</noJekyll>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>site</goal>
-            </goals>
-            <phase>site</phase>
-          </execution>
-        </executions>
-      </plugin>
-
       <plugin>
         <groupId>com.rudikershaw.gitbuildhook</groupId>
         <artifactId>git-build-hook-maven-plugin</artifactId>
@@ -621,6 +606,15 @@
         <version>${maven-resources-plugin.version}</version>
         <configuration>
           <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-scm-publish-plugin</artifactId>
+        <version>${maven-scm-publish-plugin.version}</version>
+        <configuration>
+          <scmBranch>gh-pages</scmBranch>
         </configuration>
       </plugin>
 
@@ -718,20 +712,7 @@
   <profiles>
     <profile>
       <id>site</id>
-      <build>
-        <plugins>
-          <!-- Upload site to github -->
-          <plugin>
-            <groupId>com.github.github</groupId>
-            <artifactId>site-maven-plugin</artifactId>
-            <version>${site-maven-plugin.version}</version>
-            <configuration>
-              <message>Update site</message>
-              <dryRun>false</dryRun>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
+      <build/>
     </profile>
 
     <profile>

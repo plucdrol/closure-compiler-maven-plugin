@@ -154,7 +154,7 @@ For the example above, this means that the source file name would be `js/index.j
 * `./mvnw clean site`
     * You can check out the locally rendered site in `target/site/index.html`.
 * To upload to github, add the profile `site`
-    * `./mvnw clean report:report site -P site`
+    * `./mvnw clean site site:stage scm-publish:publish-scm`
 
 # Release
 
