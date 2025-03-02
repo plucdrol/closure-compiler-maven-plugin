@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -124,17 +125,18 @@ public abstract class ProcessFilesTask implements Callable<List<ProcessingResult
     }
 
     private void assertTarget(File source, File target) throws MojoFailureException {
-        if (!processConfig.isAllowReplacingInputFiles()
-                && target.getAbsolutePath().equals(source.getAbsolutePath())) {
-            String msg;
-            msg = "The source file [" + source.getName() + "] has the same name as the output file [" + target.getName()
-                    + "].";
-            mojoMeta.getLog().warn(msg);
-            mojoMeta.getLog()
-                    .debug("Full path for source file is [" + source.getPath() + "] and for target file ["
-                            + target.getPath() + "]");
-            throw new MojoFailureException(msg);
+        if (processConfig.isAllowReplacingInputFiles()
+                || !target.getAbsolutePath().equals(source.getAbsolutePath())) {
+            return;
         }
+
+        var msg = "The source file [" + source.getName() + "] has the same name as the output file [" + target.getName()
+                + "].";
+        mojoMeta.getLog().warn(msg);
+        mojoMeta.getLog()
+                .debug("Full path for source file is [" + source.getPath() + "] and for target file ["
+                        + target.getPath() + "]");
+        throw new MojoFailureException(msg);
     }
 
     /**
@@ -190,40 +192,61 @@ public abstract class ProcessFilesTask implements Callable<List<ProcessingResult
      *     the input file.
      */
     private List<ProcessingResult> processFiles() throws IOException, MojoFailureException {
-        // No merge
-        final var results = new ArrayList<ProcessingResult>();
-        if (processConfig.isSkipMerge()) {
-            mojoMeta.getLog().info("Skipping the merge step...");
+        final var merge = !processConfig.isSkipMerge();
+        final var minify = !processConfig.isSkipMinify();
+        final var gzip = processConfig.isGzip();
+        final var sourceFiles = files;
 
-            for (final var sourceFile : files) {
-                final var minifiedFile = outputFilenameInterpolator.interpolate(sourceFile, sourceDir, targetDir);
-                assertTarget(sourceFile, minifiedFile);
-                // Neither merge nor minify
-                if (processConfig.isSkipMinify()) {
-                    results.add(copy(sourceFile, minifiedFile));
-                }
-                // Minify-only
-                else {
-                    results.add(minify(sourceFile, minifiedFile));
-                }
+        final List<ProcessingResult> results;
+        if (merge) {
+            final var outputFile = outputFilenameInterpolator.interpolate(
+                    new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
+            results = List.of(processFiles(sourceFiles, outputFile, minify, gzip));
+        } else {
+            final var list = new ArrayList<ProcessingResult>();
+            for (final var file : sourceFiles) {
+                final var outputFile = outputFilenameInterpolator.interpolate(file, sourceDir, targetDir);
+                final var result = processFiles(List.of(file), outputFile, minify, gzip);
+                list.add(result);
             }
-        }
-        // Merge-only
-        else if (processConfig.isSkipMinify()) {
-            final var mergedFile = outputFilenameInterpolator.interpolate(
-                    new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
-            results.add(merge(mergedFile));
-            mojoMeta.getLog().info("Skipping the minify step...");
-        }
-        // Minify + merge
-        else {
-            final var minifiedFile = outputFilenameInterpolator.interpolate(
-                    new File(targetDir, DEFAULT_MERGED_FILENAME), targetDir, targetDir);
-            results.add(minify(files, minifiedFile));
+            results = list;
         }
 
         logResults(results);
-        return List.copyOf(results);
+
+        return results;
+    }
+
+    private void gzipCompress(File input) throws IOException {
+        final var output = new File(input.getAbsolutePath() + ".gz");
+        try (final var gos = new GZIPOutputStream(new FileOutputStream(output))) {
+            try (final var fis = new FileInputStream(input)) {
+                fis.transferTo(gos);
+            }
+        }
+    }
+
+    private ProcessingResult processFiles(List<File> inputFiles, File outputFile, boolean minify, boolean gzip)
+            throws MojoFailureException, IOException {
+        if (minify || inputFiles.size() == 1) {
+            for (final var inputFile : inputFiles) {
+                assertTarget(inputFile, outputFile);
+            }
+        }
+
+        final ProcessingResult result;
+        if (minify) {
+            result = minify(inputFiles, outputFile);
+        } else if (inputFiles.size() == 1) {
+            result = copy(inputFiles.get(0), outputFile);
+        } else {
+            result = merge(inputFiles, outputFile);
+        }
+        if (gzip && !result.isWasSkipped()) {
+            gzipCompress(outputFile);
+        }
+
+        return result;
     }
 
     protected final void removeMessages(Collection<File> files) {
@@ -352,11 +375,12 @@ public abstract class ProcessFilesTask implements Callable<List<ProcessingResult
     /**
      * Merges a list of source files. Create missing parent directories if needed.
      *
+     * @param sourceFiles list of input files to merge
      * @param mergedFile output file resulting from the merged step
      * @throws IOException when the merge step fails
      */
-    protected final ProcessingResult merge(File mergedFile) throws IOException {
-        if (!haveFilesChanged(files, Collections.singleton(mergedFile))) {
+    protected final ProcessingResult merge(List<File> sourceFiles, File mergedFile) throws IOException {
+        if (!haveFilesChanged(sourceFiles, Collections.singleton(mergedFile))) {
             return ProcessingResult.skipped(mergedFile).build();
         }
 
@@ -372,7 +396,7 @@ public abstract class ProcessFilesTask implements Callable<List<ProcessingResult
         OutputStreamWriter outputWriter = null;
         try {
             input = new SequenceInputStream(new SourceFilesEnumeration(
-                    mojoMeta.getLog(), files, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
+                    mojoMeta.getLog(), sourceFiles, mojoMeta.getEncoding(), processConfig.getLineSeparator()));
             output = mojoMeta.getBuildContext().newFileOutputStream(mergedFile);
 
             try {
@@ -481,7 +505,11 @@ public abstract class ProcessFilesTask implements Callable<List<ProcessingResult
         final long processedCount = results.size() - skippedCount;
         mojoMeta.getLog().info("Processed " + (processedCount + skippedCount) + " output files");
         if (processedCount > 0) {
-            mojoMeta.getLog().info("Created " + processedCount + " output files");
+            var message = "Created " + processedCount + " output files";
+            if (processConfig.isGzip()) {
+                message += " (and gzipped)";
+            }
+            mojoMeta.getLog().info(message);
         }
         if (skippedCount > 0) {
             mojoMeta.getLog().info("Skipped " + skippedCount + " output files (" + processConfig.getSkipMode() + ")");
