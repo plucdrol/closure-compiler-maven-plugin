@@ -82,7 +82,7 @@
     <maven.version>3.9.9</maven.version>
 
     <!-- Dependencies -->
-    <closure-compiler.version>v20240317</closure-compiler.version>
+    <closure-compiler.version>v20250402</closure-compiler.version>
     <commons-io.version>2.18.0</commons-io.version>
     <commons-collections4.version>4.4</commons-collections4.version>
     <commons-lang3.version>3.17.0</commons-lang3.version>
